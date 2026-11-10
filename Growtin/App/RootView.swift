@@ -50,16 +50,7 @@ struct MainTabView: View {
                 ProgressTabView()
             }
             Tab("Coach", systemImage: "sparkles", value: .coach) {
-                ComingSoonView(
-                    title: "Coach",
-                    systemImage: "sparkles",
-                    description: "Ton assistant personnel répondra à tes questions en s'appuyant uniquement sur des sources vérifiées.",
-                    plannedFeatures: [
-                        "Réponses sourcées, avec niveau de preuve",
-                        "Explication de chaque recommandation",
-                        "Bilans hebdomadaires et mensuels",
-                        "Orientation vers un médecin si nécessaire"
-                    ])
+                CoachView()
             }
             Tab("Nutrition", systemImage: "leaf", value: .nutrition) {
                 NutritionView()

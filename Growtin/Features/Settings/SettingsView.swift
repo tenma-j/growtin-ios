@@ -37,11 +37,14 @@ struct SettingsView: View {
                         Toggle("Personnaliser l'assistant avec mon historique", isOn: Binding(
                             get: { profile.consents.aiPersonalization },
                             set: { model.setAIPersonalization($0) }))
+                        if profile.consents.coachConsentAt != nil {
+                            Button("Retirer mon accord pour le Coach", role: .destructive) { model.revokeCoachConsent() }
+                        }
                         NavigationLink("Comment mes données sont utilisées") { PrivacyExplanationView() }
                     } header: {
                         Text("Confidentialité")
                     } footer: {
-                        Text("Aujourd'hui, toutes tes données restent sur cet iPhone. Aucune n'est envoyée à un serveur ni à un fournisseur d'IA.")
+                        Text("Tes données restent sur cet iPhone. Seules tes questions au Coach (et, si tu l'as autorisé, un résumé de ton profil) sont envoyées, au moment où tu les poses.")
                     }
                 }
 
@@ -58,7 +61,7 @@ struct SettingsView: View {
                         confirmingDeletion = true
                     }
                 } footer: {
-                    Text("Supprime définitivement ton profil, ta routine, ton historique, tes bilans et tes rappels de cet appareil.")
+                    Text("Supprime définitivement ton profil, ta routine, ton historique, tes bilans, tes photos, ta conversation avec le Coach et tes rappels, ainsi que ton compte serveur anonyme.")
                 }
             }
             .navigationTitle("Profil et réglages")
@@ -99,9 +102,14 @@ struct PrivacyExplanationView: View {
                 Label("Utiliser tes données pour la publicité", systemImage: "xmark.circle")
                 Label("Entraîner des modèles d'IA sans ton consentement explicite", systemImage: "xmark.circle")
                 Label("Accéder à Apple Santé ou à tes photos sans ton autorisation", systemImage: "xmark.circle")
+                Label("Envoyer tes photos à un serveur ou à une IA", systemImage: "xmark.circle")
+            }
+            Section("Le Coach") {
+                Text("Quand tu poses une question, elle est transmise à un serveur hébergé dans l'Union européenne (Supabase), puis au modèle d'IA Claude d'Anthropic. Si tu as activé la personnalisation, un résumé de ton profil et de tes derniers bilans l'accompagne, sans ton prénom, ton âge exact ni tes photos.")
+                Text("La conversation reste sur ton iPhone. Le serveur ne conserve qu'un identifiant anonyme et le nombre de questions posées. « Supprimer toutes mes données » efface aussi ce compte serveur.")
             }
             Section("Prochaines versions") {
-                Text("Lorsque la sauvegarde, la synchronisation et le Coach IA seront disponibles, Growtin' te demandera ton accord avant tout envoi, t'indiquera précisément quel prestataire traite quelles données et en Europe, et te permettra d'exporter ou de supprimer toutes tes données.")
+                Text("Lorsque la sauvegarde et la synchronisation seront disponibles, Growtin' te demandera ton accord avant tout envoi et te permettra d'exporter toutes tes données.")
             }
         }
         .navigationTitle("Tes données")

@@ -1,0 +1,14 @@
+# Configuration Supabase de Growtin' (utilisée par la CLI : supabase link / db push / functions deploy).
+project_id = "growtin"
+
+[auth]
+# Comptes anonymes : chaque installation obtient une session sans formulaire.
+# La connexion avec Apple viendra s'y rattacher dans une prochaine version.
+enable_anonymous_sign_ins = true
+
+[functions.coach]
+# Le jeton de l'utilisateur est vérifié par la plateforme avant d'atteindre la fonction.
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true

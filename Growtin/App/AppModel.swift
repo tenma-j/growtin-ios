@@ -21,6 +21,7 @@ final class AppModel {
     let notifications: NotificationScheduling
     let photoStore: PhotoStore
     let nutrition: NutritionStore
+    let coach: CoachStore
     private let context: ModelContext
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -31,11 +32,12 @@ final class AppModel {
         let message: String
     }
 
-    init(container: ModelContainer, notifications: NotificationScheduling, photoStore: PhotoStore) {
+    init(container: ModelContainer, notifications: NotificationScheduling, photoStore: PhotoStore, coachService: CoachServing) {
         self.context = container.mainContext
         self.notifications = notifications
         self.photoStore = photoStore
         self.nutrition = NutritionStore(context: container.mainContext)
+        self.coach = CoachStore(context: container.mainContext, service: coachService)
         do {
             library = try SourceLibrary.bundled()
         } catch {
@@ -68,6 +70,7 @@ final class AppModel {
                 .compactMap { try? decoder.decode(PhotoEntry.self, from: $0.payload) }
                 .sorted { $0.takenAt < $1.takenAt }
             nutrition.load()
+            coach.load()
         } catch {
             report(error, message: "Impossible de charger tes données.")
         }
@@ -252,6 +255,30 @@ final class AppModel {
         }
     }
 
+    // MARK: - Coach
+
+    func acceptCoachConsent(personalization: Bool) {
+        guard var profile else { return }
+        profile.consents.coachConsentAt = .now
+        profile.consents.aiPersonalization = personalization
+        updateProfile(profile, regenerateRoutine: false)
+    }
+
+    func revokeCoachConsent() {
+        guard var profile else { return }
+        profile.consents.coachConsentAt = nil
+        updateProfile(profile, regenerateRoutine: false)
+    }
+
+    /// Contexte transmis au Coach, construit uniquement à la demande et si la personnalisation est activée.
+    func coachContext() -> String {
+        guard let profile, profile.consents.aiPersonalization else { return "" }
+        let today = DayKey(.now)
+        return CoachContextBuilder.build(profile: profile, routine: routine,
+                                         consistency7Days: consistency.consistency(endingOn: today, days: 7),
+                                         checkIns: Array(checkIns.values), photoCount: photos.count, today: today)
+    }
+
     // MARK: - Photos
 
     var lastPhotoDay: DayKey? { PhotoTimeline.lastSessionDay(photos) }
@@ -310,6 +337,7 @@ final class AppModel {
             try context.delete(model: CheckInRecord.self)
             try context.delete(model: PhotoRecord.self)
             try context.delete(model: NutritionStateRecord.self)
+            try context.delete(model: CoachMessageRecord.self)
             try context.save()
         } catch {
             context.rollback()
@@ -317,6 +345,7 @@ final class AppModel {
             return
         }
         await notifications.removeAll()
+        await coach.deleteEverything()
         photoStore.deleteAll()
         nutrition.reset()
         photos = []

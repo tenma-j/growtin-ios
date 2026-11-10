@@ -73,7 +73,7 @@ final class PhotoRecord {
 enum GrowtinSchema {
     static let models: [any PersistentModel.Type] = [
         ProfileRecord.self, RoutineItemRecord.self, CompletionRecord.self, CheckInRecord.self, PhotoRecord.self,
-        NutritionStateRecord.self
+        NutritionStateRecord.self, CoachMessageRecord.self
     ]
 
     /// Conteneur persistant. Le fichier de base hérite de la protection de données de l'app

@@ -1,5 +1,7 @@
 # Prompt système — Coach Growtin'
 
+> Version 0.2 — 2026-11-10. **Source de vérité : `backend/supabase/functions/coach/prompt.ts`** (version exécutée par le serveur, réponse en texte avec citations `[S:…]` plutôt qu'en JSON). Ce document explique la démarche.
+>
 > Version 0.1 — 2026-11-06. Ce texte est envoyé **par le serveur** (jamais par l'app) à chaque conversation avec le Coach.
 > Les blocs `<user_context>` et `<sources>` sont générés par le serveur à chaque requête.
 > Le serveur vérifie ensuite la réponse (voir « Contrôles côté serveur » en bas de page) avant de la renvoyer à l'app.

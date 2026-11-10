@@ -1,0 +1,60 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Déployer sur Supabase"
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    name: Tests de la logique du Coach
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node --experimental-strip-types --no-warnings --test backend/supabase/functions/coach/logic.test.ts
+      - name: La base de sources du serveur est identique à celle de l'app
+        run: cmp backend/supabase/functions/coach/sources.json Packages/GrowtinCore/Sources/GrowtinCore/Resources/sources.json
+
+  deploy:
+    name: Déployer sur Supabase
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Vérifier les secrets
+        run: |
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD PROJECT_REF; do
+            if [ -z "${!name}" ]; then echo "::error::Secret manquant : $name"; exit 1; fi
+          done
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then echo "::error::Secret manquant : ANTHROPIC_API_KEY"; exit 1; fi
+      - name: Lier le projet
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Appliquer les migrations de base de données
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+      - name: Enregistrer la clé Anthropic dans les secrets des fonctions
+        run: supabase secrets set --project-ref "$PROJECT_REF" ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+      - name: Déployer les fonctions
+        run: |
+          supabase functions deploy coach --project-ref "$PROJECT_REF"
+          supabase functions deploy delete-account --project-ref "$PROJECT_REF"

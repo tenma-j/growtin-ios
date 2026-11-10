@@ -77,11 +77,15 @@ public struct Consents: Codable, Hashable, Sendable {
     public var aiPersonalization: Bool
     /// Autorise l'utilisation anonymisée pour améliorer les modèles. Toujours désactivé par défaut, jamais requis.
     public var modelImprovement: Bool
+    /// Date à laquelle l'utilisateur a accepté que ses questions au Coach soient envoyées au serveur et au fournisseur d'IA.
+    public var coachConsentAt: Date?
 
-    public init(wellnessDisclaimerAcceptedAt: Date? = nil, aiPersonalization: Bool = false, modelImprovement: Bool = false) {
+    public init(wellnessDisclaimerAcceptedAt: Date? = nil, aiPersonalization: Bool = false, modelImprovement: Bool = false,
+                coachConsentAt: Date? = nil) {
         self.wellnessDisclaimerAcceptedAt = wellnessDisclaimerAcceptedAt
         self.aiPersonalization = aiPersonalization
         self.modelImprovement = modelImprovement
+        self.coachConsentAt = coachConsentAt
     }
 }
 

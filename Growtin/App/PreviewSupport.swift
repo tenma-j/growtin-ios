@@ -7,7 +7,8 @@ extension AppModel {
     /// Modèle en mémoire pour les aperçus SwiftUI. Données d'exemple clairement fictives, jamais utilisées en production.
     static func preview(withProfile: Bool = false) -> AppModel {
         let container = try! GrowtinSchema.makeContainer(inMemory: true)
-        let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary())
+        let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary(),
+                             coachService: DemoCoachService())
         model.load()
         if withProfile {
             #if DEBUG
@@ -87,6 +88,8 @@ enum DemoData {
         profile.weightKg = 75
         profile.heightCm = 180
         profile.consents.wellnessDisclaimerAcceptedAt = start
+        profile.consents.coachConsentAt = start
+        profile.consents.aiPersonalization = true
         profile.programStartDate = start
         return profile
     }

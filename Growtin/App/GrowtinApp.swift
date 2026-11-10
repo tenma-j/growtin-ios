@@ -12,17 +12,21 @@ struct GrowtinApp: App {
                 // Mode démonstration : base en mémoire, aucune donnée réelle n'est lue ni écrite.
                 let container = try GrowtinSchema.makeContainer(inMemory: true)
                 self.container = container
-                let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary())
+                let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary(),
+                                     coachService: DemoCoachService())
                 model.load()
                 #if DEBUG
                 if screen != "onboarding" { model.seedDemo(days: 28) }
+                if screen == "coach" { model.coach.seedDemo() }
+                if screen == "coachConsent" { model.revokeCoachConsent() }
                 #endif
                 _model = State(initialValue: model)
                 return
             }
             let container = try GrowtinSchema.makeContainer()
             self.container = container
-            _model = State(initialValue: AppModel(container: container, notifications: NotificationService(), photoStore: PhotoStore()))
+            _model = State(initialValue: AppModel(container: container, notifications: NotificationService(), photoStore: PhotoStore(),
+                                                          coachService: SupabaseCoachService()))
         } catch {
             self.container = nil
             _model = State(initialValue: nil)
