@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build:
     name: Tests, compilation et captures
-    runs-on: macos-15
+    runs-on: ${{ vars.MAC_RUNNER || 'macos-15-intel' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
