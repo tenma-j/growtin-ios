@@ -28,6 +28,7 @@ struct TodayView: View {
     @State private var today = DayKey(.now)
     @State private var sheet: TodayPresentation?
     @State private var session: TodayPresentation?
+    @State private var showingPhotoSession = false
 
     var body: some View {
         NavigationStack {
@@ -36,7 +37,7 @@ struct TodayView: View {
                     ForEach(model.alerts(for: today)) { SafetyBanner(alert: $0) }
                     RegularityCard(today: today)
                     CheckInCard(checkIn: model.checkIns[today]) { sheet = .checkIn }
-                    NextStepsCard(today: today)
+                    NextStepsCard(today: today) { showingPhotoSession = true }
                     routineSections
                     FootnoteText(text: WellnessNotice.short)
                 }
@@ -86,6 +87,7 @@ struct TodayView: View {
                 today = DayKey(.now)
             }
             .task { presentDemoScreenIfNeeded() }
+            .fullScreenCover(isPresented: $showingPhotoSession) { PhotoSessionView() }
         }
     }
 

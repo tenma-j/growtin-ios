@@ -33,7 +33,15 @@ struct OnboardingFlowView: View {
         .safeAreaInset(edge: .bottom) {
             PrimaryButton(title: model.continueTitle, isEnabled: model.canContinue) { advance() }
                 .padding(.horizontal, GT.Spacing.l)
+                .padding(.top, GT.Spacing.l)
                 .padding(.bottom, GT.Spacing.s)
+                .background {
+                    // Fondu : le contenu qui défile passe proprement sous le bouton.
+                    LinearGradient(colors: [Color.gtBackground.opacity(0), Color.gtBackground, Color.gtBackground],
+                                   startPoint: .top, endPoint: .bottom)
+                        .ignoresSafeArea(edges: .bottom)
+                        .allowsHitTesting(false)
+                }
         }
         .animation(GT.Motion.adaptive(GT.Motion.standard, reduceMotion: reduceMotion), value: model.stepIndex)
     }

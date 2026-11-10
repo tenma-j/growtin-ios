@@ -55,11 +55,15 @@ struct ProgressTabView: View {
     @Environment(AppModel.self) private var model
     @State private var period: ProgressPeriod = .month
     @State private var today = DayKey(.now)
+    @State private var path: [PhotoRoute] = []
+    @State private var showingPhotoSession = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: GT.Spacing.l) {
+                    PhotoTrackingCard(today: today) { showingPhotoSession = true }
+
                     Picker("Période", selection: $period) {
                         ForEach(ProgressPeriod.allCases) { Text($0.label).tag($0) }
                     }
@@ -77,7 +81,45 @@ struct ProgressTabView: View {
             }
             .background(Color.gtBackground)
             .navigationTitle("Progrès")
+            .navigationDestination(for: PhotoRoute.self) { route in
+                switch route {
+                case .zone(let zone):
+                    ZoneTimelineView(zone: zone)
+                case .photo(let id):
+                    if let entry = model.photo(id: id) {
+                        PhotoDetailView(entry: entry)
+                    } else {
+                        ContentUnavailableView("Photo supprimée", systemImage: "photo")
+                    }
+                case .compare(let before, let after):
+                    if let first = model.photo(id: before), let second = model.photo(id: after) {
+                        PhotoCompareView(first: first, second: second)
+                    } else {
+                        ContentUnavailableView("Photo supprimée", systemImage: "photo")
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showingPhotoSession) {
+                PhotoSessionView(startAtCapture: DemoLaunch.screen == "photoCapture")
+            }
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in today = DayKey(.now) }
+            .task { openDemoScreenIfNeeded() }
+        }
+    }
+
+    /// Navigation automatique pour les captures d'écran du mode démonstration.
+    private func openDemoScreenIfNeeded() {
+        switch DemoLaunch.screen {
+        case "photoSession", "photoCapture":
+            showingPhotoSession = true
+        case "photoTimeline":
+            if let zone = model.photoZones.first { path = [.zone(zone)] }
+        case "photoCompare":
+            if let zone = model.photoZones.first, let pair = PhotoTimeline.defaultComparison(model.photos, zone: zone) {
+                path = [.zone(zone), .compare(before: pair.before.id, after: pair.after.id)]
+            }
+        default:
+            break
         }
     }
 }
@@ -303,7 +345,7 @@ private struct UpcomingCard: View {
 
     var body: some View {
         let horizon = today.adding(days: max(period.rawValue, 30))
-        let photos = PhotoSchedule.upcoming(lastPhoto: nil, frequency: model.profile?.photoFrequency ?? .everyFourWeeks,
+        let photos = PhotoSchedule.upcoming(lastPhoto: model.lastPhotoDay, frequency: model.profile?.photoFrequency ?? .everyFourWeeks,
                                             today: today, through: horizon)
             .map { Event(day: $0, title: "Photos de suivi", symbol: "camera") }
         let milestones = Roadmap.milestones(programStart: model.programStart, today: today)
@@ -326,9 +368,6 @@ private struct UpcomingCard: View {
                 }
                 .font(.subheadline)
             }
-            Text("La capture photo guidée arrive dans la prochaine version.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }

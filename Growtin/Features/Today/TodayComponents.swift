@@ -156,19 +156,28 @@ struct CheckInCard: View {
 struct NextStepsCard: View {
     @Environment(AppModel.self) private var model
     let today: DayKey
+    let onStartPhotos: () -> Void
 
     var body: some View {
         let start = model.programStart
         let next = Roadmap.nextMilestone(programStart: start, today: today)
-        let photoDue = PhotoSchedule.nextDue(lastPhoto: nil, frequency: model.profile?.photoFrequency ?? .everyFourWeeks, today: today)
+        let photoDue = PhotoSchedule.nextDue(lastPhoto: model.lastPhotoDay, frequency: model.profile?.photoFrequency ?? .everyFourWeeks, today: today)
         GTCard {
             Text("Prochaines étapes").gtEyebrowStyle()
             if let next {
                 StepLine(symbol: next.symbol, title: next.title, detail: "\(relative(next.day)) · \(next.detail)")
             }
-            StepLine(symbol: "camera.viewfinder",
-                     title: photoDue <= today ? "Photos de référence" : "Prochaine série de photos",
-                     detail: "Le module de capture guidée arrive dans la prochaine version. Ton calendrier est déjà prêt.")
+            if photoDue <= today {
+                Button(action: onStartPhotos) {
+                    StepLine(symbol: "camera.viewfinder",
+                             title: model.photos.isEmpty ? "Photos de référence" : "Série de photos conseillée",
+                             detail: "Quelques minutes, dans les mêmes conditions que la dernière fois. Touche pour commencer.")
+                }
+                .buttonStyle(.plain)
+            } else {
+                StepLine(symbol: "camera.viewfinder", title: "Prochaine série de photos",
+                         detail: "\(relative(photoDue)) · un rythme espacé rend les comparaisons plus fiables.")
+            }
         }
     }
 

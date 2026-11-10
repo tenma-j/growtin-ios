@@ -56,9 +56,23 @@ final class CheckInRecord {
     }
 }
 
+/// Métadonnées d'une photo de suivi. L'image elle-même est un fichier protégé géré par `PhotoStore`.
+@Model
+final class PhotoRecord {
+    @Attribute(.unique) var photoID: UUID
+    var payload: Data
+    var updatedAt: Date
+
+    init(photoID: UUID, payload: Data, updatedAt: Date = .now) {
+        self.photoID = photoID
+        self.payload = payload
+        self.updatedAt = updatedAt
+    }
+}
+
 enum GrowtinSchema {
     static let models: [any PersistentModel.Type] = [
-        ProfileRecord.self, RoutineItemRecord.self, CompletionRecord.self, CheckInRecord.self
+        ProfileRecord.self, RoutineItemRecord.self, CompletionRecord.self, CheckInRecord.self, PhotoRecord.self
     ]
 
     /// Conteneur persistant. Le fichier de base hérite de la protection de données de l'app

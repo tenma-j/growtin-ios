@@ -45,7 +45,7 @@ Sur la réglementation : tu as raison, laisser l'utilisateur choisir son stade e
 | A. Fondations | Package `GrowtinCore`, modèles, base de sources, design system, projet Xcode | **Fait**. 35 tests unitaires passent sous Linux ; l'interface n'a pas encore été compilée |
 | B. Onboarding, navigation, Aujourd'hui | 12 écrans, routine générée, régularité, bilan du jour, éditeur de routine, rappels, séances guidées, réglages, suppression des données | **Écrit**, à compiler dans Xcode |
 | D (partiel). Tableau prévisionnel | Graphiques 7 j à 12 mois, scénarios d'habitudes, feuille de route, calendrier des photos | **Écrit**, à compiler dans Xcode |
-| C. Photos | Capture guidée (AVFoundation), contrôle de netteté et de luminosité (Vision), frise, curseur avant/après | À faire |
+| C. Photos | Capture guidée (AVFoundation, repères, photo précédente en transparence, lumière et angle en direct), contrôle de netteté et de luminosité, détection du visage (Vision) pour le cadrage, conditions déclarées, comparabilité, frise par zone, comparaison curseur / superposition / côte à côte, suppression | **Fait**. Logique testée (46 tests), interface compilée dans le cloud |
 | E. Backend et IA | Supabase, proxy IA, quotas, cache, suivi des coûts, Coach | Prompt système rédigé, reste à faire |
 | F. Nutrition et Explorer | Recettes (valeurs Ciqual), planning, liste de courses, exercices, bibliothèque | À faire |
 | G. Abonnement, Santé, notifications avancées | RevenueCat (entitlement `premium`), paywall SwiftUI, HealthKit (sommeil, pas) | À faire |

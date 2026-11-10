@@ -13,11 +13,13 @@ final class AppModel {
     private(set) var routine: [RoutineItem] = []
     private(set) var completions: [HabitCompletion] = []
     private(set) var checkIns: [DayKey: DailyCheckIn] = [:]
+    private(set) var photos: [PhotoEntry] = []
     private(set) var isLoaded = false
     var lastError: AppError?
 
     let library: SourceLibrary
     let notifications: NotificationScheduling
+    let photoStore: PhotoStore
     private let context: ModelContext
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -28,9 +30,10 @@ final class AppModel {
         let message: String
     }
 
-    init(container: ModelContainer, notifications: NotificationScheduling) {
+    init(container: ModelContainer, notifications: NotificationScheduling, photoStore: PhotoStore) {
         self.context = container.mainContext
         self.notifications = notifications
+        self.photoStore = photoStore
         do {
             library = try SourceLibrary.bundled()
         } catch {
@@ -59,6 +62,9 @@ final class AppModel {
                 return (day, checkIn)
             }
             checkIns = Dictionary(checkInPairs, uniquingKeysWith: { _, latest in latest })
+            photos = try context.fetch(FetchDescriptor<PhotoRecord>())
+                .compactMap { try? decoder.decode(PhotoEntry.self, from: $0.payload) }
+                .sorted { $0.takenAt < $1.takenAt }
         } catch {
             report(error, message: "Impossible de charger tes données.")
         }
@@ -243,6 +249,53 @@ final class AppModel {
         }
     }
 
+    // MARK: - Photos
+
+    var lastPhotoDay: DayKey? { PhotoTimeline.lastSessionDay(photos) }
+
+    var photoZones: [PhotoZone] { PhotoZone.suggested(for: profile?.zones ?? []) }
+
+    func photos(for zone: PhotoZone) -> [PhotoEntry] { PhotoTimeline.photos(photos, zone: zone) }
+
+    func photo(id: UUID) -> PhotoEntry? { photos.first { $0.id == id } }
+
+    /// Enregistre une photo (fichier protégé + métadonnées). Retourne `false` en cas d'échec.
+    @discardableResult
+    func addPhoto(jpegData: Data, zone: PhotoZone, camera: CameraPosition, quality: ImageQuality?,
+                  conditions: CaptureConditions, framing: FramingInfo, takenAt: Date = .now) -> Bool {
+        let id = UUID()
+        do {
+            let fileName = try photoStore.save(jpegData, id: id)
+            let entry = PhotoEntry(id: id, zone: zone, day: DayKey(takenAt), takenAt: takenAt, fileName: fileName,
+                                   camera: camera, quality: quality, conditions: conditions, framing: framing)
+            context.insert(PhotoRecord(photoID: id, payload: try encoder.encode(entry)))
+            try context.save()
+            photos.append(entry)
+            photos.sort { $0.takenAt < $1.takenAt }
+            return true
+        } catch {
+            context.rollback()
+            photoStore.delete(fileName: "\(id.uuidString).jpg")
+            report(error, message: "La photo n'a pas pu être enregistrée.")
+            return false
+        }
+    }
+
+    func deletePhoto(_ entry: PhotoEntry) {
+        do {
+            let id = entry.id
+            for record in try context.fetch(FetchDescriptor<PhotoRecord>(predicate: #Predicate { $0.photoID == id })) {
+                context.delete(record)
+            }
+            try context.save()
+            photoStore.delete(fileName: entry.fileName)
+            photos.removeAll { $0.id == entry.id }
+        } catch {
+            context.rollback()
+            report(error, message: "La photo n'a pas pu être supprimée.")
+        }
+    }
+
     // MARK: - Suppression
 
     /// Supprime définitivement toutes les données locales et les rappels programmés.
@@ -252,6 +305,7 @@ final class AppModel {
             try context.delete(model: RoutineItemRecord.self)
             try context.delete(model: CompletionRecord.self)
             try context.delete(model: CheckInRecord.self)
+            try context.delete(model: PhotoRecord.self)
             try context.save()
         } catch {
             context.rollback()
@@ -259,6 +313,8 @@ final class AppModel {
             return
         }
         await notifications.removeAll()
+        photoStore.deleteAll()
+        photos = []
         profile = nil
         routine = []
         completions = []

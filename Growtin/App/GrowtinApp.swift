@@ -12,7 +12,7 @@ struct GrowtinApp: App {
                 // Mode démonstration : base en mémoire, aucune donnée réelle n'est lue ni écrite.
                 let container = try GrowtinSchema.makeContainer(inMemory: true)
                 self.container = container
-                let model = AppModel(container: container, notifications: PreviewNotificationService())
+                let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary())
                 model.load()
                 #if DEBUG
                 if screen != "onboarding" { model.seedDemo(days: 28) }
@@ -22,7 +22,7 @@ struct GrowtinApp: App {
             }
             let container = try GrowtinSchema.makeContainer()
             self.container = container
-            _model = State(initialValue: AppModel(container: container, notifications: NotificationService()))
+            _model = State(initialValue: AppModel(container: container, notifications: NotificationService(), photoStore: PhotoStore()))
         } catch {
             self.container = nil
             _model = State(initialValue: nil)
