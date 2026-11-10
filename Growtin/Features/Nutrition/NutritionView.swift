@@ -207,9 +207,10 @@ struct RecipeHeroCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RecipePhoto(recipe: recipe, maxPixelSize: 1200)
+            Color.clear
                 .frame(height: 220)
                 .frame(maxWidth: .infinity)
+                .overlay { RecipePhoto(recipe: recipe, maxPixelSize: 1200) }
                 .clipped()
             VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
                 Text(eyebrow).gtEyebrowStyle()
@@ -240,9 +241,10 @@ struct RecipeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RecipePhoto(recipe: recipe, maxPixelSize: 500)
+            Color.clear
                 .frame(height: 130)
                 .frame(maxWidth: .infinity)
+                .overlay { RecipePhoto(recipe: recipe, maxPixelSize: 500) }
                 .clipped()
                 .overlay(alignment: .topTrailing) {
                     if isFavorite {

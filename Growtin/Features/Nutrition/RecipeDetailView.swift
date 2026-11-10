@@ -19,9 +19,11 @@ struct RecipeDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GT.Spacing.l) {
-                RecipePhoto(recipe: recipe, maxPixelSize: 1400)
+                // La photo est posée en superposition : sa largeur ne doit jamais influencer la mise en page.
+                Color.clear
                     .frame(height: 300)
                     .frame(maxWidth: .infinity)
+                    .overlay { RecipePhoto(recipe: recipe, maxPixelSize: 1400) }
                     .clipped()
 
                 VStack(alignment: .leading, spacing: GT.Spacing.l) {
