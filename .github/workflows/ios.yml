@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
@@ -15,7 +18,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Choisir Xcode 26
         uses: maxim-lobanov/setup-xcode@v1
@@ -49,7 +52,7 @@ jobs:
 
       - name: Publier les captures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: captures-ecran
           path: screenshots
@@ -57,10 +60,36 @@ jobs:
 
       - name: Publier les journaux
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: journaux
           path: |
             xcodebuild.log
             core-tests.log
           if-no-files-found: ignore
+
+      - name: Publier les captures sur la branche « captures »
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          mkdir -p /tmp/captures && cp -R screenshots/. /tmp/captures/
+          cp xcodebuild.log core-tests.log /tmp/captures/ 2>/dev/null || true
+          {
+            echo "# Captures d'écran — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo
+            echo "Commit : ${GITHUB_SHA}"
+            echo
+            for f in $(cd /tmp/captures && ls *.png | sort); do
+              echo "### ${f%.png}"
+              echo
+              echo "<img src=\"$f\" width=\"300\">"
+              echo
+            done
+          } > /tmp/captures/README.md
+          cd /tmp/captures
+          git init -q -b captures
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Captures pour ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" captures
