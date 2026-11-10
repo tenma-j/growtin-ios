@@ -52,10 +52,11 @@ jobs:
         run: supabase link --project-ref "$PROJECT_REF"
       - name: Appliquer les migrations de base de données
         # Les versions récentes de la CLI exigent de viser explicitement le projet lié.
-        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" || supabase db push --remote --password "$SUPABASE_DB_PASSWORD"
+        # --yes : confirmation non interactive (la chaîne ne peut pas répondre à une question).
+        run: supabase --yes db push --linked --password "$SUPABASE_DB_PASSWORD"
       - name: Enregistrer la clé Anthropic dans les secrets des fonctions
-        run: supabase secrets set --project-ref "$PROJECT_REF" ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+        run: supabase --yes secrets set --project-ref "$PROJECT_REF" ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
       - name: Déployer les fonctions
         run: |
-          supabase functions deploy coach --project-ref "$PROJECT_REF"
-          supabase functions deploy delete-account --project-ref "$PROJECT_REF"
+          supabase --yes functions deploy coach --project-ref "$PROJECT_REF" --use-api
+          supabase --yes functions deploy delete-account --project-ref "$PROJECT_REF" --use-api
