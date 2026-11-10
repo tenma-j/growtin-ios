@@ -61,12 +61,23 @@ struct PrimaryButton: View {
                 }
             }
             .font(.headline)
+            .foregroundStyle(isEnabled ? Color.gtOnInk : Color.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, GT.Spacing.xxs)
         }
-        .buttonStyle(.glassProminent)
+        .gtProminentButton()
         .controlSize(.large)
         .disabled(!isEnabled)
+    }
+}
+
+extension View {
+    /// Bouton principal Liquid Glass teinté à l'encre de l'app, avec un texte toujours contrasté
+    /// (blanc sur noir en mode clair, noir sur blanc en mode sombre).
+    func gtProminentButton() -> some View {
+        buttonStyle(.glassProminent)
+            .tint(Color.gtInk)
+            .foregroundStyle(Color.gtOnInk)
     }
 }
 

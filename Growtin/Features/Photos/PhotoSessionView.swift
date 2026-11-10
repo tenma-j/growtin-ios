@@ -355,7 +355,7 @@ private struct CameraUnavailableView: View {
         } actions: {
             if status == .denied {
                 Button("Ouvrir les Réglages", action: openSettings)
-                    .buttonStyle(.glassProminent)
+                    .gtProminentButton()
             }
         }
         .foregroundStyle(.white)

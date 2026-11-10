@@ -53,7 +53,7 @@ struct PhotoTrackingCard: View {
                 Label(model.photos.isEmpty ? "Prendre mes photos de référence" : "Nouvelle série de photos", systemImage: "camera")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
+            .gtProminentButton()
             .controlSize(.large)
         }
     }
@@ -80,7 +80,7 @@ struct ZoneTimelineView: View {
                             Label("Comparer la première et la dernière photo", systemImage: "rectangle.split.2x1")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
+                        .gtProminentButton()
                         .controlSize(.large)
                     }
                     if isSelecting {
@@ -91,7 +91,7 @@ struct ZoneTimelineView: View {
                             NavigationLink(value: PhotoRoute.compare(before: selection[0], after: selection[1])) {
                                 Label("Comparer", systemImage: "rectangle.split.2x1").frame(maxWidth: .infinity)
                             }
-                            .buttonStyle(.glassProminent)
+                            .gtProminentButton()
                             .controlSize(.large)
                         }
                     }

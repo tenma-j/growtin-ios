@@ -102,7 +102,7 @@ struct TodayView: View {
                     Text("Ta routine est vide. Ajoute une habitude pour commencer.")
                 } actions: {
                     Button("Ajouter une habitude") { sheet = .editRoutine }
-                        .buttonStyle(.glassProminent)
+                        .gtProminentButton()
                 }
             }
         } else {

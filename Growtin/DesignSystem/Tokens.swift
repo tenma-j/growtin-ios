@@ -39,6 +39,8 @@ enum GT {
 extension Color {
     /// Encre principale : noir en mode clair, blanc en mode sombre (identité héritée de la web app).
     static let gtInk = Color(uiColor: .label)
+    /// Couleur du texte posé sur l'encre : blanc en mode clair, noir en mode sombre.
+    static let gtOnInk = Color(uiColor: .systemBackground)
     /// Vert « croissance », réservé aux bénéfices et aux éléments positifs.
     static let gtGrowth = Color(light: 0x14864F, dark: 0x3DD68C)
     /// Ambre de l'anneau de régularité.

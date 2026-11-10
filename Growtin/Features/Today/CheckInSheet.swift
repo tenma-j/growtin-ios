@@ -91,7 +91,7 @@ struct CheckInSheet: View {
                         model.saveCheckIn(draft)
                         dismiss()
                     }
-                    .buttonStyle(.glassProminent)
+                    .gtProminentButton()
                 }
             }
         }
