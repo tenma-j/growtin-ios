@@ -14,7 +14,7 @@ struct StageIllustration: View {
             let head = Path(ellipseIn: rect)
             context.fill(head, with: .color(Color.secondary.opacity(0.18)))
             context.drawLayer { layer in
-                layer.fill(head, with: .color(Color.primary.opacity(0.85)))
+                layer.fill(head, with: .color(Color.primary.opacity(0.7)))
                 layer.blendMode = .destinationOut
                 for cutout in cutouts(in: rect) {
                     layer.fill(cutout.path, with: .color(Color.black.opacity(cutout.opacity)))

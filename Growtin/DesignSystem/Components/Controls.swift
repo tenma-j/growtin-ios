@@ -61,6 +61,8 @@ struct ChoiceChip: View {
                     Image(systemName: systemImage).accessibilityHidden(true)
                 }
                 Text(title)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.subheadline.weight(.medium))
             .padding(.horizontal, GT.Spacing.s + 2)
@@ -91,11 +93,18 @@ struct FlowLayout: Layout {
         for row in rows {
             var x = bounds.minX
             for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = size(of: subviews[index], maxWidth: bounds.width)
                 subviews[index].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: ProposedViewSize(size))
                 x += size.width + spacing
             }
         }
+    }
+
+    /// Taille naturelle d'un élément, limitée à la largeur disponible (le texte passe alors à la ligne).
+    private func size(of subview: LayoutSubview, maxWidth: CGFloat) -> CGSize {
+        let natural = subview.sizeThatFits(.unspecified)
+        guard maxWidth.isFinite, natural.width > maxWidth else { return natural }
+        return subview.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil))
     }
 
     private struct Row {
@@ -109,7 +118,7 @@ struct FlowLayout: Layout {
         var rows: [Row] = []
         var current = Row()
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = size(of: subviews[index], maxWidth: width)
             let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
             if needed > width, !current.indices.isEmpty {
                 rows.append(current)

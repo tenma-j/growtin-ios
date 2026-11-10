@@ -81,6 +81,7 @@ struct SessionScaffold<Visual: View>: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: GT.Spacing.m)
             visual
