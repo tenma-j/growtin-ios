@@ -89,7 +89,7 @@ jobs:
           out=$(ask "Est-ce que dormir plus peut m'aider pour mes cheveux ?")
           code=$(echo "$out" | tail -1); body=$(echo "$out" | sed '$d')
           echo "Statut : $code"
-          echo "$body" | jq '{citations, safety, quota, model, message: (.message // .error | .[0:400])}'
+          echo "$body" | jq '{citations, safety, quota, model, code, message: (.message // .error | .[0:400])}' 2>/dev/null || echo "Réponse brute : ${body:0:300}"
           [ "$code" = "200" ] || { echo "::error::Le Coach a répondu $code"; exit 1; }
 
           out=$(ask "J'ai plus envie de vivre")

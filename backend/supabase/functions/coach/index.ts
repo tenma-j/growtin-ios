@@ -19,21 +19,60 @@ const KNOWN_IDS = new Set(SOURCES.map((s) => s.id));
 // Prompt stable : il est mis en cache par l'API (seule la conversation change d'une requête à l'autre).
 const SYSTEM_PROMPT = `${COACH_INSTRUCTIONS}\n\n${sourcesSection(SOURCES)}`;
 
-const anthropic = new Anthropic(); // lit ANTHROPIC_API_KEY dans les secrets de la fonction
-const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
-  auth: { persistSession: false },
-});
+/** Erreur de configuration du serveur, signalée par un code sans donnée sensible. */
+class ConfigError extends Error {}
+
+function serviceKey(): string {
+  // Clé de service : ancien nom, ou nouveau format de clés secrètes de Supabase.
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  const keys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (keys) {
+    try {
+      const parsed = JSON.parse(keys) as Record<string, string>;
+      const first = parsed.default ?? Object.values(parsed)[0];
+      if (first) return first;
+    } catch { /* format inattendu */ }
+  }
+  throw new ConfigError("service_key_missing");
+}
+
+let anthropicClient: Anthropic | null = null;
+function anthropic(): Anthropic {
+  if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new ConfigError("anthropic_key_missing");
+  anthropicClient ??= new Anthropic(); // lit ANTHROPIC_API_KEY dans les secrets de la fonction
+  return anthropicClient;
+}
+
+function makeAdmin() {
+  return createClient(Deno.env.get("SUPABASE_URL")!, serviceKey(), { auth: { persistSession: false } });
+}
+let adminClient: ReturnType<typeof makeAdmin> | null = null;
+function admin() {
+  adminClient ??= makeAdmin();
+  return adminClient;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
 }
 
 Deno.serve(async (req: Request) => {
+  try {
+    return await handle(req);
+  } catch (error) {
+    const code = error instanceof ConfigError ? error.message : "internal_error";
+    console.error("Erreur du Coach", code, error instanceof Error ? error.message : String(error));
+    return json({ error: "Le Coach rencontre un problème technique.", code }, 500);
+  }
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== "POST") return json({ error: "Méthode non autorisée." }, 405);
 
   // 1. Authentification : jeton Supabase de l'utilisateur.
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const { data: auth } = await admin.auth.getUser(token);
+  const { data: auth } = await admin().auth.getUser(token);
   const user = auth?.user;
   if (!user) return json({ error: "Session expirée. Rouvre l'application." }, 401);
 
@@ -54,9 +93,9 @@ Deno.serve(async (req: Request) => {
   }
 
   // 4. Quota quotidien selon l'abonnement (table mise à jour par RevenueCat).
-  const { data: entitlement } = await admin.from("entitlements").select("premium").eq("user_id", user.id).maybeSingle();
+  const { data: entitlement } = await admin().from("entitlements").select("premium").eq("user_id", user.id).maybeSingle();
   const limit = entitlement?.premium ? PREMIUM_DAILY : FREE_DAILY;
-  const { data: consumed, error: quotaError } = await admin.rpc("coach_consume", { p_user: user.id, p_limit: limit });
+  const { data: consumed, error: quotaError } = await admin().rpc("coach_consume", { p_user: user.id, p_limit: limit });
   if (quotaError) return json({ error: "Service momentanément indisponible." }, 503);
   const quota = { used: consumed?.[0]?.used ?? limit, limit, premium: entitlement?.premium ?? false };
   if (!consumed?.[0]?.allowed) {
@@ -72,7 +111,7 @@ Deno.serve(async (req: Request) => {
 
   let response: Anthropic.Beta.BetaMessage;
   try {
-    response = await anthropic.beta.messages.create({
+    response = await anthropic().beta.messages.create({
       model: MODEL,
       max_tokens: 2000,
       // Repli côté serveur si les classificateurs de sécurité refusent la requête.
@@ -114,7 +153,7 @@ Deno.serve(async (req: Request) => {
 
   // 7. Suivi des coûts (aucun contenu de conversation n'est conservé).
   const usage = response.usage;
-  await admin.rpc("coach_record_usage", {
+  await admin().rpc("coach_record_usage", {
     p_user: user.id,
     p_input: usage.input_tokens,
     p_output: usage.output_tokens,
@@ -124,4 +163,4 @@ Deno.serve(async (req: Request) => {
   });
 
   return json({ message, citations: cited, safety, quota, model: response.model });
-});
+}
