@@ -1,0 +1,2687 @@
+[
+ {
+  "id": "porridge-myrtilles-noix",
+  "title": "Porridge aux myrtilles et aux noix",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 5,
+  "cookMinutes": 5,
+  "difficulty": "easy",
+  "summary": "Un porridge crémeux, des myrtilles et quelques cerneaux de noix pour bien commencer la journée.",
+  "ingredients": [
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 50,
+    "unit": "g",
+    "grams": 50
+   },
+   {
+    "ingredientID": "lait",
+    "amount": 200,
+    "unit": "ml",
+    "grams": 206
+   },
+   {
+    "ingredientID": "myrtilles",
+    "amount": 60,
+    "unit": "g",
+    "grams": 60
+   },
+   {
+    "ingredientID": "noix",
+    "amount": 15,
+    "unit": "g",
+    "grams": 15
+   },
+   {
+    "ingredientID": "cannelle",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   }
+  ],
+  "steps": [
+   "Verse les flocons d'avoine et le lait dans une petite casserole.",
+   "Fais cuire 4 à 5 minutes à feu doux en remuant, jusqu'à ce que le porridge épaississe.",
+   "Verse dans un bol, ajoute les myrtilles, les noix concassées et la cannelle."
+  ],
+  "substitutions": [
+   "Lait : boisson au soja enrichie en calcium pour une version végétale.",
+   "Myrtilles : framboises ou fruits rouges surgelés."
+  ],
+  "photo": "recipe-porridge-myrtilles-noix.jpg",
+  "photoCredit": {
+   "title": null,
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/6069150/free-public-domain-cc0-photo"
+  }
+ },
+ {
+  "id": "yaourt-granola-fruits-rouges",
+  "title": "Bol de yaourt grec, muesli et fruits rouges",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 5,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Yaourt à la grecque, muesli croustillant, fraises et myrtilles : prêt en cinq minutes.",
+  "ingredients": [
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "muesli",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "fraises",
+    "amount": 60,
+    "unit": "g",
+    "grams": 60
+   },
+   {
+    "ingredientID": "myrtilles",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   }
+  ],
+  "steps": [
+   "Verse le yaourt dans un bol.",
+   "Ajoute le muesli sur un côté.",
+   "Coupe les fraises en deux et dispose-les avec les myrtilles."
+  ],
+  "substitutions": [
+   "Yaourt grec : fromage blanc ou yaourt au soja.",
+   "Muesli : flocons d'avoine et quelques noix concassées."
+  ],
+  "photo": "recipe-yaourt-granola-fruits-rouges.jpg",
+  "photoCredit": {
+   "title": "Yogurt & Granola Cereal",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5970477/yogurt-granola-cereal"
+  }
+ },
+ {
+  "id": "tartines-avocat-oeufs-mollets",
+  "title": "Tartines avocat et œufs mollets",
+  "meal": "breakfast",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 6,
+  "difficulty": "easy",
+  "summary": "Pain complet, avocat écrasé et œufs mollets parsemés de graines : un petit-déjeuner complet et rassasiant.",
+  "ingredients": [
+   {
+    "ingredientID": "pain-complet",
+    "amount": 4,
+    "unit": "tranches",
+    "grams": 140
+   },
+   {
+    "ingredientID": "avocat",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 140
+   },
+   {
+    "ingredientID": "oeuf",
+    "amount": 4,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "graines-tournesol",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   },
+   {
+    "ingredientID": "poivre",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.3
+   },
+   {
+    "ingredientID": "sel",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   }
+  ],
+  "steps": [
+   "Plonge les œufs dans l'eau bouillante 6 minutes, puis refroidis-les sous l'eau froide et écale-les.",
+   "Fais griller le pain.",
+   "Écrase l'avocat avec le jus de citron, le sel et le poivre, puis étale-le sur les tartines.",
+   "Coupe les œufs en deux, dépose-les sur l'avocat et parsème de graines."
+  ],
+  "substitutions": [
+   "Pain complet : pain sans gluten si nécessaire.",
+   "Œufs : pois chiches écrasés pour une version végétale."
+  ],
+  "photo": "recipe-tartines-avocat-oeufs-mollets.jpg",
+  "photoCredit": {
+   "title": "Healthy Avocado Breakfast",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5970474/healthy-avocado-breakfast"
+  }
+ },
+ {
+  "id": "tartine-avocat-oeuf-tomates-cerises",
+  "title": "Tartines avocat, œuf au plat et tomates cerises",
+  "meal": "breakfast",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 5,
+  "difficulty": "easy",
+  "summary": "Des œufs au plat sur une tartine d'avocat, avec des tomates cerises et des jeunes pousses.",
+  "ingredients": [
+   {
+    "ingredientID": "pain-complet",
+    "amount": 2,
+    "unit": "grandes tranches",
+    "grams": 120
+   },
+   {
+    "ingredientID": "avocat",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 140
+   },
+   {
+    "ingredientID": "oeuf",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 100
+   },
+   {
+    "ingredientID": "tomates-cerises",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "pousses-epinards",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 20
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "sel",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   },
+   {
+    "ingredientID": "poivre",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.3
+   }
+  ],
+  "steps": [
+   "Fais griller les tranches de pain.",
+   "Fais cuire les œufs au plat dans une poêle légèrement huilée, 3 à 4 minutes.",
+   "Écrase l'avocat et étale-le sur le pain.",
+   "Dépose un œuf sur chaque tartine, puis les tomates cerises coupées et les jeunes pousses."
+  ],
+  "substitutions": [],
+  "photo": "recipe-tartine-avocat-oeuf-tomates-cerises.jpg",
+  "photoCredit": {
+   "title": "Free fried egg guacamole sandwiches",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5927634/photo-image-public-domain-food-free"
+  }
+ },
+ {
+  "id": "pancakes-avoine-banane",
+  "title": "Pancakes avoine et banane",
+  "meal": "breakfast",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 10,
+  "difficulty": "easy",
+  "summary": "Des pancakes moelleux sans sucre ajouté, à base de flocons d'avoine, de banane et d'œufs.",
+  "ingredients": [
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "banane",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 240
+   },
+   {
+    "ingredientID": "oeuf",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 100
+   },
+   {
+    "ingredientID": "lait",
+    "amount": 80,
+    "unit": "ml",
+    "grams": 82
+   },
+   {
+    "ingredientID": "cannelle",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   },
+   {
+    "ingredientID": "huile-colza",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "miel",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 7
+   }
+  ],
+  "steps": [
+   "Mixe les flocons d'avoine, une banane, les œufs, le lait et la cannelle jusqu'à obtenir une pâte épaisse.",
+   "Fais chauffer une poêle légèrement huilée et verse de petites louches de pâte.",
+   "Laisse cuire 2 minutes de chaque côté.",
+   "Sers avec la seconde banane en rondelles et un filet de miel."
+  ],
+  "substitutions": [
+   "Lait : boisson végétale.",
+   "Miel : à supprimer ou remplacer par quelques fruits rouges."
+  ],
+  "photo": "recipe-pancakes-avoine-banane.jpg",
+  "photoCredit": {
+   "title": "Stack pancakes berries syrup",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/3304276/free-photo-image-blueberry-blur-background-bokeh"
+  }
+ },
+ {
+  "id": "smoothie-bowl-fraise-banane",
+  "title": "Smoothie bowl fraise et banane",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 8,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Un smoothie épais fraise-banane, garni de fraises fraîches, de copeaux de flocons et de graines.",
+  "ingredients": [
+   {
+    "ingredientID": "fraises",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "banane",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 120
+   },
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 15,
+    "unit": "g",
+    "grams": 15
+   },
+   {
+    "ingredientID": "graines-chia",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   }
+  ],
+  "steps": [
+   "Mixe 100 g de fraises avec la banane et le yaourt jusqu'à obtenir une texture épaisse.",
+   "Verse dans un bol.",
+   "Décore avec le reste des fraises coupées, les flocons d'avoine et les graines de chia."
+  ],
+  "substitutions": [
+   "Yaourt grec : yaourt au soja pour une version végétale.",
+   "Banane congelée : pour une texture plus glacée."
+  ],
+  "photo": "recipe-smoothie-bowl-fraise-banane.jpg",
+  "photoCredit": {
+   "title": "Free pretty strawberry smoothie bowl",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5918608/image-flower-white-background-public-domain"
+  }
+ },
+ {
+  "id": "bircher-fruits-rouges",
+  "title": "Bircher muesli aux fruits rouges",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 5,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Préparé la veille dans un bocal, ce muesli au yaourt se garnit de framboises et de cerises le matin.",
+  "ingredients": [
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 125,
+    "unit": "g",
+    "grams": 125
+   },
+   {
+    "ingredientID": "lait",
+    "amount": 60,
+    "unit": "ml",
+    "grams": 62
+   },
+   {
+    "ingredientID": "pomme",
+    "amount": 0.5,
+    "unit": "pièce",
+    "grams": 75
+   },
+   {
+    "ingredientID": "framboises",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "cerises",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "noisettes",
+    "amount": 10,
+    "unit": "g",
+    "grams": 10
+   }
+  ],
+  "steps": [
+   "La veille, mélange les flocons, le yaourt, le lait et la pomme râpée dans un bocal.",
+   "Ferme et laisse au réfrigérateur toute la nuit.",
+   "Le matin, ajoute les framboises, les cerises et les noisettes concassées."
+  ],
+  "substitutions": [
+   "Cerises : myrtilles ou fruits rouges surgelés hors saison."
+  ],
+  "photo": "recipe-bircher-fruits-rouges.jpg",
+  "photoCredit": {
+   "title": "Free healthy yogurt",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5907126/free-healthy-yogurt-public-domain-food-cc0-photo"
+  }
+ },
+ {
+  "id": "overnight-oats-fraises",
+  "title": "Porridge express aux fraises",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 5,
+  "cookMinutes": 2,
+  "difficulty": "easy",
+  "summary": "Un porridge préparé en deux minutes dans une tasse, garni de fraises, de myrtilles et de graines de chia.",
+  "ingredients": [
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 45,
+    "unit": "g",
+    "grams": 45
+   },
+   {
+    "ingredientID": "boisson-soja",
+    "amount": 150,
+    "unit": "ml",
+    "grams": 155
+   },
+   {
+    "ingredientID": "fraises",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "myrtilles",
+    "amount": 20,
+    "unit": "g",
+    "grams": 20
+   },
+   {
+    "ingredientID": "graines-chia",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   }
+  ],
+  "steps": [
+   "Mélange les flocons et la boisson au soja dans une grande tasse.",
+   "Fais chauffer 2 minutes au micro-ondes en mélangeant à mi-cuisson.",
+   "Ajoute les fraises coupées, les myrtilles et les graines de chia."
+  ],
+  "substitutions": [
+   "Boisson au soja : lait demi-écrémé."
+  ],
+  "photo": "recipe-overnight-oats-fraises.jpg",
+  "photoCredit": {
+   "title": "Oatmeal berries coconut cupt",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/448427/free-photo-image-berries-blueberry-breakfast"
+  }
+ },
+ {
+  "id": "smoothie-bowl-vert-myrtilles",
+  "title": "Smoothie bowl vert aux myrtilles",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 8,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Épinards, banane et kiwi mixés, avec une couronne de myrtilles, de mangue et de graines.",
+  "ingredients": [
+   {
+    "ingredientID": "pousses-epinards",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "banane",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 120
+   },
+   {
+    "ingredientID": "kiwi",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 75
+   },
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "myrtilles",
+    "amount": 50,
+    "unit": "g",
+    "grams": 50
+   },
+   {
+    "ingredientID": "mangue",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "graines-chia",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   }
+  ],
+  "steps": [
+   "Mixe les épinards, la banane, le kiwi et le yaourt jusqu'à obtenir un mélange lisse et épais.",
+   "Verse dans un bol.",
+   "Dispose les myrtilles en couronne, ajoute la mangue en dés et les graines de chia."
+  ],
+  "substitutions": [
+   "Yaourt grec : yaourt au soja.",
+   "Kiwi : ananas."
+  ],
+  "photo": "recipe-smoothie-bowl-vert-myrtilles.jpg",
+  "photoCredit": {
+   "title": "Free healthy smoothie bowl fruits",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5918759/photo-image-public-domain-hand-green"
+  }
+ },
+ {
+  "id": "fromage-blanc-muesli-cerises",
+  "title": "Fromage blanc, muesli et cerises",
+  "meal": "breakfast",
+  "servings": 1,
+  "prepMinutes": 5,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Une assiette de fromage blanc, de muesli et de fruits de saison, à préparer en quelques minutes.",
+  "ingredients": [
+   {
+    "ingredientID": "fromage-blanc",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "muesli",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "cerises",
+    "amount": 60,
+    "unit": "g",
+    "grams": 60
+   },
+   {
+    "ingredientID": "fraises",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   }
+  ],
+  "steps": [
+   "Dépose le fromage blanc au centre de l'assiette.",
+   "Ajoute le muesli autour.",
+   "Garnis de cerises dénoyautées et de fraises coupées."
+  ],
+  "substitutions": [
+   "Fromage blanc : skyr ou yaourt au soja.",
+   "Cerises : framboises hors saison."
+  ],
+  "photo": "recipe-fromage-blanc-muesli-cerises.jpg",
+  "photoCredit": {
+   "title": "Granola with cherries",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/448252/free-photo-image-breakfast-eat-yogurt"
+  }
+ },
+ {
+  "id": "salade-verte-avocat-pain-complet",
+  "title": "Salade verte, avocat, feta et olives",
+  "meal": "lunch",
+  "servings": 2,
+  "prepMinutes": 15,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Une grande salade croquante avec avocat, tomates cerises, feta et olives noires, servie avec du pain de seigle.",
+  "ingredients": [
+   {
+    "ingredientID": "laitue",
+    "amount": 1,
+    "unit": "petite",
+    "grams": 120
+   },
+   {
+    "ingredientID": "roquette",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "avocat",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 140
+   },
+   {
+    "ingredientID": "tomates-cerises",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "feta",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "olives-noires",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "vinaigre-cidre",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "pain-seigle",
+    "amount": 2,
+    "unit": "tranches",
+    "grams": 80
+   }
+  ],
+  "steps": [
+   "Lave et essore la salade et la roquette.",
+   "Coupe l'avocat en dés et les tomates cerises en deux.",
+   "Mélange avec les pois chiches égouttés, la feta émiettée et les olives.",
+   "Assaisonne d'huile d'olive et de vinaigre, puis sers avec le pain de seigle."
+  ],
+  "substitutions": [
+   "Feta : tofu nature émietté pour une version végétale.",
+   "Pain de seigle : pain sans gluten."
+  ],
+  "photo": "recipe-salade-verte-avocat-pain-complet.jpg",
+  "photoCredit": {
+   "title": "Free bowl salad toasted bread",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5910745/photo-image-public-domain-food-free"
+  }
+ },
+ {
+  "id": "salade-mache-betterave-noix",
+  "title": "Salade de mâche, betterave, pomme et lentilles",
+  "meal": "lunch",
+  "servings": 2,
+  "prepMinutes": 15,
+  "cookMinutes": 20,
+  "difficulty": "easy",
+  "summary": "Mâche, betterave, pomme croquante et lentilles vertes : une salade colorée et riche en fibres.",
+  "ingredients": [
+   {
+    "ingredientID": "lentilles-vertes",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "mache",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "betterave",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "pomme",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "noix",
+    "amount": 20,
+    "unit": "g",
+    "grams": 20
+   },
+   {
+    "ingredientID": "huile-colza",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "moutarde",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   },
+   {
+    "ingredientID": "vinaigre-cidre",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   }
+  ],
+  "steps": [
+   "Fais cuire les lentilles 20 minutes dans l'eau frémissante, puis égoutte-les et laisse-les tiédir.",
+   "Coupe la betterave et la pomme en petits dés.",
+   "Prépare la vinaigrette avec l'huile de colza, la moutarde et le vinaigre.",
+   "Mélange la mâche, les lentilles, la betterave et la pomme, puis ajoute les noix concassées et la vinaigrette."
+  ],
+  "substitutions": [
+   "Lentilles cuites en conserve pour gagner du temps."
+  ],
+  "photo": "recipe-salade-mache-betterave-noix.jpg",
+  "photoCredit": {
+   "title": "Free top view fresh salad",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5912478/image-public-domain-plant-green"
+  }
+ },
+ {
+  "id": "salade-crevettes-crudites",
+  "title": "Salade de crevettes et crudités",
+  "meal": "lunch",
+  "servings": 2,
+  "prepMinutes": 15,
+  "cookMinutes": 3,
+  "difficulty": "easy",
+  "summary": "Des crevettes saisies sur un lit de salade, radis, carottes et tomates, avec une vinaigrette citronnée.",
+  "ingredients": [
+   {
+    "ingredientID": "crevettes",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "laitue",
+    "amount": 1,
+    "unit": "petite",
+    "grams": 120
+   },
+   {
+    "ingredientID": "radis",
+    "amount": 6,
+    "unit": "pièces",
+    "grams": 60
+   },
+   {
+    "ingredientID": "carotte",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "tomates-cerises",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   }
+  ],
+  "steps": [
+   "Fais revenir les crevettes 2 à 3 minutes dans une poêle avec un peu d'huile et l'ail émincé.",
+   "Lave la salade, émince les radis et râpe la carotte.",
+   "Dispose les légumes et les tomates dans les assiettes.",
+   "Ajoute les crevettes et arrose d'huile d'olive et de jus de citron."
+  ],
+  "substitutions": [
+   "Crevettes : thon au naturel ou pois chiches."
+  ],
+  "photo": "recipe-salade-crevettes-crudites.jpg",
+  "photoCredit": {
+   "title": "Shrimp salad",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/6036730/shrimp-salad-free-public-domain-cc0-photo"
+  }
+ },
+ {
+  "id": "salade-avocat-tomate-pois-chiches",
+  "title": "Salade tomate, concombre et pois chiches",
+  "meal": "lunch",
+  "servings": 2,
+  "prepMinutes": 15,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Des dés de tomate et de concombre, des pois chiches et des herbes fraîches : une salade simple et fraîche.",
+  "ingredients": [
+   {
+    "ingredientID": "tomate",
+    "amount": 3,
+    "unit": "pièces",
+    "grams": 300
+   },
+   {
+    "ingredientID": "concombre",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 250
+   },
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   },
+   {
+    "ingredientID": "oignon-rouge",
+    "amount": 0.5,
+    "unit": "pièce",
+    "grams": 50
+   },
+   {
+    "ingredientID": "persil",
+    "amount": 1,
+    "unit": "botte",
+    "grams": 20
+   },
+   {
+    "ingredientID": "menthe",
+    "amount": 5,
+    "unit": "feuilles",
+    "grams": 3
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 30
+   },
+   {
+    "ingredientID": "sel",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   }
+  ],
+  "steps": [
+   "Coupe les tomates et le concombre en petits dés, émince finement l'oignon rouge.",
+   "Égoutte et rince les pois chiches.",
+   "Hache le persil et la menthe.",
+   "Mélange le tout avec l'huile d'olive, le jus de citron et le sel."
+  ],
+  "substitutions": [
+   "Pois chiches : feta en dés ou œufs durs."
+  ],
+  "photo": "recipe-salade-avocat-tomate-pois-chiches.jpg",
+  "photoCredit": {
+   "title": "Fresh side dish vegetable salad",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5927590/photo-image-public-domain-plant-food"
+  }
+ },
+ {
+  "id": "veloute-lentilles-corail-graines",
+  "title": "Velouté de lentilles corail et graines",
+  "meal": "lunch",
+  "servings": 4,
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "difficulty": "easy",
+  "summary": "Un velouté orangé et doux à base de lentilles corail et de carottes, parsemé de graines grillées.",
+  "ingredients": [
+   {
+    "ingredientID": "lentilles-corail",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "carotte",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   },
+   {
+    "ingredientID": "curcuma",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "bouillon-legumes",
+    "amount": 1,
+    "unit": "litre",
+    "grams": 1000
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "graines-tournesol",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   }
+  ],
+  "steps": [
+   "Fais revenir l'oignon et l'ail émincés dans l'huile 3 minutes.",
+   "Ajoute les carottes en rondelles, les épices, les lentilles rincées et le bouillon.",
+   "Laisse mijoter 20 minutes, jusqu'à ce que les lentilles soient fondantes.",
+   "Mixe, puis sers avec les graines grillées à sec."
+  ],
+  "substitutions": [
+   "Graines de tournesol : graines de courge.",
+   "Bouillon : choisis un bouillon pauvre en sel."
+  ],
+  "photo": "recipe-veloute-lentilles-corail-graines.jpg",
+  "photoCredit": {
+   "title": "Free pumpkin soup bowl image",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5922901/photo-image-public-domain-leaf-fruit"
+  }
+ },
+ {
+  "id": "minestrone-legumes-pates",
+  "title": "Minestrone de légumes et petites pâtes",
+  "meal": "lunch",
+  "servings": 4,
+  "prepMinutes": 15,
+  "cookMinutes": 25,
+  "difficulty": "easy",
+  "summary": "Une soupe généreuse de légumes, de petits pois et de pâtes complètes, relevée de persil frais.",
+  "ingredients": [
+   {
+    "ingredientID": "pates-completes",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   },
+   {
+    "ingredientID": "carotte",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "courgette",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 200
+   },
+   {
+    "ingredientID": "petits-pois",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "brocoli",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "bouillon-legumes",
+    "amount": 1.2,
+    "unit": "litre",
+    "grams": 1200
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "persil",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 10
+   },
+   {
+    "ingredientID": "parmesan",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   }
+  ],
+  "steps": [
+   "Fais revenir l'oignon émincé dans l'huile d'olive.",
+   "Ajoute les carottes et la courgette en dés, puis le bouillon, et laisse cuire 10 minutes.",
+   "Ajoute les pâtes, les petits pois et les fleurettes de brocoli, et poursuis la cuisson 10 minutes.",
+   "Sers avec le persil haché et le parmesan râpé."
+  ],
+  "substitutions": [
+   "Parmesan : à supprimer pour une version végétale.",
+   "Pâtes : pâtes sans gluten ou riz."
+  ],
+  "photo": "recipe-minestrone-legumes-pates.jpg",
+  "photoCredit": {
+   "title": "Free clear vegetable soup bowl",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5924545/photo-image-public-domain-food-water"
+  }
+ },
+ {
+  "id": "veloute-potiron-graines",
+  "title": "Velouté de potiron au gingembre",
+  "meal": "lunch",
+  "servings": 4,
+  "prepMinutes": 15,
+  "cookMinutes": 25,
+  "difficulty": "easy",
+  "summary": "Un velouté de potiron doux, relevé de gingembre et de lait de coco, servi avec des graines.",
+  "ingredients": [
+   {
+    "ingredientID": "potiron",
+    "amount": 1,
+    "unit": "kg",
+    "grams": 1000
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "gingembre",
+    "amount": 2,
+    "unit": "cm",
+    "grams": 10
+   },
+   {
+    "ingredientID": "lait-coco",
+    "amount": 100,
+    "unit": "ml",
+    "grams": 100
+   },
+   {
+    "ingredientID": "bouillon-legumes",
+    "amount": 600,
+    "unit": "ml",
+    "grams": 600
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "graines-tournesol",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "coriandre",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 5
+   },
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   }
+  ],
+  "steps": [
+   "Fais revenir l'oignon et le gingembre râpé dans l'huile.",
+   "Ajoute le potiron en cubes et le bouillon, puis laisse cuire 20 minutes.",
+   "Mixe avec le lait de coco.",
+   "Sers avec les graines, la coriandre et les pois chiches poêlés à part."
+  ],
+  "substitutions": [
+   "Potiron : courge butternut.",
+   "Pois chiches : à remplacer par une tranche de pain complet."
+  ],
+  "photo": "recipe-veloute-potiron-graines.jpg",
+  "photoCredit": {
+   "title": "Free pumpkin soup bowl top",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5927637/photo-image-public-domain-halloween-food"
+  }
+ },
+ {
+  "id": "carottes-roties-pois-chiches-kale",
+  "title": "Carottes rôties, pois chiches et kale",
+  "meal": "lunch",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 30,
+  "difficulty": "easy",
+  "summary": "Des carottes entières rôties au four, des pois chiches croustillants et du chou kale, avec un filet de citron.",
+  "ingredients": [
+   {
+    "ingredientID": "carotte",
+    "amount": 6,
+    "unit": "pièces",
+    "grams": 400
+   },
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   },
+   {
+    "ingredientID": "chou-kale",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "quinoa",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "sel",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   }
+  ],
+  "steps": [
+   "Préchauffe le four à 200 °C.",
+   "Dispose les carottes et les pois chiches sur une plaque, arrose d'huile, de cumin et de sel, et enfourne 30 minutes.",
+   "Pendant ce temps, fais cuire le quinoa 12 minutes.",
+   "Fais revenir le kale 2 minutes à la poêle.",
+   "Sers les légumes rôtis sur le quinoa et le kale, avec un filet de citron."
+  ],
+  "substitutions": [
+   "Kale : épinards frais.",
+   "Quinoa : boulgour ou riz complet."
+  ],
+  "photo": "recipe-carottes-roties-pois-chiches-kale.jpg",
+  "photoCredit": {
+   "title": "Free baked carrots chickpeas salad",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5927962/photo-image-public-domain-wooden-table"
+  }
+ },
+ {
+  "id": "saumon-grille-brocolis",
+  "title": "Saumon grillé, légumes vapeur et sauce yaourt",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 15,
+  "difficulty": "easy",
+  "summary": "Un pavé de saumon grillé, des brocolis, des carottes et des poivrons, avec une sauce yaourt aux herbes.",
+  "ingredients": [
+   {
+    "ingredientID": "saumon",
+    "amount": 2,
+    "unit": "pavés",
+    "grams": 260
+   },
+   {
+    "ingredientID": "brocoli",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "carotte",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "poivron-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ciboulette",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 5
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "riz-complet",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   }
+  ],
+  "steps": [
+   "Fais cuire le riz complet selon les indications du paquet.",
+   "Fais cuire les légumes 8 à 10 minutes à la vapeur.",
+   "Fais griller le saumon 3 à 4 minutes de chaque côté dans une poêle-gril légèrement huilée.",
+   "Mélange le yaourt, la ciboulette et le citron, puis nappe le saumon de cette sauce."
+  ],
+  "substitutions": [
+   "Saumon : maquereau ou truite.",
+   "Yaourt : yaourt au soja."
+  ],
+  "photo": "recipe-saumon-grille-brocolis.jpg",
+  "photoCredit": {
+   "title": "Free delicious salmon fish dinner",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5926954/photo-image-public-domain-plant-food"
+  }
+ },
+ {
+  "id": "saumon-roti-legumes-soleil",
+  "title": "Saumon et salade composée",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 15,
+  "cookMinutes": 12,
+  "difficulty": "easy",
+  "summary": "Un pavé de saumon doré, servi avec une salade de tomates, d'épinards, d'oignon rouge et un œuf dur.",
+  "ingredients": [
+   {
+    "ingredientID": "saumon",
+    "amount": 2,
+    "unit": "pavés",
+    "grams": 260
+   },
+   {
+    "ingredientID": "pousses-epinards",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "tomate",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "oignon-rouge",
+    "amount": 0.5,
+    "unit": "pièce",
+    "grams": 50
+   },
+   {
+    "ingredientID": "oeuf",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 100
+   },
+   {
+    "ingredientID": "pomme-de-terre",
+    "amount": 300,
+    "unit": "g",
+    "grams": 300
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   }
+  ],
+  "steps": [
+   "Fais cuire les pommes de terre 20 minutes à l'eau et les œufs 9 minutes.",
+   "Fais dorer le saumon 4 minutes côté peau, puis 2 minutes de l'autre côté.",
+   "Prépare la salade avec les épinards, les tomates, l'oignon rouge et les œufs coupés en deux.",
+   "Assaisonne d'huile d'olive et de citron, puis sers avec le saumon et les pommes de terre."
+  ],
+  "substitutions": [],
+  "photo": "recipe-saumon-roti-legumes-soleil.jpg",
+  "photoCredit": {
+   "title": "Free healthy salmon dinner image",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5905447/photo-image-public-domain-leaf-plant"
+  }
+ },
+ {
+  "id": "saumon-poele-romarin",
+  "title": "Saumon poêlé au romarin et à l'huile d'olive",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 5,
+  "cookMinutes": 10,
+  "difficulty": "easy",
+  "summary": "Un saumon nacré, parfumé au romarin et au thym, servi avec du quinoa et des haricots verts.",
+  "ingredients": [
+   {
+    "ingredientID": "saumon",
+    "amount": 2,
+    "unit": "pavés",
+    "grams": 260
+   },
+   {
+    "ingredientID": "romarin",
+    "amount": 2,
+    "unit": "brins",
+    "grams": 4
+   },
+   {
+    "ingredientID": "thym",
+    "amount": 2,
+    "unit": "brins",
+    "grams": 2
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "quinoa",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   },
+   {
+    "ingredientID": "brocoli",
+    "amount": 250,
+    "unit": "g",
+    "grams": 250
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   }
+  ],
+  "steps": [
+   "Fais cuire le quinoa 12 minutes et le brocoli 8 minutes à la vapeur.",
+   "Fais chauffer l'huile avec le romarin et le thym.",
+   "Fais cuire le saumon 4 minutes côté peau, puis 2 à 3 minutes de l'autre côté.",
+   "Sers avec le quinoa, le brocoli et un filet de citron."
+  ],
+  "substitutions": [
+   "Saumon : cabillaud ou truite."
+  ],
+  "photo": "recipe-saumon-poele-romarin.jpg",
+  "photoCredit": {
+   "title": "Free delicious salmon fish dinner",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5921542/photo-image-public-domain-leaf-plant"
+  }
+ },
+ {
+  "id": "poelee-saumon-epinards",
+  "title": "Poêlée de saumon aux épinards",
+  "meal": "dinner",
+  "servings": 3,
+  "prepMinutes": 10,
+  "cookMinutes": 15,
+  "difficulty": "easy",
+  "summary": "Des morceaux de saumon mijotés avec des épinards dans une sauce légère au yaourt et au citron.",
+  "ingredients": [
+   {
+    "ingredientID": "saumon",
+    "amount": 3,
+    "unit": "pavés",
+    "grams": 390
+   },
+   {
+    "ingredientID": "epinards",
+    "amount": 300,
+    "unit": "g",
+    "grams": 300
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   },
+   {
+    "ingredientID": "yaourt-grec",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "riz-complet",
+    "amount": 180,
+    "unit": "g",
+    "grams": 180
+   }
+  ],
+  "steps": [
+   "Fais cuire le riz complet.",
+   "Dans une grande poêle, fais revenir l'oignon et l'ail dans l'huile, puis ajoute les épinards jusqu'à ce qu'ils fondent.",
+   "Ajoute le saumon en gros cubes et laisse cuire 5 minutes à couvert.",
+   "Hors du feu, incorpore le yaourt et le citron. Sers avec le riz."
+  ],
+  "substitutions": [
+   "Yaourt : crème végétale.",
+   "Épinards frais : épinards surgelés."
+  ],
+  "photo": "recipe-poelee-saumon-epinards.jpg",
+  "photoCredit": {
+   "title": "Free cream spinach salmon fish",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5926957/photo-image-public-domain-marble-plant"
+  }
+ },
+ {
+  "id": "poulet-grille-epinards",
+  "title": "Poulet grillé, épinards et radis",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 15,
+  "difficulty": "easy",
+  "summary": "Un filet de poulet grillé aux herbes, servi sur un lit d'épinards, de tomates cerises et de radis.",
+  "ingredients": [
+   {
+    "ingredientID": "poulet-filet",
+    "amount": 2,
+    "unit": "filets",
+    "grams": 280
+   },
+   {
+    "ingredientID": "epinards",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "tomates-cerises",
+    "amount": 100,
+    "unit": "g",
+    "grams": 100
+   },
+   {
+    "ingredientID": "radis",
+    "amount": 4,
+    "unit": "pièces",
+    "grams": 40
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "basilic",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 5
+   },
+   {
+    "ingredientID": "patate-douce",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 300
+   }
+  ],
+  "steps": [
+   "Coupe la patate douce en quartiers et fais-la rôtir 25 minutes au four à 200 °C.",
+   "Fais griller le poulet 5 à 6 minutes de chaque côté, jusqu'à ce qu'il soit bien cuit à cœur.",
+   "Fais fondre les épinards 2 minutes à la poêle.",
+   "Sers le poulet sur les épinards avec les tomates, les radis et le basilic."
+  ],
+  "substitutions": [
+   "Poulet : tofu ferme grillé."
+  ],
+  "photo": "recipe-poulet-grille-epinards.jpg",
+  "photoCredit": {
+   "title": "Chicken breast with spinach",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/448215/free-photo-image-chicken-breast-chicken-food"
+  }
+ },
+ {
+  "id": "poulet-roti-paprika",
+  "title": "Poulet rôti au paprika",
+  "meal": "dinner",
+  "servings": 4,
+  "prepMinutes": 10,
+  "cookMinutes": 40,
+  "difficulty": "easy",
+  "summary": "Des morceaux de poulet rôtis au four avec du paprika et de l'ail, servis avec des légumes rôtis.",
+  "ingredients": [
+   {
+    "ingredientID": "poulet-ailes",
+    "amount": 800,
+    "unit": "g",
+    "grams": 800
+   },
+   {
+    "ingredientID": "paprika",
+    "amount": 2,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "pomme-de-terre",
+    "amount": 600,
+    "unit": "g",
+    "grams": 600
+   },
+   {
+    "ingredientID": "courgette",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 400
+   },
+   {
+    "ingredientID": "poivron-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "thym",
+    "amount": 2,
+    "unit": "brins",
+    "grams": 2
+   }
+  ],
+  "steps": [
+   "Préchauffe le four à 200 °C.",
+   "Enrobe le poulet de paprika, d'ail écrasé et d'huile.",
+   "Dispose-le sur une plaque avec les pommes de terre, la courgette et le poivron en morceaux, et le thym.",
+   "Fais rôtir 40 minutes en retournant à mi-cuisson, jusqu'à ce que la viande soit bien cuite à cœur."
+  ],
+  "substitutions": [
+   "Ailes : hauts de cuisse sans peau, moins gras."
+  ],
+  "photo": "recipe-poulet-roti-paprika.jpg",
+  "photoCredit": {
+   "title": "Free bbq chicken wings image",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5970535/photo-image-public-domain-food"
+  }
+ },
+ {
+  "id": "curry-vert-poulet",
+  "title": "Curry de poulet au lait de coco et basilic",
+  "meal": "dinner",
+  "servings": 4,
+  "prepMinutes": 15,
+  "cookMinutes": 20,
+  "difficulty": "medium",
+  "summary": "Un curry doux au gingembre, au basilic et au lait de coco, servi avec du riz.",
+  "ingredients": [
+   {
+    "ingredientID": "poulet-filet",
+    "amount": 500,
+    "unit": "g",
+    "grams": 500
+   },
+   {
+    "ingredientID": "lait-coco",
+    "amount": 200,
+    "unit": "ml",
+    "grams": 200
+   },
+   {
+    "ingredientID": "courgette",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 200
+   },
+   {
+    "ingredientID": "poivron-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "gingembre",
+    "amount": 3,
+    "unit": "cm",
+    "grams": 15
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "curry",
+    "amount": 2,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "basilic",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 10
+   },
+   {
+    "ingredientID": "huile-colza",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "riz-basmati",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   }
+  ],
+  "steps": [
+   "Fais cuire le riz.",
+   "Fais revenir l'ail, le gingembre et le curry dans l'huile 1 minute.",
+   "Ajoute le poulet en lamelles et fais-le dorer.",
+   "Ajoute les légumes et le lait de coco, puis laisse mijoter 12 minutes.",
+   "Parsème de basilic et sers avec le riz."
+  ],
+  "substitutions": [
+   "Poulet : tofu ferme ou pois chiches.",
+   "Lait de coco : moitié lait de coco, moitié bouillon pour plus de légèreté."
+  ],
+  "photo": "recipe-curry-vert-poulet.jpg",
+  "photoCredit": {
+   "title": "Free Thai green curry bowl",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5926797/photo-image-public-domain-green-food"
+  }
+ },
+ {
+  "id": "dahl-lentilles-corail",
+  "title": "Dahl de lentilles corail à la coriandre",
+  "meal": "dinner",
+  "servings": 4,
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "difficulty": "easy",
+  "summary": "Des lentilles corail fondantes, des tomates et des épices douces, avec beaucoup de coriandre fraîche.",
+  "ingredients": [
+   {
+    "ingredientID": "lentilles-corail",
+    "amount": 250,
+    "unit": "g",
+    "grams": 250
+   },
+   {
+    "ingredientID": "tomates-pulpe",
+    "amount": 400,
+    "unit": "g",
+    "grams": 400
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "gingembre",
+    "amount": 2,
+    "unit": "cm",
+    "grams": 10
+   },
+   {
+    "ingredientID": "curcuma",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "lait-coco",
+    "amount": 100,
+    "unit": "ml",
+    "grams": 100
+   },
+   {
+    "ingredientID": "coriandre",
+    "amount": 1,
+    "unit": "botte",
+    "grams": 20
+   },
+   {
+    "ingredientID": "huile-colza",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "riz-basmati",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   }
+  ],
+  "steps": [
+   "Fais revenir l'oignon, l'ail et le gingembre dans l'huile.",
+   "Ajoute les épices, puis les lentilles rincées, la pulpe de tomate et 600 ml d'eau.",
+   "Laisse mijoter 20 minutes en remuant, puis ajoute le lait de coco.",
+   "Sers avec le riz, la coriandre et un filet de citron (sa vitamine C aide à absorber le fer des lentilles)."
+  ],
+  "substitutions": [
+   "Riz : pain naan complet.",
+   "Lait de coco : à supprimer pour une version plus légère."
+  ],
+  "photo": "recipe-dahl-lentilles-corail.jpg",
+  "photoCredit": {
+   "title": "Spicy Indian Curry",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5970798/spicy-indian-curry"
+  }
+ },
+ {
+  "id": "shakshuka",
+  "title": "Shakshuka",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 20,
+  "difficulty": "easy",
+  "summary": "Des œufs pochés dans une sauce tomate aux poivrons et au cumin, servis avec du pain complet.",
+  "ingredients": [
+   {
+    "ingredientID": "oeuf",
+    "amount": 4,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "tomates-pulpe",
+    "amount": 400,
+    "unit": "g",
+    "grams": 400
+   },
+   {
+    "ingredientID": "poivron-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "paprika",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "basilic",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 5
+   },
+   {
+    "ingredientID": "pain-complet",
+    "amount": 2,
+    "unit": "tranches",
+    "grams": 80
+   }
+  ],
+  "steps": [
+   "Fais revenir l'oignon et le poivron émincés dans l'huile 5 minutes, puis ajoute l'ail et les épices.",
+   "Verse la pulpe de tomate et laisse mijoter 10 minutes.",
+   "Creuse quatre puits et casse un œuf dans chacun.",
+   "Couvre et laisse cuire 5 à 7 minutes, jusqu'à ce que les blancs soient pris. Parsème de basilic et sers avec le pain."
+  ],
+  "substitutions": [
+   "Œufs : pois chiches et feta pour une version sans œuf."
+  ],
+  "photo": "recipe-shakshuka.jpg",
+  "photoCredit": {
+   "title": "Free pouched egg spicy tomato",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5924130/photo-image-public-domain-food-free"
+  }
+ },
+ {
+  "id": "chili-sin-carne",
+  "title": "Chili sin carne",
+  "meal": "dinner",
+  "servings": 4,
+  "prepMinutes": 15,
+  "cookMinutes": 30,
+  "difficulty": "easy",
+  "summary": "Un chili végétarien aux haricots rouges, au maïs et aux poivrons, avec du riz complet.",
+  "ingredients": [
+   {
+    "ingredientID": "haricots-rouges",
+    "amount": 480,
+    "unit": "g",
+    "grams": 480
+   },
+   {
+    "ingredientID": "mais",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "tomates-pulpe",
+    "amount": 400,
+    "unit": "g",
+    "grams": 400
+   },
+   {
+    "ingredientID": "poivron-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 2,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "paprika",
+    "amount": 2,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "concentre-tomate",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "riz-complet",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   }
+  ],
+  "steps": [
+   "Fais cuire le riz complet.",
+   "Fais revenir l'oignon, l'ail et le poivron dans l'huile.",
+   "Ajoute les épices, le concentré et la pulpe de tomate, puis les haricots et le maïs égouttés.",
+   "Laisse mijoter 20 minutes à feu doux et sers avec le riz."
+  ],
+  "substitutions": [
+   "Haricots rouges : lentilles vertes cuites.",
+   "Ajoute un yaourt grec au service si tu en manges."
+  ],
+  "photo": "recipe-chili-sin-carne.jpg",
+  "photoCredit": {
+   "title": "Free vegetable barley creamy soup",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5924298/photo-image-flower-public-domain-food"
+  }
+ },
+ {
+  "id": "nouilles-tofu-brocoli",
+  "title": "Nouilles sautées au tofu et brocoli",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 12,
+  "difficulty": "easy",
+  "summary": "Des nouilles sautées avec des cubes de tofu dorés et du brocoli, relevées de sauce soja et de sésame.",
+  "ingredients": [
+   {
+    "ingredientID": "nouilles",
+    "amount": 160,
+    "unit": "g",
+    "grams": 160
+   },
+   {
+    "ingredientID": "tofu",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "brocoli",
+    "amount": 250,
+    "unit": "g",
+    "grams": 250
+   },
+   {
+    "ingredientID": "sauce-soja",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   },
+   {
+    "ingredientID": "huile-sesame",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "gingembre",
+    "amount": 2,
+    "unit": "cm",
+    "grams": 10
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   },
+   {
+    "ingredientID": "sesame",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   }
+  ],
+  "steps": [
+   "Fais cuire les nouilles selon le paquet et le brocoli 4 minutes à l'eau bouillante.",
+   "Fais dorer le tofu en cubes dans l'huile de sésame 5 minutes.",
+   "Ajoute l'ail et le gingembre, puis le brocoli et les nouilles.",
+   "Arrose de sauce soja, mélange et parsème de sésame."
+  ],
+  "substitutions": [
+   "Nouilles : nouilles de riz pour une version sans gluten, avec une sauce soja sans gluten (tamari).",
+   "Choisis une sauce soja réduite en sel."
+  ],
+  "photo": "recipe-nouilles-tofu-brocoli.jpg",
+  "photoCredit": {
+   "title": "Sautéed Tofu and Broccoli",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/8735012/sauteed-tofu-and-broccoli"
+  }
+ },
+ {
+  "id": "pates-thon-oignon-rouge-aneth",
+  "title": "Pâtes complètes au thon, oignon rouge et aneth",
+  "meal": "dinner",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 12,
+  "difficulty": "easy",
+  "summary": "Des pâtes complètes avec du thon, de l'oignon rouge fondant, des tomates et de l'aneth frais.",
+  "ingredients": [
+   {
+    "ingredientID": "pates-completes",
+    "amount": 160,
+    "unit": "g",
+    "grams": 160
+   },
+   {
+    "ingredientID": "thon",
+    "amount": 140,
+    "unit": "g",
+    "grams": 140
+   },
+   {
+    "ingredientID": "oignon-rouge",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "tomates-cerises",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "aneth",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 5
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 15
+   }
+  ],
+  "steps": [
+   "Fais cuire les pâtes selon le paquet.",
+   "Fais fondre l'oignon rouge émincé et l'ail dans l'huile 5 minutes.",
+   "Ajoute les tomates coupées et le thon émietté, et réchauffe 2 minutes.",
+   "Mélange avec les pâtes égouttées, l'aneth et le citron."
+  ],
+  "substitutions": [
+   "Thon : sardines ou pois chiches."
+  ],
+  "photo": "recipe-pates-thon-oignon-rouge-aneth.jpg",
+  "photoCredit": {
+   "title": "Bavette with dill food photography",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/448209/free-photo-image-pasta-food-lunch"
+  }
+ },
+ {
+  "id": "ragout-pois-chiches-epinards",
+  "title": "Ragoût de pois chiches aux épinards",
+  "meal": "dinner",
+  "servings": 4,
+  "prepMinutes": 10,
+  "cookMinutes": 25,
+  "difficulty": "easy",
+  "summary": "Un ragoût réconfortant de pois chiches, de tomates et d'épinards aux épices douces, servi avec du riz.",
+  "ingredients": [
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 480,
+    "unit": "g",
+    "grams": 480
+   },
+   {
+    "ingredientID": "epinards",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "tomates-pulpe",
+    "amount": 400,
+    "unit": "g",
+    "grams": 400
+   },
+   {
+    "ingredientID": "oignon",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 100
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 2,
+    "unit": "gousses",
+    "grams": 10
+   },
+   {
+    "ingredientID": "curry",
+    "amount": 2,
+    "unit": "c. à café",
+    "grams": 4
+   },
+   {
+    "ingredientID": "lait-coco",
+    "amount": 100,
+    "unit": "ml",
+    "grams": 100
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "riz-basmati",
+    "amount": 200,
+    "unit": "g",
+    "grams": 200
+   },
+   {
+    "ingredientID": "coriandre",
+    "amount": 1,
+    "unit": "poignée",
+    "grams": 10
+   }
+  ],
+  "steps": [
+   "Fais cuire le riz.",
+   "Fais revenir l'oignon et l'ail dans l'huile, puis ajoute le curry.",
+   "Ajoute la pulpe de tomate, les pois chiches et le lait de coco, et laisse mijoter 15 minutes.",
+   "Incorpore les épinards jusqu'à ce qu'ils fondent, puis sers avec le riz et la coriandre."
+  ],
+  "substitutions": [],
+  "photo": "recipe-ragout-pois-chiches-epinards.jpg",
+  "photoCredit": {
+   "title": "Free vegan chickpea curry image",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5918870/image-public-domain-leaves-black-background"
+  }
+ },
+ {
+  "id": "houmous-maison",
+  "title": "Houmous maison et bâtonnets de légumes",
+  "meal": "snack",
+  "servings": 4,
+  "prepMinutes": 10,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Un houmous onctueux à l'huile d'olive, à tremper avec des bâtonnets de carotte et de concombre.",
+  "ingredients": [
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 240,
+    "unit": "g",
+    "grams": 240
+   },
+   {
+    "ingredientID": "sesame",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "citron",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 30
+   },
+   {
+    "ingredientID": "ail",
+    "amount": 1,
+    "unit": "gousse",
+    "grams": 5
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 2,
+    "unit": "c. à soupe",
+    "grams": 20
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   },
+   {
+    "ingredientID": "carotte",
+    "amount": 2,
+    "unit": "pièces",
+    "grams": 200
+   },
+   {
+    "ingredientID": "concombre",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 250
+   },
+   {
+    "ingredientID": "basilic",
+    "amount": 4,
+    "unit": "feuilles",
+    "grams": 2
+   }
+  ],
+  "steps": [
+   "Mixe les pois chiches, le sésame, le citron, l'ail, le cumin et 3 cuillères à soupe d'eau jusqu'à obtenir une texture lisse.",
+   "Ajoute l'huile d'olive en filet en mixant.",
+   "Sers avec les légumes en bâtonnets et quelques feuilles de basilic."
+  ],
+  "substitutions": [
+   "Graines de sésame : 1 cuillère à soupe de purée de sésame (tahini)."
+  ],
+  "photo": "recipe-houmous-maison.jpg",
+  "photoCredit": {
+   "title": "Free top hummus white plate",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5921833/photo-image-public-domain-food-pizza"
+  }
+ },
+ {
+  "id": "amandes-nature",
+  "title": "Une poignée d'amandes et un fruit",
+  "meal": "snack",
+  "servings": 1,
+  "prepMinutes": 1,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "La collation la plus simple : une petite poignée d'amandes et un fruit de saison.",
+  "ingredients": [
+   {
+    "ingredientID": "amandes",
+    "amount": 20,
+    "unit": "g",
+    "grams": 20
+   },
+   {
+    "ingredientID": "pomme",
+    "amount": 1,
+    "unit": "pièce",
+    "grams": 150
+   }
+  ],
+  "steps": [
+   "Prends une petite poignée d'amandes nature, environ 15 amandes.",
+   "Accompagne-les d'un fruit de saison."
+  ],
+  "substitutions": [
+   "Amandes : noisettes ou noix.",
+   "Pomme : poire, kiwi ou orange."
+  ],
+  "photo": "recipe-amandes-nature.jpg",
+  "photoCredit": {
+   "title": null,
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5955900/free-public-domain-cc0-photo"
+  }
+ },
+ {
+  "id": "pois-chiches-rotis",
+  "title": "Pois chiches rôtis aux épices",
+  "meal": "snack",
+  "servings": 4,
+  "prepMinutes": 5,
+  "cookMinutes": 30,
+  "difficulty": "easy",
+  "summary": "Des pois chiches croustillants rôtis au four avec du paprika et du cumin, à grignoter.",
+  "ingredients": [
+   {
+    "ingredientID": "pois-chiches",
+    "amount": 480,
+    "unit": "g",
+    "grams": 480
+   },
+   {
+    "ingredientID": "huile-olive",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   },
+   {
+    "ingredientID": "paprika",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "cumin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 2
+   },
+   {
+    "ingredientID": "sel",
+    "amount": 1,
+    "unit": "pincée",
+    "grams": 0.5
+   }
+  ],
+  "steps": [
+   "Préchauffe le four à 200 °C.",
+   "Rince, égoutte et sèche soigneusement les pois chiches.",
+   "Mélange-les avec l'huile, les épices et le sel.",
+   "Fais-les rôtir 25 à 30 minutes en remuant à mi-cuisson, puis laisse-les refroidir."
+  ],
+  "substitutions": [],
+  "photo": "recipe-pois-chiches-rotis.jpg",
+  "photoCredit": {
+   "title": "Free chickpea bowl table image",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/5928374/photo-image-public-domain-food-free"
+  }
+ },
+ {
+  "id": "melange-noix",
+  "title": "Mélange de noix",
+  "meal": "snack",
+  "servings": 4,
+  "prepMinutes": 2,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Un mélange maison de noix, noisettes, amandes et noix de pécan, à garder dans un bocal.",
+  "ingredients": [
+   {
+    "ingredientID": "noix",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "noisettes",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "amandes",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "noix-pecan",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   }
+  ],
+  "steps": [
+   "Mélange les fruits à coque dans un bocal hermétique.",
+   "Prévois une portion d'environ 30 g, soit une petite poignée."
+  ],
+  "substitutions": [
+   "Choisis des fruits à coque nature, non salés."
+  ],
+  "photo": "recipe-melange-noix.jpg",
+  "photoCredit": {
+   "title": "Almond seeds",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/6020508/almond-seeds-free-public-domain-cc0-photo"
+  }
+ },
+ {
+  "id": "energy-balls-dattes-avoine",
+  "title": "Energy balls dattes et avoine",
+  "meal": "snack",
+  "servings": 6,
+  "prepMinutes": 15,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Des petites bouchées de dattes, de flocons d'avoine et de beurre de cacahuète, sans sucre ajouté.",
+  "ingredients": [
+   {
+    "ingredientID": "dattes",
+    "amount": 120,
+    "unit": "g",
+    "grams": 120
+   },
+   {
+    "ingredientID": "flocons-avoine",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "beurre-cacahuete",
+    "amount": 40,
+    "unit": "g",
+    "grams": 40
+   },
+   {
+    "ingredientID": "cacao",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 6
+   },
+   {
+    "ingredientID": "graines-chia",
+    "amount": 1,
+    "unit": "c. à soupe",
+    "grams": 10
+   }
+  ],
+  "steps": [
+   "Fais tremper les dattes dénoyautées 10 minutes dans l'eau chaude, puis égoutte-les.",
+   "Mixe-les avec les flocons, le beurre de cacahuète, le cacao et les graines.",
+   "Forme une douzaine de boules et roule-les dans quelques flocons.",
+   "Conserve-les une semaine au réfrigérateur."
+  ],
+  "substitutions": [
+   "Beurre de cacahuète : purée d'amande ou de noisette, selon tes allergies."
+  ],
+  "photo": "recipe-energy-balls-dattes-avoine.jpg",
+  "photoCredit": {
+   "title": null,
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/6054534/free-public-domain-cc0-photo"
+  }
+ },
+ {
+  "id": "fromage-blanc-fruits-rouges",
+  "title": "Fromage blanc aux fruits rouges",
+  "meal": "snack",
+  "servings": 1,
+  "prepMinutes": 3,
+  "cookMinutes": 0,
+  "difficulty": "easy",
+  "summary": "Un bol de fromage blanc avec des fraises et des myrtilles, pour une collation riche en protéines.",
+  "ingredients": [
+   {
+    "ingredientID": "fromage-blanc",
+    "amount": 150,
+    "unit": "g",
+    "grams": 150
+   },
+   {
+    "ingredientID": "fraises",
+    "amount": 80,
+    "unit": "g",
+    "grams": 80
+   },
+   {
+    "ingredientID": "myrtilles",
+    "amount": 30,
+    "unit": "g",
+    "grams": 30
+   },
+   {
+    "ingredientID": "graines-lin",
+    "amount": 1,
+    "unit": "c. à café",
+    "grams": 5
+   }
+  ],
+  "steps": [
+   "Verse le fromage blanc dans un bol.",
+   "Ajoute les fraises coupées, les myrtilles et les graines de lin."
+  ],
+  "substitutions": [
+   "Fromage blanc : yaourt au soja."
+  ],
+  "photo": "recipe-fromage-blanc-fruits-rouges.jpg",
+  "photoCredit": {
+   "title": "Oatmeal berries coconut cup",
+   "source": "rawpixel",
+   "license": "cc0",
+   "url": "https://www.rawpixel.com/image/448448/free-photo-image-oatmeal-berries-blueberry"
+  }
+ }
+]

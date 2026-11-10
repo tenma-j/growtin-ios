@@ -18,7 +18,7 @@ enum DemoLaunch {
         switch screen {
         case "progress", "photoSession", "photoCapture", "photoTimeline", "photoCompare": .progress
         case "coach": .coach
-        case "nutrition": .nutrition
+        case "nutrition", "recipe", "mealPlan", "shopping": .nutrition
         case "explore": .explore
         default: .today
         }

@@ -62,16 +62,7 @@ struct MainTabView: View {
                     ])
             }
             Tab("Nutrition", systemImage: "leaf", value: .nutrition) {
-                ComingSoonView(
-                    title: "Nutrition",
-                    systemImage: "leaf",
-                    description: "Recettes adaptées à tes préférences et restrictions, avec valeurs nutritionnelles calculées à partir de la table Ciqual de l'ANSES.",
-                    plannedFeatures: [
-                        "Recette du jour, petit-déjeuner, déjeuner, dîner et collations",
-                        "Filtres, favoris et recherche",
-                        "Planning de la semaine et liste de courses",
-                        "Rôle nutritionnel des ingrédients, sans promesse de repousse"
-                    ])
+                NutritionView()
             }
             Tab("Explorer", systemImage: "square.grid.2x2", value: .explore) {
                 ExploreView()

@@ -20,6 +20,7 @@ final class AppModel {
     let library: SourceLibrary
     let notifications: NotificationScheduling
     let photoStore: PhotoStore
+    let nutrition: NutritionStore
     private let context: ModelContext
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -34,6 +35,7 @@ final class AppModel {
         self.context = container.mainContext
         self.notifications = notifications
         self.photoStore = photoStore
+        self.nutrition = NutritionStore(context: container.mainContext)
         do {
             library = try SourceLibrary.bundled()
         } catch {
@@ -65,6 +67,7 @@ final class AppModel {
             photos = try context.fetch(FetchDescriptor<PhotoRecord>())
                 .compactMap { try? decoder.decode(PhotoEntry.self, from: $0.payload) }
                 .sorted { $0.takenAt < $1.takenAt }
+            nutrition.load()
         } catch {
             report(error, message: "Impossible de charger tes données.")
         }
@@ -306,6 +309,7 @@ final class AppModel {
             try context.delete(model: CompletionRecord.self)
             try context.delete(model: CheckInRecord.self)
             try context.delete(model: PhotoRecord.self)
+            try context.delete(model: NutritionStateRecord.self)
             try context.save()
         } catch {
             context.rollback()
@@ -314,6 +318,7 @@ final class AppModel {
         }
         await notifications.removeAll()
         photoStore.deleteAll()
+        nutrition.reset()
         photos = []
         profile = nil
         routine = []

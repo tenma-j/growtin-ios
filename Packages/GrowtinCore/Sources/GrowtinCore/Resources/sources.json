@@ -448,5 +448,35 @@
     "type": "public_health_page",
     "verified_on": "2026-11-06",
     "verification": "Web search results for this aad.org URL (and alias aad.org/hair-scalp-care/habits-that-damage-hair) with page excerpts. Direct fetch was blocked by the sandbox network policy."
+  },
+  {
+    "id": "eu-1169-2011",
+    "title": "Règlement (UE) n° 1169/2011 concernant l'information des consommateurs sur les denrées alimentaires — annexe XIII (valeurs nutritionnelles de référence)",
+    "authors_or_org": "Parlement européen et Conseil de l'Union européenne",
+    "publisher_or_journal": "Journal officiel de l'Union européenne",
+    "year": 2011,
+    "published": "2011-10-25",
+    "pmid": null,
+    "doi": null,
+    "url": "https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX:32011R1169",
+    "type": "regulation",
+    "key_finding": "Fixe les valeurs nutritionnelles de référence utilisées pour l'étiquetage (par exemple fer 14 mg, zinc 10 mg, sélénium 55 µg, vitamine D 5 µg, vitamine C 80 mg) et les apports de référence d'un adulte (2000 kcal, 50 g de protéines). Une quantité est dite significative à partir de 15 % de la valeur de référence.",
+    "verified_on": "2026-11-10",
+    "verification": "Valeurs de l'annexe XIII confirmées par résultats de recherche web (legislation.gov.uk, FSAI). Page EUR-Lex non ouverte directement depuis cet environnement."
+  },
+  {
+    "id": "anses-ciqual-2020",
+    "title": "Table de composition nutritionnelle des aliments Ciqual 2020",
+    "authors_or_org": "Agence nationale de sécurité sanitaire de l'alimentation, de l'environnement et du travail (ANSES)",
+    "publisher_or_journal": "ANSES",
+    "year": 2020,
+    "published": "2020-07-07",
+    "pmid": null,
+    "doi": null,
+    "url": "https://ciqual.anses.fr/",
+    "type": "public_health_page",
+    "key_finding": "Base de référence française de la composition nutritionnelle de plus de 3 000 aliments. Les valeurs des recettes de Growtin' en sont calculées ; ce sont des estimations qui dépendent des produits réellement utilisés.",
+    "verified_on": "2026-11-10",
+    "verification": "Jeu de données confirmé sur data.gouv.fr (organisation ANSES). Fichier « Table Ciqual 2020_FR_2020 07 07 » obtenu via une copie publique (site ANSES en maintenance) ; empreinte SHA-256 enregistrée dans ciqual-subset.json, à revérifier contre le fichier officiel."
   }
 ]

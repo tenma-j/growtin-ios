@@ -39,6 +39,7 @@ for appearance in light dark; do
   capture "$appearance-10-aujourdhui" -demoScreen today
   capture "$appearance-20-progres" -demoScreen progress
   capture "$appearance-53-photo-comparaison" -demoScreen photoCompare
+  capture "$appearance-60-nutrition" -demoScreen nutrition
   if [ "$appearance" = "light" ]; then
     for step in 1 2 3 4 5 6 7 8 9 10 11; do
       capture "light-02-onboarding-etape-$(printf "%02d" $step)" -demoScreen onboarding -demoStep "$step"
@@ -50,6 +51,9 @@ for appearance in light dark; do
     capture "light-15-reglages" -demoScreen settings
     capture "light-30-coach" -demoScreen coach
     capture "light-40-explorer" -demoScreen explore
+    capture "light-61-recette" -demoScreen recipe
+    capture "light-62-planning" -demoScreen mealPlan
+    capture "light-63-courses" -demoScreen shopping
     capture "light-50-photo-seance" -demoScreen photoSession
     capture "light-51-photo-capture" -demoScreen photoCapture
     capture "light-52-photo-frise" -demoScreen photoTimeline

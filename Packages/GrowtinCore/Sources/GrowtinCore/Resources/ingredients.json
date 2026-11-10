@@ -1,0 +1,839 @@
+[
+ {
+  "id": "oeuf",
+  "name": "Œuf",
+  "ciqualCode": 22000,
+  "kind": "egg",
+  "allergens": [
+   "eggs"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "yaourt-grec",
+  "name": "Yaourt à la grecque nature",
+  "ciqualCode": 19860,
+  "kind": "dairy",
+  "allergens": [
+   "lactose"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "fromage-blanc",
+  "name": "Fromage blanc nature 3 %",
+  "ciqualCode": 19646,
+  "kind": "dairy",
+  "allergens": [
+   "lactose"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "lait",
+  "name": "Lait demi-écrémé",
+  "ciqualCode": 19041,
+  "kind": "dairy",
+  "allergens": [
+   "lactose"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "feta",
+  "name": "Feta AOP",
+  "ciqualCode": 12066,
+  "kind": "dairy",
+  "allergens": [
+   "lactose"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "parmesan",
+  "name": "Parmesan",
+  "ciqualCode": 12120,
+  "kind": "dairy",
+  "allergens": [
+   "lactose"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "boisson-soja",
+  "name": "Boisson au soja enrichie en calcium",
+  "ciqualCode": 18901,
+  "kind": "plant",
+  "allergens": [
+   "soy"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "tofu",
+  "name": "Tofu nature",
+  "ciqualCode": 20904,
+  "kind": "plant",
+  "allergens": [
+   "soy"
+  ],
+  "aisle": "Crèmerie et œufs"
+ },
+ {
+  "id": "flocons-avoine",
+  "name": "Flocons d'avoine",
+  "ciqualCode": 9311,
+  "kind": "plant",
+  "allergens": [
+   "gluten"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "muesli",
+  "name": "Muesli nature",
+  "ciqualCode": 32004,
+  "kind": "plant",
+  "allergens": [
+   "gluten",
+   "nuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "pain-complet",
+  "name": "Pain complet",
+  "ciqualCode": 7110,
+  "kind": "plant",
+  "allergens": [
+   "gluten"
+  ],
+  "aisle": "Boulangerie"
+ },
+ {
+  "id": "pain-seigle",
+  "name": "Pain de seigle",
+  "ciqualCode": 7125,
+  "kind": "plant",
+  "allergens": [
+   "gluten"
+  ],
+  "aisle": "Boulangerie"
+ },
+ {
+  "id": "pates-completes",
+  "name": "Pâtes complètes",
+  "ciqualCode": 9870,
+  "kind": "plant",
+  "allergens": [
+   "gluten"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "nouilles",
+  "name": "Nouilles de blé",
+  "ciqualCode": 9863,
+  "kind": "plant",
+  "allergens": [
+   "gluten",
+   "eggs"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "riz-complet",
+  "name": "Riz complet",
+  "ciqualCode": 9102,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "riz-basmati",
+  "name": "Riz blanc",
+  "ciqualCode": 9100,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "quinoa",
+  "name": "Quinoa",
+  "ciqualCode": 9340,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "pomme-de-terre",
+  "name": "Pomme de terre",
+  "ciqualCode": 4008,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "patate-douce",
+  "name": "Patate douce",
+  "ciqualCode": 4101,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "lentilles-corail",
+  "name": "Lentilles corail",
+  "ciqualCode": 20535,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "lentilles-vertes",
+  "name": "Lentilles vertes",
+  "ciqualCode": 20585,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "pois-chiches",
+  "name": "Pois chiches cuits (conserve, égouttés)",
+  "ciqualCode": 20532,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "haricots-rouges",
+  "name": "Haricots rouges cuits (conserve, égouttés)",
+  "ciqualCode": 20524,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "saumon",
+  "name": "Pavé de saumon",
+  "ciqualCode": 26036,
+  "kind": "fish",
+  "allergens": [
+   "fish"
+  ],
+  "aisle": "Poissonnerie"
+ },
+ {
+  "id": "thon",
+  "name": "Thon au naturel (conserve)",
+  "ciqualCode": 26039,
+  "kind": "fish",
+  "allergens": [
+   "fish"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "crevettes",
+  "name": "Crevettes décortiquées",
+  "ciqualCode": 10021,
+  "kind": "shellfish",
+  "allergens": [
+   "shellfish"
+  ],
+  "aisle": "Poissonnerie"
+ },
+ {
+  "id": "poulet-filet",
+  "name": "Filet de poulet",
+  "ciqualCode": 36017,
+  "kind": "meat",
+  "allergens": [],
+  "aisle": "Boucherie"
+ },
+ {
+  "id": "poulet-ailes",
+  "name": "Ailes de poulet",
+  "ciqualCode": 36023,
+  "kind": "meat",
+  "allergens": [],
+  "aisle": "Boucherie"
+ },
+ {
+  "id": "banane",
+  "name": "Banane",
+  "ciqualCode": 13005,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "fraises",
+  "name": "Fraises",
+  "ciqualCode": 13014,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "framboises",
+  "name": "Framboises",
+  "ciqualCode": 13015,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "myrtilles",
+  "name": "Myrtilles",
+  "ciqualCode": 13028,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "cerises",
+  "name": "Cerises",
+  "ciqualCode": 13008,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "kiwi",
+  "name": "Kiwi",
+  "ciqualCode": 13021,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "mangue",
+  "name": "Mangue",
+  "ciqualCode": 13025,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "pomme",
+  "name": "Pomme",
+  "ciqualCode": 13039,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "avocat",
+  "name": "Avocat",
+  "ciqualCode": 13004,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "citron",
+  "name": "Jus de citron",
+  "ciqualCode": 2028,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "dattes",
+  "name": "Dattes sèches",
+  "ciqualCode": 13011,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "epinards",
+  "name": "Épinards frais",
+  "ciqualCode": 20059,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "pousses-epinards",
+  "name": "Jeunes pousses d'épinards",
+  "ciqualCode": 20270,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "tomate",
+  "name": "Tomate",
+  "ciqualCode": 20047,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "tomates-cerises",
+  "name": "Tomates cerises",
+  "ciqualCode": 20172,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "tomates-pulpe",
+  "name": "Pulpe de tomate (conserve)",
+  "ciqualCode": 20169,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "concentre-tomate",
+  "name": "Concentré de tomate",
+  "ciqualCode": 20068,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "concombre",
+  "name": "Concombre",
+  "ciqualCode": 20019,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "oignon",
+  "name": "Oignon jaune",
+  "ciqualCode": 20239,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "oignon-rouge",
+  "name": "Oignon rouge",
+  "ciqualCode": 20238,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "ail",
+  "name": "Ail",
+  "ciqualCode": 11000,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "carotte",
+  "name": "Carotte",
+  "ciqualCode": 20009,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "courgette",
+  "name": "Courgette",
+  "ciqualCode": 20020,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "poivron-rouge",
+  "name": "Poivron rouge",
+  "ciqualCode": 20087,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "brocoli",
+  "name": "Brocoli",
+  "ciqualCode": 20057,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "chou-kale",
+  "name": "Chou kale",
+  "ciqualCode": 20218,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "potiron",
+  "name": "Potiron",
+  "ciqualCode": 20044,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "petits-pois",
+  "name": "Petits pois surgelés",
+  "ciqualCode": 20084,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "mais",
+  "name": "Maïs doux (conserve)",
+  "ciqualCode": 20066,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "laitue",
+  "name": "Laitue",
+  "ciqualCode": 20031,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "roquette",
+  "name": "Roquette",
+  "ciqualCode": 20217,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "mache",
+  "name": "Mâche",
+  "ciqualCode": 20099,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "betterave",
+  "name": "Betterave cuite",
+  "ciqualCode": 20003,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "radis",
+  "name": "Radis",
+  "ciqualCode": 20045,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "olives-noires",
+  "name": "Olives noires",
+  "ciqualCode": 13032,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "noix",
+  "name": "Cerneaux de noix",
+  "ciqualCode": 15005,
+  "kind": "plant",
+  "allergens": [
+   "nuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "noisettes",
+  "name": "Noisettes",
+  "ciqualCode": 15004,
+  "kind": "plant",
+  "allergens": [
+   "nuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "amandes",
+  "name": "Amandes",
+  "ciqualCode": 15000,
+  "kind": "plant",
+  "allergens": [
+   "nuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "noix-pecan",
+  "name": "Noix de pécan",
+  "ciqualCode": 15026,
+  "kind": "plant",
+  "allergens": [
+   "nuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "graines-tournesol",
+  "name": "Graines de tournesol",
+  "ciqualCode": 15011,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "graines-chia",
+  "name": "Graines de chia",
+  "ciqualCode": 15047,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "graines-lin",
+  "name": "Graines de lin",
+  "ciqualCode": 15034,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "sesame",
+  "name": "Graines de sésame",
+  "ciqualCode": 15010,
+  "kind": "plant",
+  "allergens": [
+   "sesame"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "beurre-cacahuete",
+  "name": "Beurre de cacahuète",
+  "ciqualCode": 15202,
+  "kind": "plant",
+  "allergens": [
+   "peanuts"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "huile-olive",
+  "name": "Huile d'olive vierge extra",
+  "ciqualCode": 17270,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "huile-colza",
+  "name": "Huile de colza",
+  "ciqualCode": 17130,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "huile-sesame",
+  "name": "Huile de sésame",
+  "ciqualCode": 17400,
+  "kind": "plant",
+  "allergens": [
+   "sesame"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "sauce-soja",
+  "name": "Sauce soja",
+  "ciqualCode": 11104,
+  "kind": "plant",
+  "allergens": [
+   "soy",
+   "gluten"
+  ],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "lait-coco",
+  "name": "Lait de coco",
+  "ciqualCode": 18041,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "moutarde",
+  "name": "Moutarde",
+  "ciqualCode": 11013,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "vinaigre-cidre",
+  "name": "Vinaigre de cidre",
+  "ciqualCode": 11090,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "miel",
+  "name": "Miel",
+  "ciqualCode": 31008,
+  "kind": "honey",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "cacao",
+  "name": "Cacao non sucré en poudre",
+  "ciqualCode": 18100,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "bouillon-legumes",
+  "name": "Bouillon de légumes",
+  "ciqualCode": 25948,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Épicerie"
+ },
+ {
+  "id": "persil",
+  "name": "Persil frais",
+  "ciqualCode": 11014,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "coriandre",
+  "name": "Coriandre fraîche",
+  "ciqualCode": 11094,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "basilic",
+  "name": "Basilic frais",
+  "ciqualCode": 11033,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "aneth",
+  "name": "Aneth frais",
+  "ciqualCode": 11093,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "ciboulette",
+  "name": "Ciboulette",
+  "ciqualCode": 11003,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "menthe",
+  "name": "Menthe fraîche",
+  "ciqualCode": 11027,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "romarin",
+  "name": "Romarin frais",
+  "ciqualCode": 11068,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "thym",
+  "name": "Thym frais",
+  "ciqualCode": 11070,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "gingembre",
+  "name": "Gingembre frais",
+  "ciqualCode": 11074,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "curcuma",
+  "name": "Curcuma en poudre",
+  "ciqualCode": 11089,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "cumin",
+  "name": "Cumin",
+  "ciqualCode": 11042,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "paprika",
+  "name": "Paprika",
+  "ciqualCode": 11049,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "curry",
+  "name": "Curry en poudre",
+  "ciqualCode": 11005,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "cannelle",
+  "name": "Cannelle",
+  "ciqualCode": 11025,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "poivre",
+  "name": "Poivre noir",
+  "ciqualCode": 11015,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ },
+ {
+  "id": "sel",
+  "name": "Sel iodé",
+  "ciqualCode": 11058,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Herbes et épices"
+ }
+]

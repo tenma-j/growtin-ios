@@ -29,6 +29,7 @@ struct TodayView: View {
     @State private var sheet: TodayPresentation?
     @State private var session: TodayPresentation?
     @State private var showingPhotoSession = false
+    @State private var recipeOfTheDay: Recipe?
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,12 @@ struct TodayView: View {
                     RegularityCard(today: today)
                     CheckInCard(checkIn: model.checkIns[today]) { sheet = .checkIn }
                     NextStepsCard(today: today) { showingPhotoSession = true }
+                    if let recipe = model.nutrition.recipeOfTheDay(for: model.profile, day: today) {
+                        Button { recipeOfTheDay = recipe } label: {
+                            RecipeHeroCard(recipe: recipe, eyebrow: "Recette du jour")
+                        }
+                        .buttonStyle(.plain)
+                    }
                     routineSections
                     FootnoteText(text: WellnessNotice.short)
                 }
@@ -88,6 +95,16 @@ struct TodayView: View {
             }
             .task { presentDemoScreenIfNeeded() }
             .fullScreenCover(isPresented: $showingPhotoSession) { PhotoSessionView() }
+            .sheet(item: $recipeOfTheDay) { recipe in
+                NavigationStack {
+                    RecipeDetailView(recipe: recipe)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Fermer", systemImage: "xmark") { recipeOfTheDay = nil }
+                            }
+                        }
+                }
+            }
         }
     }
 
