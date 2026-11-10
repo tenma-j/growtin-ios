@@ -265,6 +265,33 @@ final class AppModel {
         checkIns = [:]
     }
 
+    // MARK: - Démonstration (versions de développement uniquement)
+
+    #if DEBUG
+    /// Remplace les données par un jeu de démonstration. Utilisé uniquement pour les aperçus et
+    /// les captures d'écran automatiques ; n'existe pas dans la version publiée.
+    func importDemoData(profile: UserProfile, routine: [RoutineItem], completions: [HabitCompletion], checkIns: [DailyCheckIn]) {
+        do {
+            try persist(profile: profile)
+            for item in routine { try upsert(item) }
+            for completion in completions {
+                context.insert(CompletionRecord(itemID: completion.itemID, dayKey: completion.day.description,
+                                                completedAt: completion.completedAt))
+            }
+            for checkIn in checkIns {
+                context.insert(CheckInRecord(dayKey: checkIn.day.description, payload: try encoder.encode(checkIn)))
+            }
+            try context.save()
+            self.profile = profile
+            self.routine = routine.sorted { $0.minuteOfDay < $1.minuteOfDay }
+            self.completions = completions
+            self.checkIns = Dictionary(checkIns.map { ($0.day, $0) }, uniquingKeysWith: { _, latest in latest })
+        } catch {
+            report(error, message: "Données de démonstration invalides.")
+        }
+    }
+    #endif
+
     // MARK: - Privé
 
     private func persist(profile: UserProfile) throws {

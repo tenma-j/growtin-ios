@@ -39,7 +39,7 @@ enum AppTab: Hashable {
 }
 
 struct MainTabView: View {
-    @State private var selection: AppTab = .today
+    @State private var selection: AppTab = DemoLaunch.initialTab
 
     var body: some View {
         TabView(selection: $selection) {

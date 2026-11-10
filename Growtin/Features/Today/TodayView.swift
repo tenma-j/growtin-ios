@@ -85,6 +85,7 @@ struct TodayView: View {
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
                 today = DayKey(.now)
             }
+            .task { presentDemoScreenIfNeeded() }
         }
     }
 
@@ -127,6 +128,23 @@ struct TodayView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Ouvre directement une feuille ou une séance pour les captures d'écran automatiques.
+    private func presentDemoScreenIfNeeded() {
+        switch DemoLaunch.screen {
+        case "evidence":
+            if let item = model.activeRoutine.first(where: { $0.template?.evidenceCard != nil }),
+               let card = item.template?.evidenceCard {
+                sheet = .evidence(card, reason: item.reason)
+            }
+        case "checkin": sheet = .checkIn
+        case "settings": sheet = .settings
+        case "editRoutine": sheet = .editRoutine
+        case "breathing":
+            if let item = model.activeRoutine.first(where: { $0.kind == .guidedBreathing }) { session = .breathing(item) }
+        default: break
         }
     }
 

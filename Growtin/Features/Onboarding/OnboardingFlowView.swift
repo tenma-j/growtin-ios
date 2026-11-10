@@ -8,7 +8,12 @@ struct OnboardingFlowView: View {
     @State private var model: OnboardingModel
 
     init(mode: OnboardingModel.Mode) {
-        _model = State(initialValue: OnboardingModel(mode: mode))
+        let model = OnboardingModel(mode: mode)
+        if let step = DemoLaunch.onboardingStep {
+            if step > 0 { model.fillWithDemoAnswers() }
+            model.jump(to: step)
+        }
+        _model = State(initialValue: model)
     }
 
     var body: some View {

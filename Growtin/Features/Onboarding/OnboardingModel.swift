@@ -95,6 +95,20 @@ final class OnboardingModel {
         stepIndex += 1
     }
 
+    /// Place directement le parcours sur une étape (mode démonstration).
+    func jump(to index: Int) {
+        stepIndex = max(0, min(index, steps.count - 1))
+    }
+
+    /// Pré-remplit des réponses fictives (mode démonstration).
+    func fillWithDemoAnswers() {
+        draft = DemoData.profile(start: .now)
+        sex = draft.sex
+        duration = draft.hairLossDuration
+        shareBodyMeasures = true
+        disclaimerAccepted = true
+    }
+
     func back() {
         guard !isFirstStep else { return }
         isMovingForward = false

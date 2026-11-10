@@ -4,7 +4,19 @@ Application iOS native (SwiftUI, iOS 26, Liquid Glass) d'accompagnement quotidie
 
 Décisions, audit et avancement : [docs/PLAN.md](docs/PLAN.md).
 
-## Ouvrir et lancer l'app (Mac)
+## Compiler sans Xcode (dans le cloud)
+
+Le fichier `.github/workflows/ios.yml` fait tout le travail sur un Mac de GitHub, à chaque envoi de code :
+
+1. il lance les tests du cœur métier ;
+2. il compile l'app avec Xcode 26 ;
+3. il démarre l'app dans un simulateur iPhone et capture les écrans principaux, en mode clair et en mode sombre, avec des données de démonstration fictives.
+
+Les captures et les journaux de compilation se téléchargent depuis l'onglet **Actions** du dépôt GitHub, dans la section **Artifacts** de chaque exécution. Pour un dépôt public, les Mac de GitHub sont gratuits. Pour un dépôt privé, ils consomment le quota gratuit de minutes du compte.
+
+Pour installer l'app sur un vrai iPhone sans Xcode, il faudra passer par **TestFlight**, ce qui nécessite un compte Apple Developer (99 € par an, également indispensable pour publier sur l'App Store).
+
+## Ouvrir et lancer l'app (Mac avec Xcode)
 
 Il te faut un Mac avec **Xcode 26** (gratuit sur le Mac App Store).
 
