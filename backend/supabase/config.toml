@@ -13,3 +13,7 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+[functions.revenuecat-webhook]
+# Appelé par RevenueCat, authentifié par le secret REVENUECAT_WEBHOOK_AUTH.
+verify_jwt = false

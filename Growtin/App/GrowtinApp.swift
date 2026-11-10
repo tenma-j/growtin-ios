@@ -13,7 +13,8 @@ struct GrowtinApp: App {
                 let container = try GrowtinSchema.makeContainer(inMemory: true)
                 self.container = container
                 let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary(),
-                                     coachService: DemoCoachService())
+                                     coachService: DemoCoachService(),
+                                     purchaseService: DemoPurchaseService())
                 model.load()
                 #if DEBUG
                 if screen != "onboarding" { model.seedDemo(days: 28) }
@@ -26,7 +27,8 @@ struct GrowtinApp: App {
             let container = try GrowtinSchema.makeContainer()
             self.container = container
             _model = State(initialValue: AppModel(container: container, notifications: NotificationService(), photoStore: PhotoStore(),
-                                                          coachService: SupabaseCoachService()))
+                                                          coachService: SupabaseCoachService(),
+                                                          purchaseService: RevenueCatPurchaseService()))
         } catch {
             self.container = nil
             _model = State(initialValue: nil)

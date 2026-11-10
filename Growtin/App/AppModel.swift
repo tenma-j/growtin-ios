@@ -22,6 +22,7 @@ final class AppModel {
     let photoStore: PhotoStore
     let nutrition: NutritionStore
     let coach: CoachStore
+    let subscription: SubscriptionStore
     private let context: ModelContext
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -32,12 +33,14 @@ final class AppModel {
         let message: String
     }
 
-    init(container: ModelContainer, notifications: NotificationScheduling, photoStore: PhotoStore, coachService: CoachServing) {
+    init(container: ModelContainer, notifications: NotificationScheduling, photoStore: PhotoStore, coachService: CoachServing,
+         purchaseService: PurchaseServing) {
         self.context = container.mainContext
         self.notifications = notifications
         self.photoStore = photoStore
         self.nutrition = NutritionStore(context: container.mainContext)
         self.coach = CoachStore(context: container.mainContext, service: coachService)
+        self.subscription = SubscriptionStore(service: purchaseService)
         do {
             library = try SourceLibrary.bundled()
         } catch {
@@ -253,6 +256,16 @@ final class AppModel {
         if let item = activeRoutine.first(where: { $0.kind == .checkIn }), !checkIn.isEmpty {
             setCompleted(true, item: item, on: checkIn.day)
         }
+    }
+
+    // MARK: - Services en ligne
+
+    /// Démarre l'abonnement (si RevenueCat est configuré) en le rattachant au compte serveur anonyme,
+    /// pour que le serveur sache quels utilisateurs sont Premium.
+    func startOnlineServices() async {
+        guard subscription.isAvailable else { return }
+        let userID = await coach.service.backendUserID()
+        await subscription.start(appUserID: userID)
     }
 
     // MARK: - Coach

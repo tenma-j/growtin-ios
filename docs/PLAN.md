@@ -46,11 +46,12 @@ Sur la réglementation : tu as raison, laisser l'utilisateur choisir son stade e
 | B. Onboarding, navigation, Aujourd'hui | 12 écrans, routine générée, régularité, bilan du jour, éditeur de routine, rappels, séances guidées, réglages, suppression des données | **Écrit**, à compiler dans Xcode |
 | D (partiel). Tableau prévisionnel | Graphiques 7 j à 12 mois, scénarios d'habitudes, feuille de route, calendrier des photos | **Écrit**, à compiler dans Xcode |
 | C. Photos | Capture guidée (AVFoundation, repères, photo précédente en transparence, lumière et angle en direct), contrôle de netteté et de luminosité, détection du visage (Vision) pour le cadrage, conditions déclarées, comparabilité, frise par zone, comparaison curseur / superposition / côte à côte, suppression | **Fait**. Logique testée (46 tests), interface compilée dans le cloud |
-| E. Backend et IA | Supabase, proxy IA, quotas, cache, suivi des coûts, Coach | Prompt système rédigé, reste à faire |
+| E. Backend et IA | Supabase (UE), fonction Coach (Claude Opus 5.5, sources vérifiées, contrôle des citations et des formulations, détresse sans appel au modèle), quotas, cache du prompt, suivi des coûts, suppression de compte | **Fait et testé de bout en bout** sur le projet Supabase |
 | F. Nutrition | 37 recettes avec de vraies photos (rawpixel, domaine public), valeurs calculées depuis la table Ciqual 2020 (ANSES), apports par portion et part des valeurs de référence, filtres selon régime et allergies, recherche, favoris, recette du jour, planning de la semaine, liste de courses partageable | **Fait** (premier lot de 37 recettes, à étendre) |
 | F bis. Explorer | 7 séances guidées (marche, cardio léger, mobilité, étirements, yoga doux, relaxation, pause active) avec étapes minutées, précautions et contre-indications ; 10 articles éducatifs sourcés (cycle du cheveu, alopécie androgénétique, effluvium, signes d'alerte, nutrition, traitements, laser et PRP, soins, idées reçues, hygiène de vie) | **Fait** |
 | G bis. TestFlight | Chaîne d'envoi automatique sur TestFlight | Prête, en attente des accès App Store Connect |
-| G. Abonnement, Santé, notifications avancées | RevenueCat (entitlement `premium`), paywall SwiftUI, HealthKit (sommeil, pas) | À faire |
+| G. Abonnement | RevenueCat 5.102 (entitlement `premium`), paywall conforme 3.1.2, restauration, gestion de l'abonnement, webhook serveur qui accorde le quota Premium | **Code fait** ; en attente du contrat Apple, des produits et de la clé RevenueCat |
+| G ter. Apple Santé, notifications avancées | HealthKit (sommeil, pas) | À faire |
 | H. Fiabilisation et App Store | Tests d'interface, accessibilité, fiche App Store, étiquettes de confidentialité, TestFlight | À faire |
 
 ## 4. Conformité App Store (points déjà pris en compte)

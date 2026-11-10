@@ -6,6 +6,7 @@ struct CoachView: View {
     @State private var draft = ""
     @State private var selectedSource: SourceReference?
     @State private var confirmingClear = false
+    @State private var showingPaywall = false
     @FocusState private var inputFocused: Bool
 
     private var coach: CoachStore { model.coach }
@@ -37,6 +38,7 @@ struct CoachView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
             .confirmationDialog("Effacer la conversation ?", isPresented: $confirmingClear, titleVisibility: .visible) {
                 Button("Effacer", role: .destructive) { coach.clearConversation() }
             } message: {
@@ -85,6 +87,10 @@ struct CoachView: View {
                         Label(error.localizedDescription, systemImage: "exclamationmark.triangle")
                             .font(.subheadline)
                             .foregroundStyle(Color.gtAlert)
+                        if case .quotaReached = error, model.subscription.isAvailable, !model.subscription.status.isActive {
+                            Button("Passer à Premium : 40 questions par jour", systemImage: "sparkles") { showingPaywall = true }
+                                .gtProminentButton()
+                        }
                     }
                 }
                 .padding(GT.Spacing.m)

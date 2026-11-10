@@ -42,6 +42,8 @@ protocol CoachServing: AnyObject {
     func send(_ messages: [CoachMessage], context: String, personalization: Bool) async throws -> CoachReply
     /// Supprime le compte serveur (anonyme) et ses compteurs. Sans effet si aucun compte n'existe.
     func deleteAccount() async throws
+    /// Identifiant du compte serveur (anonyme), utilisé pour rattacher l'abonnement. Crée la session si besoin.
+    func backendUserID() async -> String?
 }
 
 /// Implémentation réelle : session Supabase anonyme, puis fonction serveur « coach ».
@@ -93,6 +95,22 @@ final class SupabaseCoachService: CoachServing {
             throw CoachError.server("La suppression du compte serveur a échoué. Réessaie plus tard.")
         }
         clearSession()
+    }
+
+    func backendUserID() async -> String? {
+        guard let token = try? await accessToken() else { return nil }
+        return Self.subject(of: token)
+    }
+
+    /// Lit l'identifiant (`sub`) dans le jeton de session, sans le vérifier : c'est le serveur qui fait autorité.
+    static func subject(of jwt: String) -> String? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard let data = Data(base64Encoded: base64),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return payload["sub"] as? String
     }
 
     // MARK: - Session anonyme
@@ -183,6 +201,7 @@ final class DemoCoachService: CoachServing {
     }
 
     func deleteAccount() async throws {}
+    func backendUserID() async -> String? { nil }
 }
 
 /// Stockage minimal dans le Trousseau iOS (jetons de session), accessible uniquement sur cet appareil.

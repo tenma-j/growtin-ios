@@ -23,6 +23,7 @@ struct RootView: View {
         .animation(GT.Motion.adaptive(GT.Motion.standard, reduceMotion: reduceMotion), value: model.profile == nil)
         .task {
             if !model.isLoaded { model.load() }
+            await model.startOnlineServices()
         }
         .alert("Un problème est survenu",
                isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } }),

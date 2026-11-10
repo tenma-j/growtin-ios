@@ -28,9 +28,20 @@ capture() {
   local name="$1"; shift
   xcrun simctl terminate "$DEVICE_ID" "$BUNDLE_ID" >/dev/null 2>&1 || true
   xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID" "$@" >/dev/null
-  sleep 6
-  xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null
-  echo "Capture : $name"
+  # Attente adaptative : un écran vide (barre d'état seule) pèse moins de 150 Ko.
+  # On reprend la capture jusqu'à ce que l'interface soit affichée, puis on laisse les animations finir.
+  local size=0
+  for attempt in $(seq 1 15); do
+    sleep 3
+    xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null 2>&1 || continue
+    size=$(stat -f%z "$OUT_DIR/$name.png" 2>/dev/null || echo 0)
+    if [ "$size" -gt 150000 ]; then
+      sleep 2
+      xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null
+      break
+    fi
+  done
+  echo "Capture : $name ($((size / 1024)) Ko)"
 }
 
 for appearance in light dark; do
@@ -50,6 +61,7 @@ for appearance in light dark; do
     capture "light-13-routine" -demoScreen editRoutine
     capture "light-14-respiration" -demoScreen breathing
     capture "light-15-reglages" -demoScreen settings
+    capture "light-16-premium" -demoScreen paywall
     capture "light-31-coach-consentement" -demoScreen coachConsent
     capture "light-40-explorer" -demoScreen explore
     capture "light-41-exercice" -demoScreen exercise

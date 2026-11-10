@@ -30,6 +30,7 @@ struct TodayView: View {
     @State private var session: TodayPresentation?
     @State private var showingPhotoSession = false
     @State private var recipeOfTheDay: Recipe?
+    @State private var showingPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -95,6 +96,7 @@ struct TodayView: View {
             }
             .task { presentDemoScreenIfNeeded() }
             .fullScreenCover(isPresented: $showingPhotoSession) { PhotoSessionView() }
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
             .sheet(item: $recipeOfTheDay) { recipe in
                 NavigationStack {
                     RecipeDetailView(recipe: recipe)
@@ -160,6 +162,7 @@ struct TodayView: View {
             }
         case "checkin": sheet = .checkIn
         case "settings": sheet = .settings
+        case "paywall": showingPaywall = true
         case "editRoutine": sheet = .editRoutine
         case "breathing":
             if let item = model.activeRoutine.first(where: { $0.kind == .guidedBreathing }) { session = .breathing(item) }

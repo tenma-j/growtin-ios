@@ -48,6 +48,8 @@ struct SettingsView: View {
                     }
                 }
 
+                SubscriptionSettingsSection()
+
                 Section("À propos") {
                     NavigationLink("Sources scientifiques") { SourcesListView() }
                     Text(WellnessNotice.short)

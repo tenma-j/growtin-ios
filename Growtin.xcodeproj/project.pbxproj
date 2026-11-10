@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0A0000000000000000000101 /* GrowtinCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0A0000000000000000000601 /* GrowtinCore */; };
+		0A0000000000000000000102 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 0A0000000000000000000602 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A0000000000000000000101 /* GrowtinCore in Frameworks */,
+				0A0000000000000000000102 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,6 +83,7 @@
 			name = Growtin;
 			packageProductDependencies = (
 				0A0000000000000000000601 /* GrowtinCore */,
+				0A0000000000000000000602 /* RevenueCat */,
 			);
 			productName = Growtin;
 			productReference = 0A0000000000000000000201 /* Growtin.app */;
@@ -112,6 +115,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0A0000000000000000000B01 /* XCLocalSwiftPackageReference "Packages/GrowtinCore" */,
+				0A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A0000000000000000000503 /* Products */;
@@ -297,10 +301,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		0A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.102.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		0A0000000000000000000601 /* GrowtinCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GrowtinCore;
+		};
+		0A0000000000000000000602 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

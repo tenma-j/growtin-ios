@@ -8,7 +8,8 @@ extension AppModel {
     static func preview(withProfile: Bool = false) -> AppModel {
         let container = try! GrowtinSchema.makeContainer(inMemory: true)
         let model = AppModel(container: container, notifications: PreviewNotificationService(), photoStore: .temporary(),
-                             coachService: DemoCoachService())
+                             coachService: DemoCoachService(),
+                             purchaseService: DemoPurchaseService())
         model.load()
         if withProfile {
             #if DEBUG
