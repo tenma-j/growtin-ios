@@ -6,8 +6,9 @@ import Security
 /// dans une app : elles ne donnent accès qu'à ce que les règles de sécurité autorisent.
 /// La clé Anthropic, elle, n'existe que côté serveur.
 enum BackendConfiguration {
-    static let supabaseURL = ""
-    static let supabaseAnonKey = ""
+    static let supabaseURL = "https://hxaioqwdqtuxlodfhfxg.supabase.co"
+    /// Clé « publishable » (nouveau format des clés anon) : publique par conception.
+    static let supabaseAnonKey = "sb_publishable_-UyhWHaBgQcs8WFV71D0MQ_AmxDArss"
 
     static var isConfigured: Bool { !supabaseURL.isEmpty && !supabaseAnonKey.isEmpty }
 }

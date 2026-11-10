@@ -49,9 +49,10 @@ jobs:
           done
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then echo "::error::Secret manquant : ANTHROPIC_API_KEY"; exit 1; fi
       - name: Lier le projet
-        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        run: supabase link --project-ref "$PROJECT_REF"
       - name: Appliquer les migrations de base de données
-        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+        # Les versions récentes de la CLI exigent de viser explicitement le projet lié.
+        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" || supabase db push --remote --password "$SUPABASE_DB_PASSWORD"
       - name: Enregistrer la clé Anthropic dans les secrets des fonctions
         run: supabase secrets set --project-ref "$PROJECT_REF" ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
       - name: Déployer les fonctions

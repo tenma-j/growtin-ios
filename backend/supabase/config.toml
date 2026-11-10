@@ -7,8 +7,9 @@ project_id = "growtin"
 enable_anonymous_sign_ins = true
 
 [functions.coach]
-# Le jeton de l'utilisateur est vérifié par la plateforme avant d'atteindre la fonction.
-verify_jwt = true
+# Avec les nouvelles clés d'API (sb_publishable_…), la vérification par la plateforme est déconseillée :
+# chaque fonction vérifie elle-même la session de l'utilisateur (admin.auth.getUser).
+verify_jwt = false
 
 [functions.delete-account]
-verify_jwt = true
+verify_jwt = false
