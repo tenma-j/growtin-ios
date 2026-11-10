@@ -48,7 +48,8 @@ Sur la réglementation : tu as raison, laisser l'utilisateur choisir son stade e
 | C. Photos | Capture guidée (AVFoundation, repères, photo précédente en transparence, lumière et angle en direct), contrôle de netteté et de luminosité, détection du visage (Vision) pour le cadrage, conditions déclarées, comparabilité, frise par zone, comparaison curseur / superposition / côte à côte, suppression | **Fait**. Logique testée (46 tests), interface compilée dans le cloud |
 | E. Backend et IA | Supabase, proxy IA, quotas, cache, suivi des coûts, Coach | Prompt système rédigé, reste à faire |
 | F. Nutrition | 37 recettes avec de vraies photos (rawpixel, domaine public), valeurs calculées depuis la table Ciqual 2020 (ANSES), apports par portion et part des valeurs de référence, filtres selon régime et allergies, recherche, favoris, recette du jour, planning de la semaine, liste de courses partageable | **Fait** (premier lot de 37 recettes, à étendre) |
-| F bis. Explorer | Exercices, bibliothèque éducative | À faire |
+| F bis. Explorer | 7 séances guidées (marche, cardio léger, mobilité, étirements, yoga doux, relaxation, pause active) avec étapes minutées, précautions et contre-indications ; 10 articles éducatifs sourcés (cycle du cheveu, alopécie androgénétique, effluvium, signes d'alerte, nutrition, traitements, laser et PRP, soins, idées reçues, hygiène de vie) | **Fait** |
+| G bis. TestFlight | Chaîne d'envoi automatique sur TestFlight | Prête, en attente des accès App Store Connect |
 | G. Abonnement, Santé, notifications avancées | RevenueCat (entitlement `premium`), paywall SwiftUI, HealthKit (sommeil, pas) | À faire |
 | H. Fiabilisation et App Store | Tests d'interface, accessibilité, fiche App Store, étiquettes de confidentialité, TestFlight | À faire |
 

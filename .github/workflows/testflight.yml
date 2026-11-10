@@ -1,0 +1,93 @@
+name: TestFlight
+
+# Lancement manuel : onglet Actions > TestFlight > Run workflow.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Archiver et envoyer sur TestFlight
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Choisir Xcode 26
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Vérifier les secrets
+        run: |
+          missing=0
+          for name in ASC_KEY_ID ASC_ISSUER_ID TEAM_ID; do
+            if [ -z "${!name}" ]; then echo "::error::Secret manquant : $name"; missing=1; fi
+          done
+          if [ -z "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" ]; then echo "::error::Secret manquant : APP_STORE_CONNECT_PRIVATE_KEY"; missing=1; fi
+          exit $missing
+
+      - name: Installer la clé API App Store Connect
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" > "$RUNNER_TEMP/keys/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/keys/AuthKey.p8"
+
+      - name: Tests du cœur métier
+        working-directory: Packages/GrowtinCore
+        run: swift test
+
+      - name: Archiver (version Release, signature automatique)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project Growtin.xcodeproj \
+            -scheme Growtin \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Growtin.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            2>&1 | tee archive.log | grep -E "error:|warning: .*(sign|provision)|ARCHIVE (SUCCEEDED|FAILED)" || true
+          grep -q "ARCHIVE SUCCEEDED" archive.log
+
+      - name: Exporter et envoyer sur App Store Connect
+        run: |
+          set -o pipefail
+          sed "s/__TEAM_ID__/$TEAM_ID/" Config/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Growtin.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee export.log | grep -E "error:|Upload|EXPORT (SUCCEEDED|FAILED)" || true
+          grep -q "EXPORT SUCCEEDED" export.log
+
+      - name: Supprimer la clé
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
+
+      - name: Journaux
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: journaux-testflight
+          path: |
+            archive.log
+            export.log
+          if-no-files-found: ignore

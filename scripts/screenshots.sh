@@ -51,6 +51,9 @@ for appearance in light dark; do
     capture "light-15-reglages" -demoScreen settings
     capture "light-30-coach" -demoScreen coach
     capture "light-40-explorer" -demoScreen explore
+    capture "light-41-exercice" -demoScreen exercise
+    capture "light-42-seance-exercice" -demoScreen exerciseSession
+    capture "light-43-article" -demoScreen article
     capture "light-61-recette" -demoScreen recipe
     capture "light-62-planning" -demoScreen mealPlan
     capture "light-63-courses" -demoScreen shopping

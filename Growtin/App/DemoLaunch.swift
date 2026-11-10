@@ -19,7 +19,7 @@ enum DemoLaunch {
         case "progress", "photoSession", "photoCapture", "photoTimeline", "photoCompare": .progress
         case "coach": .coach
         case "nutrition", "recipe", "mealPlan", "shopping": .nutrition
-        case "explore": .explore
+        case "explore", "exercise", "article", "exerciseSession": .explore
         default: .today
         }
     }

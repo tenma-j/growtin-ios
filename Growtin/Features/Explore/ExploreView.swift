@@ -1,8 +1,16 @@
 import GrowtinCore
 import SwiftUI
 
+enum ExploreRoute: Hashable {
+    case exercise(String)
+    case article(String)
+    case evidence
+    case sources
+}
+
 struct ExploreView: View {
     @Environment(AppModel.self) private var model
+    @State private var path: [ExploreRoute] = []
     @State private var session: GuidedSession?
 
     enum GuidedSession: String, Identifiable {
@@ -11,44 +19,70 @@ struct ExploreView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
                 Section {
-                    sessionRow(title: "Respiration lente", detail: "3 minutes · gestion du stress",
+                    ForEach(ExerciseLibrary.all) { exercise in
+                        NavigationLink(value: ExploreRoute.exercise(exercise.id)) {
+                            ExerciseRow(exercise: exercise)
+                        }
+                    }
+                    sessionRow(title: "Respiration lente", detail: "3 min · gestion du stress",
                                symbol: "wind", card: EvidenceCatalog.slowBreathing) { session = .breathing }
-                    sessionRow(title: "Massage du cuir chevelu", detail: "4 minutes · détente",
+                    sessionRow(title: "Massage du cuir chevelu", detail: "4 min · détente",
                                symbol: "hand.raised", card: EvidenceCatalog.scalpMassage) { session = .massage }
                 } header: {
                     Text("Séances guidées")
                 } footer: {
-                    Text("Marche, mobilité, étirements et yoga arrivent dans une prochaine version, avec démonstrations visuelles et précautions.")
+                    Text("Des séances pour bouger et se détendre. Leurs bénéfices concernent la santé générale : aucune n'a d'effet démontré sur la repousse des cheveux.")
                 }
 
-                Section("Comprendre") {
-                    NavigationLink {
-                        EvidenceLibraryView()
-                    } label: {
+                ForEach(ArticleCategory.allCases) { category in
+                    Section(category.label) {
+                        ForEach(ArticleLibrary.all.filter { $0.category == category }) { article in
+                            NavigationLink(value: ExploreRoute.article(article.id)) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(article.title).font(.body.weight(.medium))
+                                    Text("\(article.readMinutes) min de lecture · \(article.subtitle)")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+                }
+
+                Section("Transparence") {
+                    NavigationLink(value: ExploreRoute.evidence) {
                         Label("Fiches de preuve", systemImage: "checkmark.seal")
                     }
-                    NavigationLink {
-                        SourcesListView()
-                    } label: {
+                    NavigationLink(value: ExploreRoute.sources) {
                         Label("Sources scientifiques", systemImage: "books.vertical")
                     }
-                    Label("Bibliothèque éducative (cycle du cheveu, types d'alopécie, traitements, idées reçues) : prochaine version",
-                          systemImage: "circle.dashed")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
                 }
 
                 Section {
-                    Text("Consulte un médecin ou un dermatologue en cas de chute brutale, de plaques, de douleur, de rougeurs ou de tout symptôme inhabituel.")
-                        .font(.subheadline)
-                } header: {
-                    Text("Quand consulter")
+                    NavigationLink(value: ExploreRoute.article("signes-a-faire-examiner")) {
+                        Label("Quand consulter un médecin", systemImage: "stethoscope")
+                            .foregroundStyle(Color.gtAlert)
+                    }
                 }
             }
             .navigationTitle("Explorer")
+            .navigationDestination(for: ExploreRoute.self) { route in
+                switch route {
+                case .exercise(let id):
+                    if let exercise = ExerciseLibrary.exercise(id: id) { ExerciseDetailView(exercise: exercise) }
+                case .article(let id):
+                    if let article = ArticleLibrary.article(id: id) { ArticleView(article: article) }
+                case .evidence:
+                    EvidenceLibraryView()
+                case .sources:
+                    SourcesListView()
+                }
+            }
             .fullScreenCover(item: $session) { session in
                 switch session {
                 case .breathing:
@@ -57,6 +91,7 @@ struct ExploreView: View {
                     ScalpMassageSessionView { markRoutine(kind: .guidedScalpMassage) }
                 }
             }
+            .task { openDemoScreenIfNeeded() }
         }
     }
 
@@ -70,8 +105,8 @@ struct ExploreView: View {
                     .background(Color.gtGrowth.opacity(0.12), in: .circle)
                     .foregroundStyle(Color.gtGrowth)
                 VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
-                    Text(title).font(.headline).foregroundStyle(.primary)
-                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                    Text(title).font(.body.weight(.medium)).foregroundStyle(.primary)
+                    Text(detail).font(.footnote).foregroundStyle(.secondary)
                     EvidenceBadge(level: card.evidence)
                 }
                 Spacer()
@@ -85,6 +120,14 @@ struct ExploreView: View {
     private func markRoutine(kind: HabitKind) {
         guard let item = model.activeRoutine.first(where: { $0.kind == kind }) else { return }
         model.setCompleted(true, item: item, on: DayKey(.now))
+    }
+
+    private func openDemoScreenIfNeeded() {
+        switch DemoLaunch.screen {
+        case "exercise", "exerciseSession": path = [.exercise("yoga-doux")]
+        case "article": path = [.article("alopecie-androgenetique")]
+        default: break
+        }
     }
 }
 
