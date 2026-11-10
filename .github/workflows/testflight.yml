@@ -45,7 +45,9 @@ jobs:
         working-directory: Packages/GrowtinCore
         run: swift test
 
-      - name: Archiver (version Release, signature automatique)
+      # L'archive est créée sans signature : la signature de développement exigerait un appareil déclaré.
+      # L'export ci-dessous la signe pour l'App Store (certificat de distribution géré par Apple dans le cloud).
+      - name: Archiver (version Release, sans signature)
         run: |
           set -o pipefail
           xcodebuild archive \
@@ -54,12 +56,9 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Growtin.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             2>&1 | tee archive.log | grep -E "error:|warning: .*(sign|provision)|ARCHIVE (SUCCEEDED|FAILED)" || true
           grep -q "ARCHIVE SUCCEEDED" archive.log
