@@ -55,6 +55,8 @@ jobs:
         # --yes : confirmation non interactive (la chaîne ne peut pas répondre à une question).
         run: supabase --yes db push --linked --password "$SUPABASE_DB_PASSWORD"
       - name: Enregistrer la clé Anthropic dans les secrets des fonctions
+        # Facultatif : la clé peut aussi être saisie directement dans Supabase (Edge Functions › Secrets).
+        continue-on-error: true
         run: supabase --yes secrets set --project-ref "$PROJECT_REF" ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
       - name: Déployer les fonctions
         run: |
