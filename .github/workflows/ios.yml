@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: Tests, compilation et captures
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
@@ -23,7 +23,8 @@ jobs:
       - name: Choisir Xcode 26
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          # Xcode 26 (SDK iOS 26) est nécessaire pour Liquid Glass.
+          xcode-version: "26"
 
       - name: Versions
         run: |
