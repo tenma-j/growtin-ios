@@ -4,7 +4,7 @@ import RevenueCat
 
 /// Paramètres RevenueCat. La clé « publique » (appl_…) est conçue pour être embarquée dans l'app.
 enum RevenueCatConfiguration {
-    static let apiKey = ""
+    static let apiKey = "appl_qAceQtUDpgvLXRZiPTzUCypfJre"
     /// Identifiant du droit d'accès configuré dans RevenueCat.
     static let entitlementID = "premium"
 
