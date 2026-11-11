@@ -34,21 +34,12 @@ struct CueLabelStyle: LabelStyle {
     }
 }
 
-/// Illustration animée d'un mouvement (SF Symbols), respectueuse de « Réduire les animations ».
-struct MovementIllustration: View {
-    let symbol: String
-    var size: CGFloat = 88
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+/// Bibliothèque de mouvements du personnage 3D, chargée une seule fois.
+enum MotionCatalog {
+    static let library: MotionLibrary? = try? MotionLibrary.bundled()
 
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size, weight: .regular))
-            .foregroundStyle(Color.gtGrowth)
-            .symbolEffect(.breathe, isActive: !reduceMotion)
-            .contentTransition(.symbolEffect(.replace))
-            .frame(width: size * 1.8, height: size * 1.8)
-            .background(Color.gtGrowth.opacity(0.1), in: .circle)
-            .accessibilityHidden(true)
+    static func caption(for step: ExerciseStep) -> String? {
+        BodyRegionLabel.text(step.focus ?? library?.motion(step.motion)?.muscles ?? [])
     }
 }
 
@@ -56,16 +47,15 @@ struct ExerciseDetailView: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     @State private var showingSession = false
+    @State private var selectedStep = 0
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: GT.Spacing.l) {
-                HStack {
-                    Spacer()
-                    MovementIllustration(symbol: exercise.category.symbol)
-                    Spacer()
-                }
-                .padding(.top, GT.Spacing.s)
+                let preview = exercise.steps[min(selectedStep, exercise.steps.count - 1)]
+                MannequinCard(motion: preview.motion, focus: preview.focus,
+                              caption: "\(min(selectedStep, exercise.steps.count - 1) + 1). \(preview.title)", height: 360)
+                    .padding(.top, GT.Spacing.s)
 
                 VStack(alignment: .leading, spacing: GT.Spacing.xs) {
                     Text(exercise.category.label).gtEyebrowStyle()
@@ -81,29 +71,43 @@ struct ExerciseDetailView: View {
                 }
 
                 GTCard {
-                    Text("Déroulé").font(.headline)
+                    HStack {
+                        Text("Déroulé").font(.headline)
+                        Spacer()
+                        Text("Touche une étape pour voir le mouvement").font(.caption).foregroundStyle(.secondary)
+                    }
                     ForEach(Array(exercise.steps.enumerated()), id: \.offset) { index, step in
-                        HStack(alignment: .top, spacing: GT.Spacing.s) {
-                            Image(systemName: step.symbol)
-                                .frame(width: 28)
-                                .foregroundStyle(Color.gtGrowth)
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack {
-                                    Text("\(index + 1). \(step.title)").font(.subheadline.weight(.semibold))
-                                    Spacer()
-                                    Text(SessionTime.label(step.seconds)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                                }
-                                Text(step.instruction).font(.footnote).foregroundStyle(.secondary)
-                                ForEach(step.cues, id: \.self) { cue in
-                                    Label(cue, systemImage: "checkmark")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .labelStyle(CueLabelStyle())
+                        Button {
+                            withAnimation(.snappy) { selectedStep = index }
+                        } label: {
+                            HStack(alignment: .top, spacing: GT.Spacing.s) {
+                                Image(systemName: step.symbol)
+                                    .frame(width: 28)
+                                    .foregroundStyle(Color.gtGrowth)
+                                    .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack {
+                                        Text("\(index + 1). \(step.title)").font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                        Text(SessionTime.label(step.seconds)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                    }
+                                    Text(step.instruction).font(.footnote).foregroundStyle(.secondary)
+                                    ForEach(step.cues, id: \.self) { cue in
+                                        Label(cue, systemImage: "checkmark")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .labelStyle(CueLabelStyle())
+                                    }
                                 }
                             }
+                            .padding(GT.Spacing.xs)
+                            .background(index == selectedStep ? Color.gtGrowth.opacity(0.1) : .clear, in: .rect(cornerRadius: GT.Radius.small))
+                            .contentShape(.rect)
                         }
+                        .buttonStyle(.plain)
                         .accessibilityElement(children: .combine)
+                        .accessibilityHint("Affiche ce mouvement en 3D")
+                        .accessibilityAddTraits(index == selectedStep ? .isSelected : [])
                     }
                 }
 
@@ -148,7 +152,14 @@ struct ExerciseDetailView: View {
             ExerciseSessionView(exercise: exercise) { markHabit() }
         }
         .task {
-            if DemoLaunch.screen == "exerciseSession" { showingSession = true }
+            switch DemoLaunch.screen {
+            case "exerciseSession": showingSession = true
+            case "exercise": selectedStep = 1
+            case "exerciseFloor":
+                UserDefaults.standard.set(MannequinBody.female.rawValue, forKey: "mannequin.figure")
+                selectedStep = 3
+            default: break
+            }
         }
     }
 
@@ -199,13 +210,12 @@ struct ExerciseSessionView: View {
             precautions: exercise.precautions.first ?? "Arrête en cas de douleur ou de malaise.",
             onClose: { dismiss() }
         ) {
-            VStack(spacing: GT.Spacing.l) {
-                MovementIllustration(symbol: step.symbol, size: 72)
-                    .id(state.index)
+            VStack(spacing: GT.Spacing.m) {
+                MannequinCard(motion: step.motion, focus: step.focus, caption: MotionCatalog.caption(for: step), height: 270)
                 if !step.cues.isEmpty {
                     VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
                         ForEach(step.cues, id: \.self) { cue in
-                            Label(cue, systemImage: "checkmark").font(.subheadline).labelStyle(CueLabelStyle())
+                            Label(cue, systemImage: "checkmark").font(.footnote).labelStyle(CueLabelStyle())
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -213,7 +223,7 @@ struct ExerciseSessionView: View {
                     .background(Color.gtGrowth.opacity(0.08), in: .rect(cornerRadius: GT.Radius.control))
                 }
                 Text(SessionTime.label(state.remaining))
-                    .font(.system(size: 48, weight: .semibold).monospacedDigit())
+                    .font(.system(size: 40, weight: .semibold).monospacedDigit())
                     .contentTransition(.numericText(countsDown: true))
                 HStack(spacing: GT.Spacing.xxs) {
                     ForEach(exercise.steps.indices, id: \.self) { index in

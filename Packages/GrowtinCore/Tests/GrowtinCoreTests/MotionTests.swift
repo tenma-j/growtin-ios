@@ -1,0 +1,81 @@
+import Foundation
+import Testing
+@testable import GrowtinCore
+
+@Suite("Personnage 3D : mouvements")
+struct MotionTests {
+    let library = try! MotionLibrary.bundled()
+
+    @Test("Quaternions : rotations d'Euler dans l'ordre X, Y, Z")
+    func quaternions() {
+        let q = Quat(eulerXYZ: Vec3(-90, 0, 0))            // flexion de hanche : la jambe part vers l'avant
+        let v = q.rotate(Vec3(0, -1, 0))
+        #expect(abs(v.y) < 1e-9 && abs(v.z - 1) < 1e-9)
+        let abduct = Quat(eulerXYZ: Vec3(0, 0, 90)).rotate(Vec3(0, -1, 0)) // bras gauche sur le côté
+        #expect(abs(abduct.x - 1) < 1e-9)
+        let mid = Quat.slerp(.identity, Quat(axis: Vec3(0, 1, 0), degrees: 90), 0.5)
+        let r = mid.rotate(Vec3(0, 0, 1))
+        #expect(abs(r.x - sin(.pi / 4)) < 1e-9 && abs(r.z - cos(.pi / 4)) < 1e-9)
+    }
+
+    @Test("Miroir automatique pour le côté droit")
+    func mirroring() {
+        let pose = library.resolve(.inline(PoseSpec(base: nil, bones: ["upperarm01": [-10, 20, 30]], root: nil, ground: nil)))
+        let left = pose.rotations["upperarm01.L"]!, right = pose.rotations["upperarm01.R"]!
+        #expect(left == Quat(eulerXYZ: Vec3(-10, 20, 30)))
+        #expect(right == Quat(eulerXYZ: Vec3(-10, -20, -30)))
+    }
+
+    @Test("La bibliothèque est cohérente : os, régions, temps")
+    func libraryIsConsistent() {
+        #expect(library.motions.count >= 40)
+        let bones = Set(library.bones), regions = Set(library.regions)
+        for (id, motion) in library.motions {
+            #expect(motion.keys.first?.t == 0, "\(id)")
+            #expect(zip(motion.keys, motion.keys.dropFirst()).allSatisfy { $0.t < $1.t }, "\(id) : temps croissants")
+            for region in motion.muscles { #expect(regions.contains(region), "\(id) : \(region)") }
+            for prop in motion.props {
+                if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
+                #expect(["chair", "table", "wall", "mat"].contains(prop.kind), "\(id) : \(prop.kind)")
+            }
+            for key in motion.keys {
+                let pose = library.resolve(key.pose)
+                for name in pose.rotations.keys {
+                    let central = name.hasSuffix(".L") || name.hasSuffix(".R") ? String(name.dropLast(2)) : name
+                    #expect(bones.contains(name) || bones.contains(name + ".L") || bones.contains(central), "\(id) : os \(name)")
+                }
+            }
+        }
+    }
+
+    @Test("Chaque étape d'exercice a une animation existante")
+    func everyStepHasMotion() {
+        let regions = Set(library.regions)
+        for exercise in ExerciseLibrary.all {
+            for step in exercise.steps {
+                #expect(library.motion(step.motion) != nil, "\(exercise.id) / \(step.title) → \(step.motion)")
+                for region in step.focus ?? [] { #expect(regions.contains(region), "\(exercise.id) / \(step.title) : \(region)") }
+            }
+        }
+    }
+
+    @Test("Cinématique et mise au sol sur un squelette simple")
+    func kinematicsAndGrounding() {
+        let skeleton = Skeleton(joints: [
+            SkeletonJoint(name: "root", parent: nil, head: [0, 1, 0]),
+            SkeletonJoint(name: "upperleg01.L", parent: "root", head: [0.1, 1, 0]),
+            SkeletonJoint(name: "lowerleg01.L", parent: "upperleg01.L", head: [0.1, 0.5, 0]),
+        ])
+        // Un sommet au pied : 1 m sous la racine, porté par le genou.
+        let foot = SkinSample(position: Vec3(0.1, 0, 0), bones: [2], weights: [1])
+        let standing = ResolvedPose(rotations: [:], rootRotation: .identity, rootOffset: .zero, ground: true)
+        #expect(abs(Grounding.lift(for: standing, skeleton: skeleton, samples: [foot])) < 1e-9)
+        // Hanche fléchie à 90° : toute la jambe est à l'horizontale, le pied à 1 m du sol → il faut redescendre d'1 m.
+        let flexed = ResolvedPose(rotations: ["upperleg01.L": Quat(eulerXYZ: Vec3(-90, 0, 0))], rootRotation: .identity,
+                                  rootOffset: .zero, ground: true)
+        let (_, positions) = skeleton.worldTransforms(flexed)
+        #expect(abs(positions[2].z - 0.5) < 1e-9 && abs(positions[2].y - 1) < 1e-9)
+        #expect(abs(Grounding.lift(for: flexed, skeleton: skeleton, samples: [foot]) - (-1.0)) < 1e-9)
+        #expect(Easing.value(0.5, "inOut") == 0.5 && Easing.value(0.25, "linear") == 0.25)
+    }
+}

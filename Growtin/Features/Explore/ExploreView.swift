@@ -149,6 +149,7 @@ struct ExploreView: View {
     private func openDemoScreenIfNeeded() {
         switch DemoLaunch.screen {
         case "exercise", "exerciseSession": path = [.exercise("renforcement-poids-du-corps")]
+        case "exerciseFloor": path = [.exercise("yoga-doux")]
         case "article": path = [.article("alopecie-androgenetique")]
         default: break
         }

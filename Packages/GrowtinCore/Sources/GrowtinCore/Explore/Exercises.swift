@@ -53,13 +53,20 @@ public struct ExerciseStep: Codable, Hashable, Sendable {
     public let symbol: String
     /// Points de technique (posture, rythme, respiration) affichés sous la consigne.
     public let cues: [String]
+    /// Mouvement joué par le personnage 3D (identifiant de motions.json).
+    public let motion: String
+    /// Zones du corps mises en avant pendant l'étape ; à défaut, celles du mouvement.
+    public let focus: [String]?
 
-    public init(_ title: String, _ instruction: String, seconds: Int, symbol: String, cues: [String] = []) {
+    public init(_ title: String, _ instruction: String, seconds: Int, symbol: String, cues: [String] = [],
+                motion: String = "breathe-stand", focus: [String]? = nil) {
         self.title = title
         self.instruction = instruction
         self.seconds = seconds
         self.symbol = symbol
         self.cues = cues
+        self.motion = motion
+        self.focus = focus
     }
 }
 
@@ -92,11 +99,11 @@ public enum ExerciseLibrary {
             summary: "Une marche à allure soutenue, encadrée par un échauffement et un retour au calme. La base la plus simple pour atteindre les repères d'activité de l'OMS.",
             steps: [
                 ExerciseStep("Échauffement", "Marche à allure de promenade. Laisse les bras se balancer naturellement.", seconds: 180, symbol: "figure.walk",
-                             cues: ["Épaules basses, regard à l'horizon.", "Respire par le nez si c'est confortable."]),
+                             cues: ["Épaules basses, regard à l'horizon.", "Respire par le nez si c'est confortable."], motion: "walk"),
                 ExerciseStep("Marche soutenue", "Accélère jusqu'à respirer plus vite tout en pouvant encore parler, sans pouvoir chanter.", seconds: 840, symbol: "figure.walk.motion",
-                             cues: ["Raccourcis un peu la foulée et augmente la cadence plutôt que d'allonger le pas.", "Plie les coudes à 90° et balance les bras d'avant en arrière.", "Pose le talon, déroule le pied, pousse avec les orteils."]),
+                             cues: ["Raccourcis un peu la foulée et augmente la cadence plutôt que d'allonger le pas.", "Plie les coudes à 90° et balance les bras d'avant en arrière.", "Pose le talon, déroule le pied, pousse avec les orteils."], motion: "walk-fast"),
                 ExerciseStep("Retour au calme", "Ralentis progressivement jusqu'à l'allure du début.", seconds: 180, symbol: "figure.walk",
-                             cues: ["Expire plus longtemps que tu n'inspires.", "Termine par 3 grandes respirations à l'arrêt."])
+                             cues: ["Expire plus longtemps que tu n'inspires.", "Termine par 3 grandes respirations à l'arrêt."], motion: "walk")
             ],
             benefits: "L'OMS recommande 150 à 300 minutes d'activité modérée par semaine : 20 minutes par jour en font déjà 140. Elle améliore la santé cardiovasculaire, le sommeil et l'humeur.",
             hairNote: "La marche est un des meilleurs leviers pour le sommeil et la gestion du stress, deux sujets qui comptent quand on s'inquiète pour ses cheveux. Elle n'a pas d'effet démontré sur la repousse.",
@@ -109,16 +116,16 @@ public enum ExerciseLibrary {
             summary: "Quatre fois 3 minutes rapides et 2 minutes tranquilles. Plus stimulant qu'une marche continue, sans courir.",
             steps: [
                 ExerciseStep("Échauffement", "Marche tranquille.", seconds: 180, symbol: "figure.walk",
-                             cues: ["Fais quelques cercles d'épaules en marchant."]),
+                             cues: ["Fais quelques cercles d'épaules en marchant."], motion: "walk"),
                 ExerciseStep("Rapide n° 1", "Marche aussi vite que possible sans courir.", seconds: 180, symbol: "figure.walk.motion",
-                             cues: ["Tu dois avoir du mal à faire une phrase complète.", "Bras pliés et dynamiques."]),
-                ExerciseStep("Récupération", "Ralentis franchement.", seconds: 120, symbol: "figure.walk", cues: ["Laisse ta respiration redescendre."]),
-                ExerciseStep("Rapide n° 2", "Reprends l'allure rapide.", seconds: 180, symbol: "figure.walk.motion"),
-                ExerciseStep("Récupération", "Allure tranquille.", seconds: 120, symbol: "figure.walk"),
-                ExerciseStep("Rapide n° 3", "Allure rapide, si possible dans une petite montée.", seconds: 180, symbol: "figure.walk.motion"),
-                ExerciseStep("Récupération", "Allure tranquille.", seconds: 120, symbol: "figure.walk"),
-                ExerciseStep("Rapide n° 4", "Dernière accélération : garde une bonne posture jusqu'au bout.", seconds: 180, symbol: "figure.walk.motion"),
-                ExerciseStep("Retour au calme", "Marche lentement.", seconds: 120, symbol: "figure.cooldown", cues: ["Expire lentement par la bouche."])
+                             cues: ["Tu dois avoir du mal à faire une phrase complète.", "Bras pliés et dynamiques."], motion: "walk-fast"),
+                ExerciseStep("Récupération", "Ralentis franchement.", seconds: 120, symbol: "figure.walk", cues: ["Laisse ta respiration redescendre."], motion: "walk"),
+                ExerciseStep("Rapide n° 2", "Reprends l'allure rapide.", seconds: 180, symbol: "figure.walk.motion", motion: "walk-fast"),
+                ExerciseStep("Récupération", "Allure tranquille.", seconds: 120, symbol: "figure.walk", motion: "walk"),
+                ExerciseStep("Rapide n° 3", "Allure rapide, si possible dans une petite montée.", seconds: 180, symbol: "figure.walk.motion", motion: "walk-fast"),
+                ExerciseStep("Récupération", "Allure tranquille.", seconds: 120, symbol: "figure.walk", motion: "walk"),
+                ExerciseStep("Rapide n° 4", "Dernière accélération : garde une bonne posture jusqu'au bout.", seconds: 180, symbol: "figure.walk.motion", motion: "walk-fast"),
+                ExerciseStep("Retour au calme", "Marche lentement.", seconds: 120, symbol: "figure.cooldown", cues: ["Expire lentement par la bouche."], motion: "walk")
             ],
             benefits: "Alterner des phases plus intenses permet d'atteindre plus facilement une intensité modérée à soutenue ; l'OMS rappelle que toute activité compte.",
             hairNote: "Bon choix si tu veux progresser après la marche simple. Le bénéfice porte sur la forme et le sommeil, pas directement sur les cheveux.",
@@ -130,24 +137,24 @@ public enum ExerciseLibrary {
             id: "renforcement-poids-du-corps", title: "Renforcement au poids du corps", category: .strength, level: .beginner,
             summary: "Quinze minutes sans matériel, en 2 tours de 5 exercices. L'OMS recommande ce type de séance au moins 2 fois par semaine.",
             steps: [
-                ExerciseStep("Échauffement", "Marche sur place et fais de grands cercles de bras.", seconds: 120, symbol: "figure.walk"),
+                ExerciseStep("Échauffement", "Marche sur place et fais de grands cercles de bras.", seconds: 120, symbol: "figure.walk", motion: "warmup-march"),
                 ExerciseStep("Squat sur chaise", "Assieds-toi lentement sur une chaise puis relève-toi sans t'aider des mains. 10 répétitions.", seconds: 60, symbol: "figure.strengthtraining.functional",
-                             cues: ["Descends en 3 secondes, remonte en 1.", "Genoux dans l'axe des pieds.", "Pousse dans les talons."]),
+                             cues: ["Descends en 3 secondes, remonte en 1.", "Genoux dans l'axe des pieds.", "Pousse dans les talons."], motion: "chair-squat"),
                 ExerciseStep("Pompes inclinées", "Mains sur le bord d'une table ou d'un plan de travail, corps gainé. Plie les coudes puis repousse. 8 à 10 répétitions.", seconds: 60, symbol: "figure.strengthtraining.traditional",
-                             cues: ["Le corps forme une planche de la tête aux talons.", "Coudes à 45° du corps, pas à l'horizontale."]),
+                             cues: ["Le corps forme une planche de la tête aux talons.", "Coudes à 45° du corps, pas à l'horizontale."], motion: "incline-pushup"),
                 ExerciseStep("Pont fessier", "Allongé sur le dos, genoux pliés, monte le bassin en serrant les fessiers, tiens 2 secondes, redescends. 12 répétitions.", seconds: 60, symbol: "figure.core.training",
-                             cues: ["Expire en montant.", "Ne cambre pas : arrête la montée quand les cuisses et le buste sont alignés."]),
+                             cues: ["Expire en montant.", "Ne cambre pas : arrête la montée quand les cuisses et le buste sont alignés."], motion: "glute-bridge"),
                 ExerciseStep("Rowing serviette", "Debout, coince une serviette sous un pied et tire les deux extrémités vers ton ventre en serrant les omoplates. 12 répétitions.", seconds: 60, symbol: "figure.rower",
-                             cues: ["Dos droit, poitrine ouverte.", "Imagine pincer un crayon entre les omoplates."]),
+                             cues: ["Dos droit, poitrine ouverte.", "Imagine pincer un crayon entre les omoplates."], motion: "towel-row"),
                 ExerciseStep("Gainage sur les genoux", "Sur les avant-bras et les genoux, aligne dos et cuisses, rentre légèrement le ventre.", seconds: 30, symbol: "figure.core.training",
-                             cues: ["Respire normalement, ne bloque pas.", "Si c'est facile, passe sur les pieds."]),
-                ExerciseStep("Pause", "Bois une gorgée d'eau, marche un peu.", seconds: 60, symbol: "drop"),
-                ExerciseStep("Tour 2 : squats", "10 squats sur chaise.", seconds: 60, symbol: "figure.strengthtraining.functional"),
-                ExerciseStep("Tour 2 : pompes", "8 à 10 pompes inclinées.", seconds: 60, symbol: "figure.strengthtraining.traditional"),
-                ExerciseStep("Tour 2 : pont", "12 ponts fessiers.", seconds: 60, symbol: "figure.core.training"),
-                ExerciseStep("Tour 2 : rowing", "12 rowings serviette.", seconds: 60, symbol: "figure.rower"),
-                ExerciseStep("Tour 2 : gainage", "Gainage sur les genoux.", seconds: 30, symbol: "figure.core.training"),
-                ExerciseStep("Retour au calme", "Étire doucement les cuisses et la poitrine, respire lentement.", seconds: 120, symbol: "figure.cooldown")
+                             cues: ["Respire normalement, ne bloque pas.", "Si c'est facile, passe sur les pieds."], motion: "knee-plank"),
+                ExerciseStep("Pause", "Bois une gorgée d'eau, marche un peu.", seconds: 60, symbol: "drop", motion: "breathe-stand", focus: []),
+                ExerciseStep("Tour 2 : squats", "10 squats sur chaise.", seconds: 60, symbol: "figure.strengthtraining.functional", motion: "chair-squat"),
+                ExerciseStep("Tour 2 : pompes", "8 à 10 pompes inclinées.", seconds: 60, symbol: "figure.strengthtraining.traditional", motion: "incline-pushup"),
+                ExerciseStep("Tour 2 : pont", "12 ponts fessiers.", seconds: 60, symbol: "figure.core.training", motion: "glute-bridge"),
+                ExerciseStep("Tour 2 : rowing", "12 rowings serviette.", seconds: 60, symbol: "figure.rower", motion: "towel-row"),
+                ExerciseStep("Tour 2 : gainage", "Gainage sur les genoux.", seconds: 30, symbol: "figure.core.training", motion: "knee-plank"),
+                ExerciseStep("Retour au calme", "Étire doucement les cuisses et la poitrine, respire lentement.", seconds: 120, symbol: "figure.cooldown", motion: "cooldown-stretch")
             ],
             benefits: "Le renforcement musculaire 2 fois par semaine fait partie des recommandations de l'OMS : il entretient la masse musculaire, l'équilibre et la santé métabolique.",
             hairNote: "Aucun lien démontré entre musculation au poids du corps et chute de cheveux. Si tu prends des compléments « pour sportifs », parles-en à ton médecin : certains contiennent des substances à éviter.",
@@ -159,18 +166,18 @@ public enum ExerciseLibrary {
             id: "cardio-leger", title: "Cardio doux sans sauts", category: .cardio, level: .beginner,
             summary: "Dix minutes de mouvements simples dans le salon, sans sauts ni matériel, pour faire monter le cœur en douceur.",
             steps: [
-                ExerciseStep("Marche sur place", "Lève les genoux à hauteur confortable et balance les bras.", seconds: 120, symbol: "figure.walk"),
+                ExerciseStep("Marche sur place", "Lève les genoux à hauteur confortable et balance les bras.", seconds: 120, symbol: "figure.walk", motion: "march"),
                 ExerciseStep("Pas chassés", "Deux pas à droite, deux pas à gauche, genoux légèrement fléchis.", seconds: 60, symbol: "figure.step.training",
-                             cues: ["Reste léger sur les pieds.", "Ajoute les bras en ouvrant et fermant."]),
+                             cues: ["Reste léger sur les pieds.", "Ajoute les bras en ouvrant et fermant."], motion: "side-steps"),
                 ExerciseStep("Montées de genoux", "Alterne les genoux devant toi, dos droit, sans sauter.", seconds: 60, symbol: "figure.highintensity.intervaltraining",
-                             cues: ["Touche le genou avec la main opposée pour travailler la coordination."]),
-                ExerciseStep("Récupération", "Marche sur place lentement.", seconds: 60, symbol: "figure.walk"),
+                             cues: ["Touche le genou avec la main opposée pour travailler la coordination."], motion: "high-knees"),
+                ExerciseStep("Récupération", "Marche sur place lentement.", seconds: 60, symbol: "figure.walk", motion: "walk"),
                 ExerciseStep("Squats partiels", "Plie les genoux comme pour t'asseoir, puis remonte en levant les bras.", seconds: 60, symbol: "figure.strengthtraining.functional",
-                             cues: ["Rythme : 2 secondes pour descendre, 2 pour monter."]),
+                             cues: ["Rythme : 2 secondes pour descendre, 2 pour monter."], motion: "half-squat-arms"),
                 ExerciseStep("Boxe dans le vide", "Genoux souples, envoie des coups de poing alternés devant toi.", seconds: 60, symbol: "figure.boxing",
-                             cues: ["Expire à chaque coup.", "Ne tends pas complètement les coudes."]),
-                ExerciseStep("Montées de genoux", "Alterne les genoux, respiration régulière.", seconds: 60, symbol: "figure.highintensity.intervaltraining"),
-                ExerciseStep("Retour au calme", "Marche lentement, puis respire profondément.", seconds: 120, symbol: "figure.cooldown")
+                             cues: ["Expire à chaque coup.", "Ne tends pas complètement les coudes."], motion: "shadow-boxing"),
+                ExerciseStep("Montées de genoux", "Alterne les genoux, respiration régulière.", seconds: 60, symbol: "figure.highintensity.intervaltraining", motion: "high-knees"),
+                ExerciseStep("Retour au calme", "Marche lentement, puis respire profondément.", seconds: 120, symbol: "figure.cooldown", motion: "walk")
             ],
             benefits: "Une activité modérée régulière contribue à la santé cardiovasculaire et au bien-être, et peut se pratiquer par tous les temps.",
             hairNote: "Une alternative à la marche les jours de pluie. Effet sur la forme et l'humeur, pas sur les cheveux.",
@@ -182,15 +189,15 @@ public enum ExerciseLibrary {
             id: "mobilite-matin", title: "Mobilité du matin", category: .mobility, level: .gentle,
             summary: "Huit minutes pour délier les épaules, le dos et les hanches au réveil.",
             steps: [
-                ExerciseStep("Épaules", "Fais de grands cercles lents avec les épaules : 10 vers l'arrière, 10 vers l'avant.", seconds: 60, symbol: "figure.arms.open"),
-                ExerciseStep("Nuque", "Incline l'oreille vers l'épaule, 3 respirations de chaque côté, sans forcer ni faire de cercles complets.", seconds: 60, symbol: "figure.mind.and.body"),
+                ExerciseStep("Épaules", "Fais de grands cercles lents avec les épaules : 10 vers l'arrière, 10 vers l'avant.", seconds: 60, symbol: "figure.arms.open", motion: "shoulder-rolls"),
+                ExerciseStep("Nuque", "Incline l'oreille vers l'épaule, 3 respirations de chaque côté, sans forcer ni faire de cercles complets.", seconds: 60, symbol: "figure.mind.and.body", motion: "neck-tilt"),
                 ExerciseStep("Chat-vache", "À quatre pattes, arrondis le dos en expirant puis creuse-le en inspirant.", seconds: 90, symbol: "figure.flexibility",
-                             cues: ["Commence le mouvement par le bassin, laisse la tête suivre.", "Une respiration complète par mouvement."]),
-                ExerciseStep("Hanches", "Debout, mains sur les hanches, fais 8 cercles lents du bassin dans chaque sens.", seconds: 60, symbol: "figure.cooldown"),
+                             cues: ["Commence le mouvement par le bassin, laisse la tête suivre.", "Une respiration complète par mouvement."], motion: "cat-cow"),
+                ExerciseStep("Hanches", "Debout, mains sur les hanches, fais 8 cercles lents du bassin dans chaque sens.", seconds: 60, symbol: "figure.cooldown", motion: "hip-circles"),
                 ExerciseStep("Fentes douces", "Avance un pied, plie légèrement les deux genoux, reviens. Alterne.", seconds: 90, symbol: "figure.strengthtraining.functional",
-                             cues: ["Le genou avant reste au-dessus de la cheville."]),
-                ExerciseStep("Chevilles", "Une main contre un mur, fais 10 cercles avec chaque cheville.", seconds: 60, symbol: "figure.stand"),
-                ExerciseStep("Grand étirement", "Monte les bras au-dessus de la tête et grandis-toi en respirant, puis penche-toi doucement à droite et à gauche.", seconds: 60, symbol: "figure.arms.open")
+                             cues: ["Le genou avant reste au-dessus de la cheville."], motion: "gentle-lunge"),
+                ExerciseStep("Chevilles", "Une main contre un mur, fais 10 cercles avec chaque cheville.", seconds: 60, symbol: "figure.stand", motion: "ankle-circles"),
+                ExerciseStep("Grand étirement", "Monte les bras au-dessus de la tête et grandis-toi en respirant, puis penche-toi doucement à droite et à gauche.", seconds: 60, symbol: "figure.arms.open", motion: "overhead-stretch")
             ],
             benefits: "Des mouvements doux et réguliers aident à se sentir moins raide et à démarrer la journée en douceur.",
             hairNote: "Idéal à associer à ta photo de suivi ou à ton bilan du matin, pour ancrer une routine. Aucun effet direct sur les cheveux.",
@@ -202,14 +209,14 @@ public enum ExerciseLibrary {
             id: "nuque-epaules", title: "Nuque et épaules détendues", category: .stretching, level: .gentle,
             summary: "Six minutes pour relâcher les tensions qui s'accumulent dans le haut du dos quand on est stressé ou longtemps devant un écran.",
             steps: [
-                ExerciseStep("Haussements", "Monte les épaules vers les oreilles en inspirant, tiens 3 secondes, laisse-les tomber en expirant. 8 fois.", seconds: 60, symbol: "figure.arms.open"),
+                ExerciseStep("Haussements", "Monte les épaules vers les oreilles en inspirant, tiens 3 secondes, laisse-les tomber en expirant. 8 fois.", seconds: 60, symbol: "figure.arms.open", motion: "shrugs"),
                 ExerciseStep("Rentrer le menton", "Recule le menton comme pour faire un double menton, tiens 3 secondes. 10 fois.", seconds: 60, symbol: "figure.stand",
-                             cues: ["Le regard reste horizontal.", "Tu dois sentir un allongement à l'arrière de la nuque."]),
+                             cues: ["Le regard reste horizontal.", "Tu dois sentir un allongement à l'arrière de la nuque."], motion: "chin-tucks"),
                 ExerciseStep("Étirement du trapèze", "Main droite sur la tête, incline doucement l'oreille droite vers l'épaule, épaule gauche basse. 30 secondes de chaque côté.", seconds: 75, symbol: "figure.mind.and.body",
-                             cues: ["La main pèse, elle ne tire pas."]),
-                ExerciseStep("Ouverture de poitrine", "Dans l'encadrement d'une porte, avant-bras sur les montants, avance doucement le buste.", seconds: 60, symbol: "figure.arms.open"),
-                ExerciseStep("Omoplates", "Bras le long du corps, serre les omoplates l'une vers l'autre 5 secondes, relâche. 8 fois.", seconds: 60, symbol: "figure.rower"),
-                ExerciseStep("Respiration", "Mains sur le bas des côtes, inspire 4 secondes en écartant les côtes, expire 6 secondes.", seconds: 45, symbol: "wind")
+                             cues: ["La main pèse, elle ne tire pas."], motion: "trap-stretch"),
+                ExerciseStep("Ouverture de poitrine", "Dans l'encadrement d'une porte, avant-bras sur les montants, avance doucement le buste.", seconds: 60, symbol: "figure.arms.open", motion: "doorway-stretch"),
+                ExerciseStep("Omoplates", "Bras le long du corps, serre les omoplates l'une vers l'autre 5 secondes, relâche. 8 fois.", seconds: 60, symbol: "figure.rower", motion: "scapular-squeeze"),
+                ExerciseStep("Respiration", "Mains sur le bas des côtes, inspire 4 secondes en écartant les côtes, expire 6 secondes.", seconds: 45, symbol: "wind", motion: "rib-breathing")
             ],
             benefits: "Des pauses d'étirement et de mobilité aident à réduire la sensation de raideur et à faire une coupure.",
             hairNote: "Les tensions de la nuque n'abîment pas les cheveux. En revanche, si tu portes souvent des coiffures serrées, desserrer ta coiffure compte davantage pour ton cuir chevelu.",
@@ -221,14 +228,14 @@ public enum ExerciseLibrary {
             id: "etirements-soir", title: "Étirements du soir", category: .stretching, level: .gentle,
             summary: "Dix minutes d'étirements lents, au sol, pour signaler au corps que la journée est terminée.",
             steps: [
-                ExerciseStep("Respiration d'arrivée", "Assis en tailleur, 5 respirations lentes, expiration plus longue que l'inspiration.", seconds: 60, symbol: "wind"),
-                ExerciseStep("Nuque et épaules", "Incline la tête d'un côté, puis de l'autre, en laissant l'épaule opposée descendre.", seconds: 90, symbol: "figure.mind.and.body"),
+                ExerciseStep("Respiration d'arrivée", "Assis en tailleur, 5 respirations lentes, expiration plus longue que l'inspiration.", seconds: 60, symbol: "wind", motion: "seated-breathe"),
+                ExerciseStep("Nuque et épaules", "Incline la tête d'un côté, puis de l'autre, en laissant l'épaule opposée descendre.", seconds: 90, symbol: "figure.mind.and.body", motion: "seated-neck"),
                 ExerciseStep("Flexion assise", "Jambes tendues devant toi, penche-toi vers l'avant dos long, genoux pliés si besoin.", seconds: 90, symbol: "figure.flexibility",
-                             cues: ["Cherche à allonger le dos, pas à toucher les pieds."]),
-                ExerciseStep("Papillon", "Plantes de pieds collées, laisse tomber les genoux sur les côtés.", seconds: 90, symbol: "figure.yoga"),
-                ExerciseStep("Torsion allongée", "Sur le dos, genoux pliés, laisse-les tomber d'un côté, regard de l'autre. Change de côté.", seconds: 120, symbol: "figure.mind.and.body"),
+                             cues: ["Cherche à allonger le dos, pas à toucher les pieds."], motion: "seated-forward-fold"),
+                ExerciseStep("Papillon", "Plantes de pieds collées, laisse tomber les genoux sur les côtés.", seconds: 90, symbol: "figure.yoga", motion: "butterfly"),
+                ExerciseStep("Torsion allongée", "Sur le dos, genoux pliés, laisse-les tomber d'un côté, regard de l'autre. Change de côté.", seconds: 120, symbol: "figure.mind.and.body", motion: "supine-twist"),
                 ExerciseStep("Jambes contre le mur", "Allongé, fesses près du mur, jambes posées dessus. Respire calmement.", seconds: 150, symbol: "bed.double",
-                             cues: ["Ferme les yeux.", "Lâche le poids de la tête dans le sol."])
+                             cues: ["Ferme les yeux.", "Lâche le poids de la tête dans le sol."], motion: "legs-up-wall")
             ],
             benefits: "Un moment calme et régulier avant le coucher fait partie des conseils d'hygiène du sommeil ; 7 heures ou plus par nuit sont recommandées chez l'adulte.",
             hairNote: "Mieux dormir est bénéfique pour ta santé générale et ton humeur ; aucun effet direct sur la repousse n'est démontré.",
@@ -240,14 +247,14 @@ public enum ExerciseLibrary {
             id: "scan-corporel", title: "Scan corporel pour s'endormir", category: .relaxation, level: .gentle,
             summary: "Dix minutes, allongé dans ton lit, pour poser ton attention sur chaque partie du corps et laisser venir le sommeil.",
             steps: [
-                ExerciseStep("Installation", "Allonge-toi sur le dos, lumière éteinte, bras le long du corps.", seconds: 60, symbol: "bed.double", cues: ["Baisse la luminosité de l'écran au minimum."]),
-                ExerciseStep("Respiration", "Inspire par le nez 4 secondes, expire par la bouche 6 secondes.", seconds: 90, symbol: "wind"),
-                ExerciseStep("Pieds et jambes", "Porte ton attention sur tes pieds, puis tes mollets, tes genoux, tes cuisses. Remarque le poids, la chaleur, sans rien changer.", seconds: 120, symbol: "figure.cooldown"),
-                ExerciseStep("Ventre et poitrine", "Sens le ventre se soulever et redescendre. Laisse la respiration se faire seule.", seconds: 90, symbol: "figure.mind.and.body"),
-                ExerciseStep("Mains, bras, épaules", "Desserre les mains, relâche les coudes, laisse les épaules s'enfoncer dans le matelas.", seconds: 90, symbol: "hand.raised"),
+                ExerciseStep("Installation", "Allonge-toi sur le dos, lumière éteinte, bras le long du corps.", seconds: 60, symbol: "bed.double", cues: ["Baisse la luminosité de l'écran au minimum."], motion: "lying-breathe", focus: []),
+                ExerciseStep("Respiration", "Inspire par le nez 4 secondes, expire par la bouche 6 secondes.", seconds: 90, symbol: "wind", motion: "lying-breathe", focus: ["chest", "abs"]),
+                ExerciseStep("Pieds et jambes", "Porte ton attention sur tes pieds, puis tes mollets, tes genoux, tes cuisses. Remarque le poids, la chaleur, sans rien changer.", seconds: 120, symbol: "figure.cooldown", motion: "lying-breathe", focus: ["feet", "calves", "shins", "quads", "hamstrings"]),
+                ExerciseStep("Ventre et poitrine", "Sens le ventre se soulever et redescendre. Laisse la respiration se faire seule.", seconds: 90, symbol: "figure.mind.and.body", motion: "lying-breathe", focus: ["abs", "chest"]),
+                ExerciseStep("Mains, bras, épaules", "Desserre les mains, relâche les coudes, laisse les épaules s'enfoncer dans le matelas.", seconds: 90, symbol: "hand.raised", motion: "lying-breathe", focus: ["hands", "forearms", "biceps", "triceps", "shoulders"]),
                 ExerciseStep("Visage", "Relâche la mâchoire, la langue, le front, l'espace entre les sourcils.", seconds: 75, symbol: "face.smiling",
-                             cues: ["Les dents ne se touchent pas."]),
-                ExerciseStep("Corps entier", "Sens le corps entier, lourd et posé. Si une pensée arrive, reviens simplement à la respiration.", seconds: 75, symbol: "moon.zzz")
+                             cues: ["Les dents ne se touchent pas."], motion: "lying-breathe", focus: ["head", "neck"]),
+                ExerciseStep("Corps entier", "Sens le corps entier, lourd et posé. Si une pensée arrive, reviens simplement à la respiration.", seconds: 75, symbol: "moon.zzz", motion: "lying-breathe", focus: [])
             ],
             benefits: "Les techniques de relaxation font partie des approches proposées pour mieux s'endormir ; viser au moins 7 heures de sommeil régulier est recommandé chez l'adulte.",
             hairNote: "Tu ne retrouves pas le sommeil en surveillant tes cheveux le soir : laisse le suivi photo au matin, et garde le soir pour décrocher.",
@@ -259,15 +266,15 @@ public enum ExerciseLibrary {
             id: "yoga-doux", title: "Yoga doux", category: .yoga, level: .gentle,
             summary: "Douze minutes de postures simples rythmées par une respiration lente, accessibles aux débutants.",
             steps: [
-                ExerciseStep("Posture de la montagne", "Debout, pieds parallèles largeur de bassin, épaules relâchées, 5 respirations profondes.", seconds: 60, symbol: "figure.stand"),
+                ExerciseStep("Posture de la montagne", "Debout, pieds parallèles largeur de bassin, épaules relâchées, 5 respirations profondes.", seconds: 60, symbol: "figure.stand", motion: "breathe-stand"),
                 ExerciseStep("Salutation des bras", "Inspire en levant les bras au-dessus de la tête, expire en les redescendant. 6 fois.", seconds: 90, symbol: "figure.arms.open",
-                             cues: ["Le mouvement dure le temps de la respiration, ni plus ni moins."]),
-                ExerciseStep("Flexion avant douce", "Penche-toi vers l'avant, genoux fléchis, tête et bras relâchés. Remonte en déroulant le dos.", seconds: 60, symbol: "figure.flexibility"),
-                ExerciseStep("Chat-vache", "À quatre pattes, alterne dos rond à l'expiration et dos creux à l'inspiration.", seconds: 120, symbol: "figure.flexibility"),
+                             cues: ["Le mouvement dure le temps de la respiration, ni plus ni moins."], motion: "arm-raise"),
+                ExerciseStep("Flexion avant douce", "Penche-toi vers l'avant, genoux fléchis, tête et bras relâchés. Remonte en déroulant le dos.", seconds: 60, symbol: "figure.flexibility", motion: "forward-fold"),
+                ExerciseStep("Chat-vache", "À quatre pattes, alterne dos rond à l'expiration et dos creux à l'inspiration.", seconds: 120, symbol: "figure.flexibility", motion: "cat-cow"),
                 ExerciseStep("Posture de l'enfant", "Fesses vers les talons, bras allongés, front au sol ou sur un coussin.", seconds: 120, symbol: "figure.yoga",
-                             cues: ["Respire dans le dos : sens les côtes s'écarter."]),
-                ExerciseStep("Torsion allongée", "Sur le dos, genoux pliés, laisse-les tomber d'un côté puis de l'autre.", seconds: 120, symbol: "figure.mind.and.body"),
-                ExerciseStep("Relaxation", "Allongé sur le dos, bras le long du corps, paumes vers le ciel, respire calmement.", seconds: 150, symbol: "bed.double")
+                             cues: ["Respire dans le dos : sens les côtes s'écarter."], motion: "child-pose"),
+                ExerciseStep("Torsion allongée", "Sur le dos, genoux pliés, laisse-les tomber d'un côté puis de l'autre.", seconds: 120, symbol: "figure.mind.and.body", motion: "supine-twist"),
+                ExerciseStep("Relaxation", "Allongé sur le dos, bras le long du corps, paumes vers le ciel, respire calmement.", seconds: 150, symbol: "bed.double", motion: "lying-breathe")
             ],
             benefits: "Le yoga doux associe mouvement et respiration lente ; les respirations lentes sont associées à une sensation de calme et de détente.",
             hairNote: "Contrairement à une idée répandue, les postures tête en bas n'ont aucun effet démontré sur les cheveux. Le bénéfice attendu ici concerne le stress.",
@@ -279,14 +286,14 @@ public enum ExerciseLibrary {
             id: "relaxation-progressive", title: "Relaxation musculaire progressive", category: .relaxation, level: .gentle,
             summary: "Contracter 5 secondes, relâcher 10 secondes, groupe de muscles par groupe de muscles, pour sentir la différence entre tension et détente.",
             steps: [
-                ExerciseStep("Installation", "Assis ou allongé, ferme les yeux et respire lentement.", seconds: 60, symbol: "figure.mind.and.body"),
+                ExerciseStep("Installation", "Assis ou allongé, ferme les yeux et respire lentement.", seconds: 60, symbol: "figure.mind.and.body", motion: "chair-breathe", focus: []),
                 ExerciseStep("Mains et bras", "Serre les poings et contracte les bras 5 secondes, puis relâche d'un coup et observe pendant 10 secondes. Deux fois.", seconds: 90, symbol: "hand.raised",
-                             cues: ["Contracte à environ 70 % de ta force, pas au maximum."]),
-                ExerciseStep("Épaules", "Monte les épaules vers les oreilles, tiens 5 secondes, puis laisse-les tomber.", seconds: 90, symbol: "figure.arms.open"),
-                ExerciseStep("Visage", "Plisse le front, ferme fort les yeux, serre les lèvres, puis relâche tout le visage.", seconds: 90, symbol: "face.smiling"),
-                ExerciseStep("Ventre", "Contracte le ventre 5 secondes, puis relâche en expirant longuement.", seconds: 90, symbol: "figure.core.training"),
-                ExerciseStep("Jambes et pieds", "Tends les jambes et ramène les orteils vers toi, puis relâche.", seconds: 90, symbol: "figure.cooldown"),
-                ExerciseStep("Détente globale", "Parcours le corps : s'il reste une zone tendue, contracte-la une dernière fois puis relâche.", seconds: 90, symbol: "bed.double")
+                             cues: ["Contracte à environ 70 % de ta force, pas au maximum."], motion: "fists-clench"),
+                ExerciseStep("Épaules", "Monte les épaules vers les oreilles, tiens 5 secondes, puis laisse-les tomber.", seconds: 90, symbol: "figure.arms.open", motion: "chair-shrugs"),
+                ExerciseStep("Visage", "Plisse le front, ferme fort les yeux, serre les lèvres, puis relâche tout le visage.", seconds: 90, symbol: "face.smiling", motion: "chair-breathe", focus: ["head", "neck"]),
+                ExerciseStep("Ventre", "Contracte le ventre 5 secondes, puis relâche en expirant longuement.", seconds: 90, symbol: "figure.core.training", motion: "abs-contract"),
+                ExerciseStep("Jambes et pieds", "Tends les jambes et ramène les orteils vers toi, puis relâche.", seconds: 90, symbol: "figure.cooldown", motion: "legs-tense"),
+                ExerciseStep("Détente globale", "Parcours le corps : s'il reste une zone tendue, contracte-la une dernière fois puis relâche.", seconds: 90, symbol: "bed.double", motion: "chair-breathe", focus: [])
             ],
             benefits: "Un exercice simple pour faire une vraie pause et relâcher les tensions ressenties, utilisable aussi au coucher.",
             hairNote: "Un stress intense peut déclencher une chute temporaire (effluvium télogène), souvent 2 à 3 mois après l'événement. Se détendre aide à mieux vivre le stress ; aucun effet direct sur les cheveux n'est démontré.",
@@ -298,11 +305,11 @@ public enum ExerciseLibrary {
             id: "pause-active-bureau", title: "Pause active au bureau", category: .mobility, level: .gentle,
             summary: "Cinq minutes, debout à côté de ton poste, pour couper une longue période assise. À refaire toutes les 1 à 2 heures.",
             steps: [
-                ExerciseStep("Debout", "Lève-toi et marche quelques pas, va remplir ton verre d'eau.", seconds: 60, symbol: "figure.walk"),
-                ExerciseStep("Épaules", "10 cercles lents des épaules vers l'arrière.", seconds: 45, symbol: "figure.arms.open"),
-                ExerciseStep("Dos", "Mains sur les hanches, redresse-toi et regarde légèrement vers le plafond, puis arrondis le dos.", seconds: 45, symbol: "figure.stand"),
-                ExerciseStep("Mollets", "Monte sur la pointe des pieds en 1 seconde, redescends en 3 secondes. 15 fois.", seconds: 60, symbol: "figure.step.training"),
-                ExerciseStep("Regard au loin", "Regarde un point éloigné par la fenêtre et respire : inspire 5 secondes, expire 5 secondes.", seconds: 90, symbol: "eye")
+                ExerciseStep("Debout", "Lève-toi et marche quelques pas, va remplir ton verre d'eau.", seconds: 60, symbol: "figure.walk", motion: "walk"),
+                ExerciseStep("Épaules", "10 cercles lents des épaules vers l'arrière.", seconds: 45, symbol: "figure.arms.open", motion: "shoulder-rolls"),
+                ExerciseStep("Dos", "Mains sur les hanches, redresse-toi et regarde légèrement vers le plafond, puis arrondis le dos.", seconds: 45, symbol: "figure.stand", motion: "back-extension"),
+                ExerciseStep("Mollets", "Monte sur la pointe des pieds en 1 seconde, redescends en 3 secondes. 15 fois.", seconds: 60, symbol: "figure.step.training", motion: "calf-raises"),
+                ExerciseStep("Regard au loin", "Regarde un point éloigné par la fenêtre et respire : inspire 5 secondes, expire 5 secondes.", seconds: 90, symbol: "eye", motion: "look-far")
             ],
             benefits: "L'OMS recommande de limiter le temps passé assis et de le remplacer par une activité, même légère.",
             hairNote: "Un bon moment pour boire de l'eau et faire une vraie coupure. Aucun effet direct sur les cheveux.",

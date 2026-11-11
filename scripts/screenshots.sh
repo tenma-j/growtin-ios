@@ -75,5 +75,7 @@ for appearance in light dark; do
     capture "light-52-photo-frise" -demoScreen photoTimeline
     capture "light-54-photo-lecture-ia" -demoScreen photoReading
     capture "light-55-photo-lecture-consentement" -demoScreen photoReadingConsent
+    # En dernier : cette capture choisit le personnage féminin (préférence conservée par l'app).
+    capture "light-44-exercice-3d-sol" -demoScreen exerciseFloor
   fi
 done
