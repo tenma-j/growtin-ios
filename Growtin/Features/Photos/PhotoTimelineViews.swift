@@ -166,6 +166,11 @@ struct PhotoDetailView: View {
                     .clipShape(.rect(cornerRadius: GT.Radius.small))
                     .listRowInsets(EdgeInsets())
             }
+            Section {
+                PhotoReadingSection(entry: entry)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
             Section("Informations") {
                 LabeledContent("Date", value: entry.takenAt.formatted(date: .long, time: .shortened))
                 LabeledContent("Source", value: entry.camera.label)
@@ -179,11 +184,6 @@ struct PhotoDetailView: View {
                 LabeledContent("Coiffage habituel", value: entry.conditions.usualStyling ? "Oui" : "Non")
                 LabeledContent("Sans produit", value: entry.conditions.noProduct ? "Oui" : "Non")
                 LabeledContent("Lumière", value: entry.conditions.lighting.label)
-            }
-            Section {
-                PhotoReadingSection(entry: entry)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
             }
             Section {
                 Button("Supprimer cette photo", systemImage: "trash", role: .destructive) { confirmingDeletion = true }
