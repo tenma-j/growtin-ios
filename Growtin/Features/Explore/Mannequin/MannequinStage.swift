@@ -39,6 +39,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
 
     private(set) var currentBody: MannequinBody?
     private(set) var currentMotion: String?
+    /// Rapport largeur / hauteur de la vue, pour cadrer le mouvement sans le couper.
+    private var aspect: Float = 1
+    private var framing: (motion: Motion, keyPositions: [[Vec3]])?
 
     override init() {
         library = MotionCatalog.library
@@ -163,7 +166,15 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         material?.setValue(NSNumber(value: asset.mask(for: regions)), forKey: "highlightMask")
 
         buildProps(motion.props, keyPositions: jointPositions)
-        frameCamera(motion: motion, keyPositions: jointPositions)
+        framing = (motion, jointPositions)
+        frameCamera(animated: true)
+    }
+
+    /// Appelé quand la vue change de taille.
+    func setAspect(_ value: Float) {
+        guard value.isFinite, value > 0, abs(value - aspect) > 0.01 else { return }
+        aspect = value
+        frameCamera(animated: false)
     }
 
     func setPaused(_ value: Bool) {
@@ -243,7 +254,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             float selB = float((mask >> int(regions.y + 0.5)) & 1);
             float hi = mix(selA, selB, mixes.x);
             float fabric = smoothstep(0.3, 0.7, mixes.y);
-            float3 skin = float3(0.62, 0.635, 0.66);
+            float3 skin = float3(0.50, 0.515, 0.54);
             float3 hot = float3(0.95, 0.20, 0.03);
             float3 cloth = float3(0.016, 0.016, 0.02);
             float3 clothHot = float3(0.10, 0.03, 0.01);
@@ -281,9 +292,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             node.simdEulerAngles = euler
             scene.rootNode.addChildNode(node)
         }
-        light(.directional, intensity: 1150, euler: SIMD3(-0.95, -0.55, 0), shadow: true)          // principale, en hauteur
+        light(.directional, intensity: 920, euler: SIMD3(-0.95, -0.55, 0), shadow: true)          // principale, en hauteur
         light(.directional, intensity: 380, color: UIColor(red: 0.85, green: 0.9, blue: 1, alpha: 1), euler: SIMD3(-0.3, 1.1, 0))
-        light(.directional, intensity: 650, color: UIColor(red: 0.55, green: 0.7, blue: 1, alpha: 1), euler: SIMD3(-0.25, 2.9, 0)) // contre-jour
+        light(.directional, intensity: 520, color: UIColor(red: 0.55, green: 0.7, blue: 1, alpha: 1), euler: SIMD3(-0.25, 2.9, 0)) // contre-jour
         light(.ambient, intensity: 260, color: UIColor(white: 0.85, alpha: 1), euler: .zero)
     }
 
@@ -306,7 +317,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         matte.roughness.contents = 0.7
         let mat = SCNMaterial()
         mat.lightingModel = .physicallyBased
-        mat.diffuse.contents = UIColor(red: 0.16, green: 0.42, blue: 0.30, alpha: 1)
+        mat.diffuse.contents = UIColor(red: 0.12, green: 0.27, blue: 0.21, alpha: 1)
         mat.roughness.contents = 0.9
 
         for prop in props {
@@ -356,31 +367,33 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     }
 
     /// Cadre la caméra sur l'ensemble des poses du mouvement, sous l'angle choisi pour ce mouvement.
-    private func frameCamera(motion: Motion, keyPositions: [[Vec3]]) {
+    private func frameCamera(animated: Bool) {
+        guard let framing else { return }
+        let motion = framing.motion
         let yaw = Float(motion.camera.yaw * .pi / 180)
         let pitch = Float((motion.camera.pitch ?? 8) * .pi / 180)
         var lo = SIMD3<Float>(repeating: .greatestFiniteMagnitude), hi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
         let rot = simd_quatf(angle: yaw, axis: SIMD3(0, 1, 0))
-        for positions in keyPositions {
+        for positions in framing.keyPositions {
             for p in positions {
                 let v = rot.act(SIMD3(Float(p.x), Float(p.y), Float(p.z)))
                 lo = simd_min(lo, v); hi = simd_max(hi, v)
             }
         }
         guard lo.x.isFinite else { return }
-        let margin: Float = 0.16
+        let margin: Float = 0.18
         lo -= margin; hi += margin
         lo.y = 0
         let center = (lo + hi) / 2
-        let width = hi.x - lo.x, height = hi.y - lo.y
-        let fov = Float(30 * Double.pi / 180)
-        let fit = max(height, width * 0.75) // l'écran est plus large que haut : on cadre surtout la hauteur
-        let distance = fit / (2 * tan(fov / 2)) * 1.12 + (hi.z - lo.z) / 2
+        let width = hi.x - lo.x, height = hi.y - lo.y, depth = hi.z - lo.z
+        let vfov = Float(30 * Double.pi / 180)
+        let hfov = 2 * atan(tan(vfov / 2) * aspect)
+        let distance = max(height / 2 / tan(vfov / 2), width / 2 / tan(hfov / 2)) * 1.05 + depth / 2
         let target = SIMD3(center.x, center.y, center.z)
         let eye = target + SIMD3(0, sin(pitch), cos(pitch)) * distance
 
         SCNTransaction.begin()
-        SCNTransaction.animationDuration = 0.6
+        SCNTransaction.animationDuration = animated ? 0.6 : 0
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         container.simdOrientation = rot
         cameraNode.simdPosition = eye

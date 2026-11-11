@@ -2,6 +2,15 @@ import GrowtinCore
 import SceneKit
 import SwiftUI
 
+/// SCNView qui signale ses changements de taille (cadrage adapté à la carte).
+final class MannequinSCNView: SCNView {
+    var onResize: ((CGSize) -> Void)?
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onResize?(bounds.size)
+    }
+}
+
 /// Vue SceneKit qui affiche le personnage 3D et joue un mouvement en boucle.
 struct MannequinSceneView: UIViewRepresentable {
     let motion: String
@@ -10,8 +19,8 @@ struct MannequinSceneView: UIViewRepresentable {
 
     func makeCoordinator() -> MannequinStage { MannequinStage() }
 
-    func makeUIView(context: Context) -> SCNView {
-        let view = SCNView(frame: .zero, options: nil)
+    func makeUIView(context: Context) -> MannequinSCNView {
+        let view = MannequinSCNView(frame: .zero, options: nil)
         view.backgroundColor = .clear
         view.isOpaque = false
         view.antialiasingMode = .multisampling4X
@@ -23,17 +32,23 @@ struct MannequinSceneView: UIViewRepresentable {
         view.delegate = context.coordinator
         view.isPlaying = true
         view.isAccessibilityElement = false
+        let stage = context.coordinator
+        view.onResize = { [weak stage] size in
+            guard size.height > 0 else { return }
+            stage?.setAspect(Float(size.width / size.height))
+        }
         context.coordinator.setBody(figure)
         context.coordinator.play(motion, focus: focus)
         return view
     }
 
-    func updateUIView(_ view: SCNView, context: Context) {
+    func updateUIView(_ view: MannequinSCNView, context: Context) {
         context.coordinator.setBody(figure)
         context.coordinator.play(motion, focus: focus)
     }
 
-    static func dismantleUIView(_ view: SCNView, coordinator: MannequinStage) {
+    static func dismantleUIView(_ view: MannequinSCNView, coordinator: MannequinStage) {
+        view.onResize = nil
         view.isPlaying = false
         view.delegate = nil
     }
