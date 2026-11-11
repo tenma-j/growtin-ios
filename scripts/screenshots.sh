@@ -73,5 +73,7 @@ for appearance in light dark; do
     capture "light-50-photo-seance" -demoScreen photoSession
     capture "light-51-photo-capture" -demoScreen photoCapture
     capture "light-52-photo-frise" -demoScreen photoTimeline
+    capture "light-54-photo-lecture-ia" -demoScreen photoReading
+    capture "light-55-photo-lecture-consentement" -demoScreen photoReadingConsent
   fi
 done

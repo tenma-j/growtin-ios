@@ -102,6 +102,8 @@ public struct UserProfile: Codable, Hashable, Sendable {
 
     public var hairLossDuration: HairLossDuration
     public var triggers: Set<PerceivedTrigger>
+    /// Précision libre quand « Autre » est choisi parmi les déclencheurs (facultatif).
+    public var otherTriggers: String? = nil
     public var familyHistory: FamilyHistory
     public var stage: SelfAssessedStage
     public var zones: Set<ScalpZone>
@@ -118,6 +120,8 @@ public struct UserProfile: Codable, Hashable, Sendable {
     public var wearsTightHairstyles: Bool
     public var usesHeatStyling: Bool
     public var products: Set<HairProduct>
+    /// Précision libre quand « Autre » est choisi parmi les produits (facultatif).
+    public var otherProducts: String? = nil
 
     public var health: HealthDetails
     public var photoFrequency: PhotoFrequency
@@ -177,6 +181,12 @@ public struct UserProfile: Codable, Hashable, Sendable {
         self.photoFrequency = photoFrequency
         self.consents = consents
         self.programStartDate = programStartDate
+    }
+
+    /// Texte libre nettoyé et borné (200 caractères), `nil` si vide.
+    public static func cleanedFreeText(_ text: String?) -> String? {
+        guard let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return String(trimmed.prefix(200))
     }
 
     /// Prénom à afficher, nettoyé. `nil` si l'utilisateur n'en a pas donné.

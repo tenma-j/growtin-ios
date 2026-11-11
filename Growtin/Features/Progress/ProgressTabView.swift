@@ -114,6 +114,10 @@ struct ProgressTabView: View {
             showingPhotoSession = true
         case "photoTimeline":
             if let zone = model.photoZones.first { path = [.zone(zone)] }
+        case "photoReading", "photoReadingConsent":
+            if let zone = model.photoZones.first, let latest = PhotoTimeline.latest(model.photos, zone: zone) {
+                path = [.zone(zone), .photo(latest.id)]
+            }
         case "photoCompare":
             if let zone = model.photoZones.first, let pair = PhotoTimeline.defaultComparison(model.photos, zone: zone) {
                 path = [.zone(zone), .compare(before: pair.before.id, after: pair.after.id)]

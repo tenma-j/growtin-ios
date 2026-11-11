@@ -34,6 +34,11 @@ final class CoachStore {
         self.service = service
     }
 
+    /// Une lecture de photo compte dans le même quota quotidien que les questions.
+    func updateQuota(_ newQuota: CoachQuota?) {
+        if let newQuota { quota = newQuota }
+    }
+
     func load() {
         let records = (try? context.fetch(FetchDescriptor<CoachMessageRecord>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         messages = records.compactMap { try? JSONDecoder().decode(CoachMessage.self, from: $0.payload) }
@@ -99,7 +104,7 @@ final class CoachStore {
             role: .assistant,
             content: "Réponse de démonstration. Tu as indiqué dormir environ six heures par nuit. Viser au moins 7 heures, avec un horaire de coucher régulier, est bénéfique pour ton bien-être général [S:watson-2015-sleep]. En revanche, cela ne constitue pas un traitement démontré contre l'alopécie androgénétique.",
             citations: ["watson-2015-sleep"], isLocal: true))
-        quota = CoachQuota(used: 1, limit: 5, premium: false)
+        quota = CoachQuota(used: 1, limit: 2, premium: false)
     }
     #endif
 }

@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: node --experimental-strip-types --no-warnings --test backend/supabase/functions/coach/logic.test.ts backend/supabase/functions/revenuecat-webhook/logic.test.ts
+      - run: node --experimental-strip-types --no-warnings --test backend/supabase/functions/coach/logic.test.ts backend/supabase/functions/coach/photo.test.ts backend/supabase/functions/revenuecat-webhook/logic.test.ts
       - name: La base de sources du serveur est identique à celle de l'app
         run: cmp backend/supabase/functions/coach/sources.json Packages/GrowtinCore/Sources/GrowtinCore/Resources/sources.json
 
@@ -73,6 +73,7 @@ jobs:
       # Clé publique (publishable), embarquée dans l'app par conception.
       SUPABASE_KEY: sb_publishable_-UyhWHaBgQcs8WFV71D0MQ_AmxDArss
     steps:
+      - uses: actions/checkout@v5
       - name: Session anonyme, question réelle, circuit de détresse
         run: |
           set -euo pipefail
@@ -97,5 +98,15 @@ jobs:
           echo "$out" | sed '$d' | jq -e '.safety == "seekHelpNow" and (.message | contains("3114"))' > /dev/null \
             || { echo "::error::Le circuit de détresse ne répond pas comme prévu"; exit 1; }
           echo "Circuit de détresse : OK (aucun appel au modèle)."
+
+          # Lecture de photo (image synthétique, sans personne) : 200, ou 422 si le modèle juge l'image inexploitable.
+          jq -n --arg img "$(base64 -w0 backend/fixtures/smoke-photo.jpg)" \
+            '{kind:"photo", zone:"top", image:$img, conditions:"cheveux secs, lumière de fenêtre"}' > photo.json
+          out=$(curl -sS -w '\n%{http_code}' -X POST "$SUPABASE_URL/functions/v1/coach" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data @photo.json)
+          code=$(echo "$out" | tail -1); body=$(echo "$out" | sed '$d')
+          echo "Lecture de photo, statut : $code"
+          echo "$body" | jq '{reading, quota, error}' 2>/dev/null || echo "Réponse brute : ${body:0:300}"
+          case "$code" in 200|422) ;; *) echo "::error::La lecture de photo a répondu $code"; exit 1 ;; esac
 
           curl -sS -X POST "$SUPABASE_URL/functions/v1/delete-account" -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $token" | jq -c .

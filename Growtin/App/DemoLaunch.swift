@@ -16,7 +16,7 @@ enum DemoLaunch {
 
     static var initialTab: AppTab {
         switch screen {
-        case "progress", "photoSession", "photoCapture", "photoTimeline", "photoCompare": .progress
+        case "progress", "photoSession", "photoCapture", "photoTimeline", "photoCompare", "photoReading", "photoReadingConsent": .progress
         case "coach", "coachConsent": .coach
         case "nutrition", "recipe", "mealPlan", "shopping": .nutrition
         case "explore", "exercise", "article", "exerciseSession": .explore

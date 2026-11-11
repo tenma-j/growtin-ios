@@ -324,6 +324,49 @@ final class AppModel {
         }
     }
 
+    /// Lecture IA d'une photo, sur demande explicite. La photo (et la précédente de la même zone, si elle existe)
+    /// est réduite, débarrassée de ses métadonnées, envoyée puis oubliée par le serveur. Le résultat reste sur l'iPhone.
+    func readPhoto(_ entry: PhotoEntry, comparedWith previous: PhotoEntry?) async throws -> PhotoReading {
+        func jpeg(_ photo: PhotoEntry) -> Data? {
+            photoStore.image(fileName: photo.fileName).flatMap { PhotoAnalysis.normalizedJPEG(from: $0, maxDimension: 1024)?.data }
+        }
+        guard let image = jpeg(entry) else { throw CoachError.server("La photo est introuvable sur cet iPhone.") }
+        let previousImage = previous.flatMap(jpeg)
+        let days = previous.map { Calendar.current.dateComponents([.day], from: $0.takenAt, to: entry.takenAt).day ?? 0 }
+        do {
+            let reply = try await coach.service.readPhoto(PhotoReadingRequest(
+                zone: entry.zone, image: image, previousImage: previousImage, daysBetween: previousImage == nil ? nil : days,
+                conditions: entry.conditions.summary, previousConditions: previous?.conditions.summary ?? ""))
+            coach.updateQuota(reply.quota)
+            let r = reply.reading
+            let reading = PhotoReading(conditions: r.conditions, observations: r.observations, comparison: r.comparison,
+                                       nextPhotoTips: r.nextPhotoTips, seeProfessionalSoon: r.seeProfessionalSoon,
+                                       comparedWith: previousImage == nil ? nil : previous?.id)
+            savePhotoReading(reading, for: entry.id)
+            return reading
+        } catch let CoachError.quotaReached(quota) {
+            coach.updateQuota(quota)
+            throw CoachError.quotaReached(quota)
+        }
+    }
+
+    func savePhotoReading(_ reading: PhotoReading, for id: UUID) {
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        var entry = photos[index]
+        entry.reading = reading
+        do {
+            for record in try context.fetch(FetchDescriptor<PhotoRecord>(predicate: #Predicate { $0.photoID == id })) {
+                record.payload = try encoder.encode(entry)
+                record.updatedAt = .now
+            }
+            try context.save()
+            photos[index] = entry
+        } catch {
+            context.rollback()
+            report(error, message: "La lecture n'a pas pu être enregistrée.")
+        }
+    }
+
     func deletePhoto(_ entry: PhotoEntry) {
         do {
             let id = entry.id

@@ -147,6 +147,9 @@ struct HistoryStep: View {
             FieldLabel(text: "Déclencheurs perçus (plusieurs choix possibles)")
             MultiChoiceChips(options: Array(PerceivedTrigger.allCases), selection: $model.draft.triggers,
                              title: \.label, symbol: { $0.symbol }, exclusive: .unknown)
+            if model.draft.triggers.contains(.other) {
+                OtherDetailField(prompt: "Précise (ex. déménagement, changement de pilule…)", text: $model.draft.otherTriggers)
+            }
             FieldLabel(text: "Antécédents familiaux de chute de cheveux")
             VStack(spacing: GT.Spacing.s) {
                 ForEach(FamilyHistory.allCases) { option in
@@ -349,6 +352,9 @@ struct HairCareStep: View {
 
             FieldLabel(text: "Produits utilisés actuellement")
             MultiChoiceChips(options: Array(HairProduct.allCases), selection: $model.draft.products, title: \.label, exclusive: HairProduct.none)
+            if model.draft.products.contains(.other) {
+                OtherDetailField(prompt: "Lesquels ? (ex. shampoing sec, lotion…)", text: $model.draft.otherProducts)
+            }
         }
         .font(.body)
     }
@@ -476,5 +482,21 @@ struct SummaryStep: View {
 
             FootnoteText(text: WellnessNotice.short)
         }
+    }
+}
+
+/// Champ libre affiché quand « Autre » est sélectionné. Limité à 200 caractères.
+struct OtherDetailField: View {
+    let prompt: String
+    @Binding var text: String?
+
+    var body: some View {
+        TextField(prompt, text: Binding(get: { text ?? "" }, set: { text = String($0.prefix(200)) }), axis: .vertical)
+            .lineLimit(1...3)
+            .textInputAutocapitalization(.sentences)
+            .padding(GT.Spacing.s)
+            .background(Color.gtSurface, in: .rect(cornerRadius: GT.Radius.control))
+            .transition(.opacity.combined(with: .move(edge: .top)))
+            .accessibilityLabel("Précision pour « Autre »")
     }
 }

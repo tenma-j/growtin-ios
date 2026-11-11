@@ -39,7 +39,7 @@ public enum HairLossDuration: String, LabeledOption {
 }
 
 public enum PerceivedTrigger: String, LabeledOption {
-    case stress, postpartum, diet, genetics, illnessOrTreatment, hairstyleTension, unknown
+    case stress, postpartum, diet, genetics, illnessOrTreatment, hairstyleTension, other, unknown
 
     public var label: String {
         switch self {
@@ -49,6 +49,7 @@ public enum PerceivedTrigger: String, LabeledOption {
         case .genetics: "Génétique / hérédité"
         case .illnessOrTreatment: "Maladie / traitement récent"
         case .hairstyleTension: "Coiffures serrées"
+        case .other: "Autre"
         case .unknown: "Je ne sais pas"
         }
     }
@@ -61,6 +62,7 @@ public enum PerceivedTrigger: String, LabeledOption {
         case .genetics: "person.2"
         case .illnessOrTreatment: "cross.case"
         case .hairstyleTension: "comb"
+        case .other: "ellipsis.circle"
         case .unknown: "questionmark.circle"
         }
     }
@@ -213,7 +215,7 @@ public enum WashFrequency: String, LabeledOption {
 }
 
 public enum HairProduct: String, LabeledOption {
-    case gentleShampoo, antiDandruffShampoo, conditioner, oils, stylingProducts, supplements, none
+    case gentleShampoo, antiDandruffShampoo, conditioner, oils, stylingProducts, supplements, other, none
 
     public var label: String {
         switch self {
@@ -223,6 +225,7 @@ public enum HairProduct: String, LabeledOption {
         case .oils: "Huiles"
         case .stylingProducts: "Produits coiffants"
         case .supplements: "Compléments alimentaires"
+        case .other: "Autre"
         case .none: "Aucun"
         }
     }

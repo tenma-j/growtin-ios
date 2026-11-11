@@ -130,4 +130,21 @@ struct PhotoTimelineTests {
         #expect(pair.after.fileName == "56.jpg") // la photo floue est écartée
         #expect(PhotoTimeline.defaultComparison(photos, zone: .frontalHairline) == nil)
     }
+
+    @Test("Lecture IA : photo précédente, résumé des conditions, anciens enregistrements")
+    func photoReading() throws {
+        let d1 = DayKey(year: 2026, month: 9, day: 1), d2 = DayKey(year: 2026, month: 10, day: 1)
+        let a = PhotoEntry(zone: .leftTemple, day: d1, takenAt: d1.date(), fileName: "a.jpg", camera: .front, quality: nil, conditions: CaptureConditions())
+        let b = PhotoEntry(zone: .leftTemple, day: d2, takenAt: d2.date(), fileName: "b.jpg", camera: .front, quality: nil, conditions: CaptureConditions())
+        let other = PhotoEntry(zone: .vertex, day: d1, takenAt: d1.date(), fileName: "c.jpg", camera: .back, quality: nil, conditions: CaptureConditions())
+        #expect(PhotoTimeline.previous(of: b, in: [a, b, other])?.id == a.id)
+        #expect(PhotoTimeline.previous(of: a, in: [a, b, other]) == nil)
+        #expect(CaptureConditions(dryHair: false).summary.hasPrefix("cheveux mouillés"))
+        #expect(PhotoReading.disclaimer.contains("dermatologue"))
+
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(a)) as! [String: Any]
+        json.removeValue(forKey: "reading")
+        let decoded = try JSONDecoder().decode(PhotoEntry.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.reading == nil)
+    }
 }

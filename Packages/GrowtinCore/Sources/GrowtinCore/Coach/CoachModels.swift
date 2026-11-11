@@ -90,12 +90,29 @@ public enum CoachContextBuilder {
         }
         lines.append("Chute depuis : \(profile.hairLossDuration.label.lowercased()). Antécédents familiaux : \(profile.familyHistory.label.lowercased()).")
         if !profile.triggers.isEmpty {
-            lines.append("Déclencheurs perçus : \(labels(profile.triggers)).")
+            var triggers = labels(profile.triggers.subtracting([.other]))
+            if profile.triggers.contains(.other) {
+                let detail = UserProfile.cleanedFreeText(profile.otherTriggers).map { "autre : « \($0) »" } ?? "autre"
+                triggers = triggers.isEmpty ? detail : "\(triggers), \(detail)"
+            }
+            lines.append("Déclencheurs perçus : \(triggers).")
         }
         if !profile.zones.isEmpty { lines.append("Zones concernées : \(labels(profile.zones)).") }
         if !profile.goals.isEmpty { lines.append("Objectifs : \(labels(profile.goals)).") }
         lines.append("Sommeil habituel : \(profile.sleepHours.formatted()) h, qualité \(profile.sleepQuality.label.lowercased()). Stress : \(profile.stress.label.lowercased()).")
         lines.append("Alimentation : \(profile.diet.label.lowercased()), \(profile.mealRegularity.label.lowercased()). Activité : \(profile.activity.label.lowercased()).")
+        var care = ["lavages : \(profile.washFrequency.label.lowercased())"]
+        if profile.wearsTightHairstyles { care.append("coiffures serrées fréquentes") }
+        if profile.usesHeatStyling { care.append("outils chauffants réguliers") }
+        lines.append("Soins : \(care.joined(separator: ", ")).")
+        if !profile.products.isEmpty {
+            var products = labels(profile.products.subtracting([.other]))
+            if profile.products.contains(.other) {
+                let detail = UserProfile.cleanedFreeText(profile.otherProducts).map { "autre : « \($0) »" } ?? "autre"
+                products = products.isEmpty ? detail : "\(products), \(detail)"
+            }
+            lines.append("Produits utilisés : \(products).")
+        }
         if !profile.health.restrictions.isEmpty { lines.append("Allergies ou aliments évités : \(labels(profile.health.restrictions)).") }
         if let diagnosis = profile.health.diagnosis, diagnosis != .none { lines.append("Diagnostic déclaré : \(diagnosis.label).") }
         if !profile.health.treatments.isEmpty { lines.append("Traitements déclarés : \(labels(profile.health.treatments)).") }

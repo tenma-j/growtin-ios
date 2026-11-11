@@ -20,6 +20,30 @@ struct CoachReply: Decodable {
     let quota: CoachQuota?
 }
 
+/// Réponse de la lecture de photo.
+struct PhotoReadingReply: Decodable {
+    struct Reading: Decodable {
+        let conditions: String
+        let observations: [String]
+        let comparison: String?
+        let nextPhotoTips: [String]
+        let seeProfessionalSoon: Bool
+    }
+
+    let reading: Reading
+    let quota: CoachQuota?
+}
+
+/// Ce qui est envoyé pour une lecture : la photo réduite, et éventuellement la précédente de la même zone.
+struct PhotoReadingRequest {
+    let zone: PhotoZone
+    let image: Data
+    let previousImage: Data?
+    let daysBetween: Int?
+    let conditions: String
+    let previousConditions: String
+}
+
 enum CoachError: LocalizedError, Equatable {
     case notConfigured
     case quotaReached(CoachQuota?)
@@ -40,6 +64,8 @@ enum CoachError: LocalizedError, Equatable {
 protocol CoachServing: AnyObject {
     var isAvailable: Bool { get }
     func send(_ messages: [CoachMessage], context: String, personalization: Bool) async throws -> CoachReply
+    /// Lecture IA d'une photo. Les images ne sont pas conservées par le serveur.
+    func readPhoto(_ request: PhotoReadingRequest) async throws -> PhotoReadingReply
     /// Supprime le compte serveur (anonyme) et ses compteurs. Sans effet si aucun compte n'existe.
     func deleteAccount() async throws
     /// Identifiant du compte serveur (anonyme), utilisé pour rattacher l'abonnement. Crée la session si besoin.
@@ -81,6 +107,31 @@ final class SupabaseCoachService: CoachServing {
         default:
             let message = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error
             throw CoachError.server(message ?? "Le Coach n'a pas pu répondre. Réessaie plus tard.")
+        }
+    }
+
+    func readPhoto(_ request: PhotoReadingRequest) async throws -> PhotoReadingReply {
+        guard let baseURL, !anonKey.isEmpty else { throw CoachError.notConfigured }
+        var body: [String: Any] = ["kind": "photo", "zone": request.zone.rawValue, "image": request.image.base64EncodedString(),
+                                   "conditions": request.conditions]
+        if let previous = request.previousImage {
+            body["previousImage"] = previous.base64EncodedString()
+            body["previousConditions"] = request.previousConditions
+            if let days = request.daysBetween { body["daysBetween"] = days }
+        }
+        let urlRequest = try await authorizedRequest(baseURL.appending(path: "functions/v1/coach"), body: body)
+        let (data, response) = try await perform(urlRequest)
+        switch response.statusCode {
+        case 200:
+            return try JSONDecoder().decode(PhotoReadingReply.self, from: data)
+        case 401:
+            keychain.delete("access_token")
+            throw CoachError.server("Ta session a expiré. Réessaie.")
+        case 429:
+            throw CoachError.quotaReached((try? JSONDecoder().decode(ErrorBody.self, from: data))?.quota)
+        default:
+            let message = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error
+            throw CoachError.server(message ?? "La lecture de la photo a échoué. Réessaie plus tard.")
         }
     }
 
@@ -197,7 +248,22 @@ final class DemoCoachService: CoachServing {
         try? await Task.sleep(for: .milliseconds(400))
         return CoachReply(
             message: "Réponse de démonstration. Tu as indiqué dormir environ six heures par nuit. Viser au moins 7 heures, avec un horaire de coucher régulier, est bénéfique pour ton bien-être général [S:watson-2015-sleep]. En revanche, cela ne constitue pas un traitement démontré contre l'alopécie androgénétique. Si tu veux, on peut choisir ensemble une petite habitude du soir pour commencer.",
-            citations: ["watson-2015-sleep"], safety: "none", quota: CoachQuota(used: 2, limit: 5, premium: false))
+            citations: ["watson-2015-sleep"], safety: "none", quota: CoachQuota(used: 1, limit: 2, premium: false))
+    }
+
+    func readPhoto(_ request: PhotoReadingRequest) async throws -> PhotoReadingReply {
+        try? await Task.sleep(for: .milliseconds(400))
+        return PhotoReadingReply(
+            reading: .init(
+                conditions: "Lecture de démonstration. La photo est nette et la lumière de fenêtre est homogène ; les cheveux sont secs et dégagés vers l'arrière, ce qui rend la tempe bien visible.",
+                observations: ["Sur cette photo, la ligne de cheveux de la tempe apparaît nette et régulière.",
+                               "Le cuir chevelu semble un peu plus visible juste au-dessus de la tempe que sur le reste de l'image.",
+                               "Quelques cheveux plus courts et plus fins semblent présents en bordure."],
+                comparison: request.previousImage == nil ? nil : "Par rapport à la photo précédente, la tempe paraît très proche. La lumière était plus chaude et la tête un peu plus tournée la dernière fois, ce qui suffit à modifier l'aspect.",
+                nextPhotoTips: ["Garde la même fenêtre, à la même heure, pour une lumière comparable.",
+                                "Tourne la tête du même angle en t'aidant du guide à l'écran."],
+                seeProfessionalSoon: false),
+            quota: CoachQuota(used: 2, limit: 2, premium: false))
     }
 
     func deleteAccount() async throws {}

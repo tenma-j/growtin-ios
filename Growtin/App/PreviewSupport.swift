@@ -70,11 +70,28 @@ extension AppModel {
                          takenAt: day.date(calendar: calendar))
             }
         }
+        // Une lecture IA de démonstration sur la photo la plus récente de la première zone.
+        if let zone = PhotoZone.suggested(for: profile.zones).first,
+           let first = PhotoTimeline.photos(photos, zone: zone).first, let latest = PhotoTimeline.latest(photos, zone: zone),
+           first.id != latest.id {
+            savePhotoReading(DemoData.photoReading(comparedWith: first.id), for: latest.id)
+        }
     }
     #endif
 }
 
 enum DemoData {
+    static func photoReading(comparedWith reference: UUID) -> PhotoReading {
+        PhotoReading(
+            conditions: "Lecture de démonstration. La photo est nette, la lumière de fenêtre est homogène et les cheveux sont secs, ce qui la rend exploitable.",
+            observations: ["Sur cette photo, la ligne de cheveux apparaît régulière, sans zone nettement dégarnie.",
+                           "Le cuir chevelu semble un peu plus visible sur les côtés qu'au centre.",
+                           "Quelques cheveux plus courts semblent présents en bordure du front."],
+            comparison: "Les deux photos se ressemblent beaucoup. L'appareil était un peu plus incliné la première fois, ce qui peut suffire à expliquer les petites différences d'aspect.",
+            nextPhotoTips: ["Garde la même fenêtre et la même heure.", "Tiens le téléphone bien droit en suivant le guide."],
+            seeProfessionalSoon: false, comparedWith: reference)
+    }
+
     static func profile(start: Date) -> UserProfile {
         var profile = UserProfile(firstName: "Alex", sex: .male, age: 28)
         profile.hairLossDuration = .sixMonthsTo2Years

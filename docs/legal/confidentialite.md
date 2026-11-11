@@ -23,12 +23,13 @@ Ton profil et tes réponses (y compris les informations de santé facultatives),
 | Identifiant de compte anonyme (aléatoire) | Au premier usage du Coach ou de l'abonnement | Supabase (hébergement dans l'Union européenne, Francfort) | Faire fonctionner le Coach et les limites quotidiennes |
 | Tes questions au Coach | Quand tu poses une question, après ton accord explicite | Supabase, puis Anthropic (modèle d'IA Claude) | Te répondre |
 | Résumé de ton profil et de tes derniers bilans (sans prénom, âge exact ni photos) | Seulement si tu as activé la personnalisation | Supabase, puis Anthropic | Personnaliser les réponses |
+| Photo choisie, et si tu le souhaites la précédente de la même zone (réduites, sans métadonnées), avec les conditions de prise de vue déclarées | Seulement quand tu demandes une « lecture de photo », après une confirmation à chaque lecture | Supabase (transit, sans enregistrement), puis Anthropic | Décrire ce qui est visible sur la photo, sans diagnostic |
 | Nombre de questions posées et coût technique | À chaque question | Supabase | Limites quotidiennes, suivi des coûts |
 | Achats et statut d'abonnement | Si tu t'abonnes | Apple, RevenueCat | Gérer l'abonnement Premium |
 
-**Ne sont jamais envoyées :** tes photos, ton prénom, tes notes en dehors du résumé que tu autorises, ni aucune donnée à des fins publicitaires.
+**Ne sont jamais envoyées :** tes photos sans ta demande explicite, ton prénom, tes notes en dehors du résumé que tu autorises, ni aucune donnée à des fins publicitaires.
 
-Le serveur de Growtin' **ne conserve pas le contenu de tes conversations**. Selon ses conditions commerciales, Anthropic n'utilise pas les données envoyées via son API pour entraîner ses modèles [à vérifier dans le contrat en vigueur, ainsi que les garanties encadrant le transfert vers les États-Unis]. RevenueCat et Anthropic sont établis aux États-Unis : [préciser le mécanisme de transfert, par exemple les clauses contractuelles types ou le cadre de protection des données UE-États-Unis].
+Le serveur de Growtin' **ne conserve ni le contenu de tes conversations, ni tes photos**. Selon ses conditions commerciales, Anthropic n'utilise pas les données envoyées via son API pour entraîner ses modèles [à vérifier dans le contrat en vigueur, ainsi que les garanties encadrant le transfert vers les États-Unis]. RevenueCat et Anthropic sont établis aux États-Unis : [préciser le mécanisme de transfert, par exemple les clauses contractuelles types ou le cadre de protection des données UE-États-Unis].
 
 ## Base légale
 

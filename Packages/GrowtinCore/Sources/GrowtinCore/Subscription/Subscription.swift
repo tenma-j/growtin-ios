@@ -137,7 +137,7 @@ public enum PremiumBenefits {
 
     public static let current: [Benefit] = [
         Benefit(id: "coach", symbol: "sparkles", title: "Coach : 40 questions par jour",
-                detail: "Au lieu de 5 en version gratuite, avec des réponses personnalisées et sourcées."),
+                detail: "Au lieu de 2 en version gratuite, avec des plans d'action personnalisés et sourcés. Une lecture de photo compte comme une question."),
         Benefit(id: "support", symbol: "heart", title: "Soutenir Growtin'",
                 detail: "Ton abonnement finance le Coach, les nouvelles recettes et les prochaines fonctionnalités.")
     ]

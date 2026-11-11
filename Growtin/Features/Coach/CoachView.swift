@@ -212,7 +212,7 @@ struct CoachConsentView: View {
                            subtitle: "Le Coach répond à tes questions en s'appuyant uniquement sur la base de sources vérifiées de Growtin'.")
                 GTCard {
                     consentLine("lock.shield", "Ce qui est envoyé",
-                                "Tes questions, et seulement si tu l'autorises ci-dessous, un résumé de ton profil et de tes derniers bilans. Jamais tes photos, ton prénom ni ton âge exact.")
+                                "Tes questions, et seulement si tu l'autorises ci-dessous, un résumé de ton profil et de tes derniers bilans. Jamais ton prénom ni ton âge exact. Tes photos ne sont envoyées que si tu demandes leur lecture, photo par photo.")
                     consentLine("server.rack", "Comment",
                                 "Via un serveur sécurisé hébergé dans l'Union européenne, qui transmet ta question au modèle d'IA Claude, développé par Anthropic. Selon les conditions d'Anthropic, les données envoyées via son API ne servent pas à entraîner ses modèles.")
                     consentLine("iphone", "Ce qui est conservé",

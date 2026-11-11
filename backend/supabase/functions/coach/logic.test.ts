@@ -1,7 +1,7 @@
 // Tests de la logique du Coach : node --experimental-strip-types --test backend/supabase/functions/coach/
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkCitations, costMicros, findForbidden, parseRequest, RequestError, screen } from "./logic.ts";
+import { checkCitations, costMicros, findForbidden, needsReminder, parseRequest, RequestError, screen } from "./logic.ts";
 import { sourcesSection, wrapLastUserMessage } from "./prompt.ts";
 
 test("valide et tronque la conversation", () => {
@@ -62,6 +62,18 @@ test("prompt stable et contexte encadré", () => {
   const a = sourcesSection([{ id: "b", title: "B", authors_or_org: "X", publisher_or_journal: "Y", year: null, type: "review", key_finding: "k" },
                             { id: "a", title: "A", authors_or_org: "X", publisher_or_journal: "Y", year: 2020, type: "review", key_finding: "k" }]);
   assert.ok(a.indexOf("[S:a]") < a.indexOf("[S:b]"));
-  assert.equal(wrapLastUserMessage("Question", ""), "Question");
-  assert.ok(wrapLastUserMessage("Question", "âge : 28").startsWith("<user_context>"));
+  const bare = wrapLastUserMessage("Question", "");
+  assert.ok(bare.startsWith("<conversation_state>") && bare.endsWith("Question") && !bare.includes("<user_context>"));
+  const withContext = wrapLastUserMessage("Question", "âge : 28", { reminder: true });
+  assert.ok(withContext.includes("rappel: oui") && withContext.indexOf("<user_context>") < withContext.indexOf("Question"));
+});
+
+test("rappel de prudence : première réponse ou sujet médical seulement", () => {
+  const first = [{ role: "user" as const, content: "Comment mieux dormir ?" }];
+  assert.equal(needsReminder(first, "none"), true);
+  const later = [...first, { role: "assistant" as const, content: "…" }, { role: "user" as const, content: "Et pour le stress ?" }];
+  assert.equal(needsReminder(later, "none"), false);
+  const treatment = [...first, { role: "assistant" as const, content: "…" }, { role: "user" as const, content: "Le minoxidil, ça marche ?" }];
+  assert.equal(needsReminder(treatment, "none"), true);
+  assert.equal(needsReminder(later, "consultDoctor"), true);
 });

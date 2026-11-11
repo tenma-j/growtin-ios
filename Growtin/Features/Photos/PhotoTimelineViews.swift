@@ -181,6 +181,11 @@ struct PhotoDetailView: View {
                 LabeledContent("Lumière", value: entry.conditions.lighting.label)
             }
             Section {
+                PhotoReadingSection(entry: entry)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            Section {
                 Button("Supprimer cette photo", systemImage: "trash", role: .destructive) { confirmingDeletion = true }
             }
         }
@@ -250,6 +255,7 @@ struct PhotoCompareView: View {
                 }
 
                 ComparabilityCard(report: ComparabilityAnalyzer.compare(before, after))
+                PhotoReadingSection(entry: after, reference: before)
             }
             .padding(GT.Spacing.m)
         }

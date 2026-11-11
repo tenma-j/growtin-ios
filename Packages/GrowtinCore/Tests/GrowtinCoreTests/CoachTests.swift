@@ -43,6 +43,28 @@ struct CoachTests {
         #expect(decoded.consents.coachConsentAt == nil)
     }
 
+    @Test("Les précisions « Autre » et les soins rejoignent le contexte")
+    func otherDetailsInContext() throws {
+        var profile = UserProfile(triggers: [.stress, .other], products: [.oils, .other])
+        profile.otherTriggers = "  déménagement récent  "
+        profile.otherProducts = "Shampoing sec"
+        profile.wearsTightHairstyles = true
+        let day = DayKey(year: 2026, month: 11, day: 10)
+        let context = CoachContextBuilder.build(profile: profile, routine: [], consistency7Days: nil, checkIns: [],
+                                                photoCount: 0, today: day)
+        #expect(context.contains("stress, autre : « déménagement récent »"))
+        #expect(context.contains("huiles, autre : « Shampoing sec »"))
+        #expect(context.contains("coiffures serrées fréquentes"))
+
+        // Les profils enregistrés avant l'ajout de ces champs se décodent toujours.
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(UserProfile())) as! [String: Any]
+        json.removeValue(forKey: "otherTriggers")
+        json.removeValue(forKey: "otherProducts")
+        let decoded = try JSONDecoder().decode(UserProfile.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.otherTriggers == nil)
+        #expect(UserProfile.cleanedFreeText("   ") == nil)
+    }
+
     @Test("Quota restant")
     func quota() {
         #expect(CoachQuota(used: 3, limit: 5, premium: false).remaining == 2)

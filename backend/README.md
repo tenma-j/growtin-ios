@@ -13,8 +13,8 @@ Le serveur sert uniquement au **Coach IA** pour l'instant :
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `COACH_MODEL` | `claude-opus-5-5` | Modèle utilisé |
-| `COACH_EFFORT` | `low` | Profondeur de réflexion (`low`, `medium`, `high`) |
-| `COACH_FREE_DAILY_LIMIT` | `5` | Questions par jour, version gratuite |
+| `COACH_EFFORT` | `medium` | Profondeur de réflexion (`low`, `medium`, `high`) |
+| `COACH_FREE_DAILY_LIMIT` | `2` | Questions par jour, version gratuite |
 | `COACH_PREMIUM_DAILY_LIMIT` | `40` | Questions par jour, Premium |
 
 Le repli automatique d'Anthropic (`fallbacks: "default"`) est activé : si ses filtres de sécurité refusent une requête, elle est relancée sur un autre modèle au lieu d'échouer.
@@ -45,3 +45,14 @@ Coût indicatif : une question coûte de l'ordre de quelques centimes ; le promp
 ```bash
 node --experimental-strip-types --test backend/supabase/functions/coach/logic.test.ts
 ```
+
+## Lecture de photo
+
+La fonction `coach` accepte aussi `{"kind": "photo", "zone": …, "image": <JPEG base64>, "previousImage"?: …}`.
+L'image est transmise au modèle puis oubliée : elle n'est ni enregistrée ni journalisée. La réponse est un JSON
+structuré (conditions, constats visuels, comparaison, conseils de prise de vue, besoin d'un avis médical rapide),
+contrôlé par une liste de vocabulaire interdit (diagnostic, stade, pourcentages, pronostic, traitements).
+Une lecture compte comme une question dans le quota quotidien.
+
+Dans App Store Connect › Confidentialité de l'app, déclarer en plus « Photos ou vidéos » (fonctionnalité de l'app,
+non liées à l'identité, pas de suivi).

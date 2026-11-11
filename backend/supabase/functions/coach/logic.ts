@@ -68,6 +68,24 @@ export function screen(text: string): SafetyLevel {
   return "none";
 }
 
+/** Sujets où un rappel « parles-en à un médecin » est toujours pertinent. */
+const MEDICAL_TOPICS = [
+  "minoxidil", "finasteride", "dutasteride", "spironolactone", "traitement", "medicament", "ordonnance", "prescri",
+  "complement", "supplement", "diagnosti", "alopecie", "calvitie", "stade", "est-ce grave", "maladie", "thyroid",
+  "carence", "prise de sang", "bilan sanguin", "enceinte", "grossesse", "allait", "prp", "greffe", "laser",
+];
+
+/**
+ * Le rappel de prudence n'apparaît qu'à la première réponse d'une conversation, ou quand la question
+ * touche à un traitement, un diagnostic ou un signal d'alerte. Ailleurs, il deviendrait du bruit.
+ */
+export function needsReminder(messages: ChatTurn[], safety: SafetyLevel): boolean {
+  if (safety !== "none") return true;
+  if (!messages.some((m) => m.role === "assistant")) return true;
+  const question = normalize(messages[messages.length - 1].content);
+  return MEDICAL_TOPICS.some((k) => question.includes(k));
+}
+
 export const DISTRESS_REPLY =
   "Je suis désolé que tu traverses un moment aussi difficile. Ce que tu ressens compte, et tu n'as pas à rester seul·e avec ça. " +
   "Appelle le 3114, le numéro national de prévention du suicide : il est gratuit et joignable 24 h/24. " +

@@ -144,6 +144,8 @@ public struct PhotoEntry: Codable, Hashable, Sendable, Identifiable {
     public var conditions: CaptureConditions
     public var framing: FramingInfo
     public var note: String
+    /// Dernière lecture IA demandée par l'utilisateur, conservée uniquement sur l'appareil.
+    public var reading: PhotoReading? = nil
 
     public init(id: UUID = UUID(), zone: PhotoZone, day: DayKey, takenAt: Date = Date(), fileName: String,
                 camera: CameraPosition, quality: ImageQuality?, conditions: CaptureConditions,
@@ -158,6 +160,52 @@ public struct PhotoEntry: Codable, Hashable, Sendable, Identifiable {
         self.conditions = conditions
         self.framing = framing
         self.note = note
+    }
+}
+
+/// Lecture d'une photo par l'IA : une description visuelle prudente, jamais un diagnostic.
+public struct PhotoReading: Codable, Hashable, Sendable {
+    public var conditions: String
+    public var observations: [String]
+    /// Différences d'aspect avec la photo précédente de la même zone (si elle a été envoyée).
+    public var comparison: String?
+    public var nextPhotoTips: [String]
+    /// Un aspect inhabituel du cuir chevelu est visible : un avis médical rapide est conseillé.
+    public var seeProfessionalSoon: Bool
+    public var comparedWith: UUID?
+    public var createdAt: Date
+
+    public init(conditions: String, observations: [String], comparison: String?, nextPhotoTips: [String],
+                seeProfessionalSoon: Bool, comparedWith: UUID? = nil, createdAt: Date = Date()) {
+        self.conditions = conditions
+        self.observations = observations
+        self.comparison = comparison
+        self.nextPhotoTips = nextPhotoTips
+        self.seeProfessionalSoon = seeProfessionalSoon
+        self.comparedWith = comparedWith
+        self.createdAt = createdAt
+    }
+
+    /// Rappel affiché sous chaque lecture, quel que soit son contenu.
+    public static let disclaimer = "Cette lecture décrit une image, pas l'état de ta santé : la lumière, l'angle et le coiffage changent beaucoup l'aspect des cheveux. Seul un médecin ou un dermatologue peut évaluer une chute de cheveux. Si quelque chose t'inquiète, montre-lui tes photos."
+
+    public static let urgentAdvice = "Un aspect inhabituel du cuir chevelu semble visible sur cette photo. Par prudence, prends rendez-vous avec un médecin ou un dermatologue pour le lui montrer."
+}
+
+extension CaptureConditions {
+    /// Résumé transmis avec une photo à lire.
+    public var summary: String {
+        [dryHair ? "cheveux secs" : "cheveux mouillés",
+         usualStyling ? "coiffage habituel" : "coiffage inhabituel",
+         noProduct ? "sans produit" : "avec produit",
+         lighting.label.lowercased()].joined(separator: ", ")
+    }
+}
+
+extension PhotoTimeline {
+    /// Photo précédente de la même zone (pour une lecture comparée), si elle existe.
+    public static func previous(of entry: PhotoEntry, in photos: [PhotoEntry]) -> PhotoEntry? {
+        self.photos(photos, zone: entry.zone).last { $0.takenAt < entry.takenAt }
     }
 }
 
