@@ -58,8 +58,16 @@ research/                 Données brutes de vérification des sources
 Config/                   Entitlements (chiffrement des données)
 ```
 
+## Personnage 3D des exercices
+
+Les séances de l'onglet Explorer sont montrées par un personnage 3D animé (femme ou homme selon le profil, modifiable),
+rendu avec SceneKit : 46 mouvements, muscles sollicités mis en valeur, accessoires (chaise, table, mur, tapis).
+Le corps provient des ressources de [MakeHuman](https://github.com/makehumancommunity/makehuman), publiées dans le
+domaine public (CC0 1.0) ; tout le pipeline est dans `scripts/mannequin` (voir son README).
+
 ## État honnête
 
-- **Testé** : le package `GrowtinCore` (35 tests). Il compile sans avertissement avec Swift 6.2.
-- **Écrit mais pas encore compilé** : toute l'interface SwiftUI. Elle a été développée sans Xcode, dans un environnement Linux. Elle a été relue, mais la première compilation dans Xcode peut faire apparaître quelques erreurs à corriger.
-- **Pas encore développé** : les onglets Coach et Nutrition, qui affichent clairement « En cours de développement » ; la capture photo ; le backend ; l'abonnement ; Apple Santé.
+- **Testé** : le package `GrowtinCore` (79 tests, Swift 6.2, sans avertissement), la logique du serveur (Node) et le
+  Coach déployé (test de bout en bout à chaque déploiement).
+- **Compilé dans le cloud** : l'app complète (Xcode 26, simulateur), avec captures d'écran automatiques à chaque envoi.
+- **Pas encore développé** : Apple Santé, l'export des données, la sauvegarde et la synchronisation.
