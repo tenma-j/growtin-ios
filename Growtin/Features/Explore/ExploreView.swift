@@ -21,6 +21,25 @@ struct ExploreView: View {
     var body: some View {
         NavigationStack(path: $path) {
             List {
+                if !recommendations.isEmpty {
+                    Section {
+                        ForEach(recommendations) { recommendation in
+                            NavigationLink(value: ExploreRoute.exercise(recommendation.exercise.id)) {
+                                VStack(alignment: .leading, spacing: GT.Spacing.xs) {
+                                    ExerciseRow(exercise: recommendation.exercise)
+                                    Label(recommendation.reason, systemImage: "person.crop.circle.badge.checkmark")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Pour toi")
+                    } footer: {
+                        Text("Choisies d'après ton profil et tes derniers bilans du jour.")
+                    }
+                }
+
                 Section {
                     ForEach(ExerciseLibrary.all) { exercise in
                         NavigationLink(value: ExploreRoute.exercise(exercise.id)) {
@@ -32,7 +51,7 @@ struct ExploreView: View {
                     sessionRow(title: "Massage du cuir chevelu", detail: "4 min · détente",
                                symbol: "hand.raised", card: EvidenceCatalog.scalpMassage) { session = .massage }
                 } header: {
-                    Text("Séances guidées")
+                    Text("Toutes les séances")
                 } footer: {
                     Text("Des séances pour bouger et se détendre. Leurs bénéfices concernent la santé générale : aucune n'a d'effet démontré sur la repousse des cheveux.")
                 }
@@ -95,6 +114,11 @@ struct ExploreView: View {
         }
     }
 
+    private var recommendations: [ExerciseRecommendation] {
+        guard let profile = model.profile else { return [] }
+        return ExerciseRecommender.recommend(profile: profile, checkIns: Array(model.checkIns.values), today: DayKey(.now))
+    }
+
     private func sessionRow(title: String, detail: String, symbol: String, card: EvidenceCard,
                             action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -124,7 +148,7 @@ struct ExploreView: View {
 
     private func openDemoScreenIfNeeded() {
         switch DemoLaunch.screen {
-        case "exercise", "exerciseSession": path = [.exercise("yoga-doux")]
+        case "exercise", "exerciseSession": path = [.exercise("renforcement-poids-du-corps")]
         case "article": path = [.article("alopecie-androgenetique")]
         default: break
         }

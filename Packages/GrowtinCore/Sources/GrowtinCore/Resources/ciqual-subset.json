@@ -85,6 +85,33 @@
    }
   },
   {
+   "code": 6206,
+   "name": "Boeuf, rumsteck, cru",
+   "energyComputed": false,
+   "nutrientsPer100g": {
+    "energyKcal": 114.0,
+    "protein": 22.5,
+    "carbohydrates": 0.4,
+    "fat": 2.5,
+    "sugars": 0.0,
+    "fiber": 0.0,
+    "saturatedFat": 0.78,
+    "ala": 0.031,
+    "epa": 0.00095,
+    "dha": 0.00047,
+    "salt": 0.13,
+    "calcium": 7.33,
+    "iron": 2.48,
+    "magnesium": 16.5,
+    "selenium": 9.3,
+    "zinc": 3.54,
+    "vitaminD": 0.5,
+    "vitaminC": 0.0,
+    "folate": 5.0,
+    "vitaminB12": 1.52
+   }
+  },
+  {
    "code": 7110,
    "name": "Pain complet ou intégral (à la farine T150)",
    "energyComputed": false,
@@ -298,6 +325,33 @@
     "vitaminC": 0.0,
     "folate": 22.4,
     "vitaminB12": 0.0
+   }
+  },
+  {
+   "code": 10014,
+   "name": "Moule commune, crue",
+   "energyComputed": false,
+   "nutrientsPer100g": {
+    "energyKcal": 71.8,
+    "protein": 11.2,
+    "carbohydrates": 2.69,
+    "fat": 1.82,
+    "sugars": 0.0,
+    "fiber": 0.0,
+    "saturatedFat": 0.45,
+    "ala": 0.029,
+    "epa": 0.15,
+    "dha": 0.15,
+    "salt": 0.85,
+    "calcium": 51.5,
+    "iron": 6.78,
+    "magnesium": 31.0,
+    "selenium": 48.3,
+    "zinc": 2.36,
+    "vitaminD": 0.0,
+    "vitaminC": 6.4,
+    "folate": 39.5,
+    "vitaminB12": 12.3
    }
   },
   {
@@ -1462,6 +1516,33 @@
    }
   },
   {
+   "code": 16400,
+   "name": "Beurre à 82% MG, doux",
+   "energyComputed": false,
+   "nutrientsPer100g": {
+    "energyKcal": 753.0,
+    "protein": 0.7,
+    "carbohydrates": 0.9,
+    "fat": 82.9,
+    "sugars": 0.83,
+    "fiber": 0.0,
+    "saturatedFat": 55.4,
+    "ala": 0.38,
+    "epa": 0.0,
+    "dha": 0.0,
+    "salt": 0.063,
+    "calcium": 17.8,
+    "iron": 0.026,
+    "magnesium": 2.05,
+    "selenium": 0.0,
+    "zinc": 0.083,
+    "vitaminD": 1.12,
+    "vitaminC": 0.0,
+    "folate": 3.0,
+    "vitaminB12": 0.17
+   }
+  },
+  {
    "code": 17130,
    "name": "Huile de colza",
    "energyComputed": false,
@@ -1594,33 +1675,6 @@
     "vitaminC": 0.0,
     "folate": 107.0,
     "vitaminB12": 0.0
-   }
-  },
-  {
-   "code": 18901,
-   "name": "Boisson au soja, nature, enrichie en calcium, préemballée",
-   "energyComputed": false,
-   "nutrientsPer100g": {
-    "energyKcal": 44.2,
-    "protein": 3.42,
-    "carbohydrates": 2.18,
-    "fat": 2.05,
-    "sugars": 2.18,
-    "fiber": 1.0,
-    "saturatedFat": 0.26,
-    "ala": 0.12,
-    "epa": 0.0,
-    "dha": 0.0,
-    "salt": 0.097,
-    "calcium": 98.0,
-    "iron": 0.45,
-    "magnesium": 13.0,
-    "selenium": 0.0,
-    "zinc": 0.24,
-    "vitaminD": 1.16,
-    "vitaminC": null,
-    "folate": 22.3,
-    "vitaminB12": null
    }
   },
   {
@@ -1921,6 +1975,33 @@
    }
   },
   {
+   "code": 20056,
+   "name": "Champignon de Paris ou champignon de couche, cru",
+   "energyComputed": false,
+   "nutrientsPer100g": {
+    "energyKcal": 28.0,
+    "protein": 2.62,
+    "carbohydrates": 3.15,
+    "fat": 0.36,
+    "sugars": 2.5,
+    "fiber": 1.0,
+    "saturatedFat": 0.067,
+    "ala": 0.00026,
+    "epa": 0.0,
+    "dha": 0.0,
+    "salt": 0.098,
+    "calcium": 6.03,
+    "iron": 0.31,
+    "magnesium": 10.5,
+    "selenium": 6.47,
+    "zinc": 0.5,
+    "vitaminD": 0.3,
+    "vitaminC": 3.09,
+    "folate": 34.5,
+    "vitaminB12": 0.0
+   }
+  },
+  {
    "code": 20057,
    "name": "Brocoli, cru",
    "energyComputed": true,
@@ -2079,6 +2160,33 @@
     "vitaminD": 0.0,
     "vitaminC": 121.0,
     "folate": 81.8,
+    "vitaminB12": 0.0
+   }
+  },
+  {
+   "code": 20097,
+   "name": "Échalote, crue",
+   "energyComputed": false,
+   "nutrientsPer100g": {
+    "energyKcal": 63.6,
+    "protein": 1.81,
+    "carbohydrates": 12.2,
+    "fat": 0.0,
+    "sugars": 3.3,
+    "fiber": 2.6,
+    "saturatedFat": 0.0,
+    "ala": 0.0,
+    "epa": 0.0,
+    "dha": 0.0,
+    "salt": 0.013,
+    "calcium": 9.5,
+    "iron": 0.12,
+    "magnesium": 7.5,
+    "selenium": 0.0,
+    "zinc": 0.2,
+    "vitaminD": 0.0,
+    "vitaminC": 8.0,
+    "folate": 10.2,
     "vitaminB12": 0.0
    }
   },

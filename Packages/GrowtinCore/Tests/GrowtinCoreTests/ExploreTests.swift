@@ -29,6 +29,32 @@ struct ExploreTests {
         }
     }
 
+    @Test("Recommandations d'activité : raisons tirées du profil et des bilans")
+    func exerciseRecommendations() {
+        let today = DayKey(year: 2026, month: 11, day: 11)
+        var stressed = UserProfile(age: 30)
+        stressed.stress = .low
+        stressed.sleepHours = 8
+        stressed.sleepQuality = .good
+        stressed.activity = .moderate
+        let checkIns = (0..<5).map { DailyCheckIn(day: today.adding(days: -$0), sleepHours: 6, stress: 4) }
+        let picks = ExerciseRecommender.recommend(profile: stressed, checkIns: checkIns, today: today)
+        #expect(picks.count == 3)
+        #expect(picks[0].exercise.id == "relaxation-progressive")
+        #expect(picks[0].reason.contains("4/5"))
+        #expect(picks.contains { $0.exercise.id == "scan-corporel" && $0.reason.contains("6 h") })
+
+        var calm = UserProfile(age: 30)
+        calm.stress = .low
+        calm.sleepHours = 8
+        calm.sleepQuality = .good
+        calm.activity = .sedentary
+        let calmPicks = ExerciseRecommender.recommend(profile: calm, checkIns: [], today: today)
+        #expect(calmPicks.first?.exercise.id == "marche-active")
+        #expect(Set(calmPicks.map(\.id)).count == calmPicks.count)
+        #expect(ExerciseRecommender.format(6.5) == "6,5")
+    }
+
     @Test("Chaque article cite des sources existantes")
     func articlesAreSourced() {
         #expect(ArticleLibrary.all.count >= 10)

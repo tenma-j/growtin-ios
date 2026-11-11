@@ -24,6 +24,16 @@ struct ExerciseRow: View {
     }
 }
 
+/// Point de technique : coche verte alignée sur la première ligne.
+struct CueLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: GT.Spacing.xs) {
+            configuration.icon.foregroundStyle(Color.gtGrowth).font(.caption.weight(.bold))
+            configuration.title
+        }
+    }
+}
+
 /// Illustration animée d'un mouvement (SF Symbols), respectueuse de « Réduire les animations ».
 struct MovementIllustration: View {
     let symbol: String
@@ -85,6 +95,12 @@ struct ExerciseDetailView: View {
                                     Text(SessionTime.label(step.seconds)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                                 }
                                 Text(step.instruction).font(.footnote).foregroundStyle(.secondary)
+                                ForEach(step.cues, id: \.self) { cue in
+                                    Label(cue, systemImage: "checkmark")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .labelStyle(CueLabelStyle())
+                                }
                             }
                         }
                         .accessibilityElement(children: .combine)
@@ -186,6 +202,16 @@ struct ExerciseSessionView: View {
             VStack(spacing: GT.Spacing.l) {
                 MovementIllustration(symbol: step.symbol, size: 72)
                     .id(state.index)
+                if !step.cues.isEmpty {
+                    VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
+                        ForEach(step.cues, id: \.self) { cue in
+                            Label(cue, systemImage: "checkmark").font(.subheadline).labelStyle(CueLabelStyle())
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GT.Spacing.s)
+                    .background(Color.gtGrowth.opacity(0.08), in: .rect(cornerRadius: GT.Radius.control))
+                }
                 Text(SessionTime.label(state.remaining))
                     .font(.system(size: 48, weight: .semibold).monospacedDigit())
                     .contentTransition(.numericText(countsDown: true))

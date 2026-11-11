@@ -72,7 +72,7 @@ struct NutritionTests {
     @Test("Recherche insensible aux accents, y compris dans les ingrédients")
     func search() {
         let results = RecipeFilter.search(database.recipes, query: "epinards", in: database)
-        #expect(results.contains { $0.id == "poelee-saumon-epinards" })
+        #expect(results.contains { $0.id == "rumsteck-epinards-champignons" })
         #expect(RecipeFilter.search(database.recipes, query: "oeuf", in: database).contains { $0.id == "shakshuka" })
         #expect(RecipeFilter.search(database.recipes, query: "", in: database).count == database.recipes.count)
     }
@@ -121,5 +121,33 @@ struct NutritionTests {
         #expect(QuantityFormatter.format(2, unit: "c. à soupe") == "2 c. à soupe")
         #expect(QuantityFormatter.format(1234, unit: "g") == "1230 g")
         #expect(QuantityFormatter.singular("grandes tranches") == "grande tranche")
+    }
+
+    @Test("Recettes recommandées selon le régime et les carences déclarées")
+    func recommendations() {
+        var vegan = UserProfile(age: 30)
+        vegan.diet = .vegan
+        let veganPicks = RecipeRecommender.recommend(profile: vegan, database: database)
+        #expect(!veganPicks.isEmpty)
+        for pick in veganPicks {
+            #expect(RecipeFilter.tags(for: pick.recipe, in: database).isVegan, "\(pick.recipe.id)")
+            #expect(pick.reason.contains("%"))
+        }
+
+        var lowIron = UserProfile(age: 30)
+        lowIron.health.knownDeficiencies = [.iron]
+        let ironPicks = RecipeRecommender.recommend(profile: lowIron, database: database)
+        #expect(ironPicks.first?.focus == .iron)
+        #expect(ironPicks.first?.reason.contains("manque de fer") == true)
+        #expect(Set(ironPicks.map(\.recipe.meal)).count >= 2, "les suggestions couvrent plusieurs repas")
+
+        var noShellfish = UserProfile(age: 30)
+        noShellfish.health.restrictions = [.shellfish]
+        #expect(!RecipeRecommender.recommend(profile: noShellfish, database: database, limit: 10).contains { $0.recipe.id == "moules-marinieres-persil" })
+    }
+
+    @Test("Chaque recette a une astuce")
+    func tips() {
+        for recipe in database.recipes { #expect(recipe.tip?.isEmpty == false, "\(recipe.id)") }
     }
 }

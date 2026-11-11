@@ -33,6 +33,12 @@ struct RecipeDetailView: View {
                     }
                     ingredientsSection
                     stepsSection
+                    if let tip = recipe.tip {
+                        GTCard {
+                            Label("L'astuce", systemImage: "lightbulb").font(.headline).foregroundStyle(Color.gtGrowth)
+                            Text(tip).font(.subheadline)
+                        }
+                    }
                     if !recipe.substitutions.isEmpty {
                         GTCard {
                             Text("Substitutions").font(.headline)

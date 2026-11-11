@@ -297,6 +297,12 @@ public enum QuantityFormatter {
     }
 
     /// « 1,5 » devient « 1 ½ », les grammes sont arrondis et les unités s'accordent en nombre.
+    /// Valeur nutritionnelle lisible : « 4,1 mg », « 23 g ».
+    public static func nutrient(_ amount: Double, unit: String) -> String {
+        let text = amount >= 10 ? String(Int(amount.rounded())) : String(format: "%.1f", amount).replacingOccurrences(of: ".", with: ",")
+        return "\(text.hasSuffix(",0") ? String(text.dropLast(2)) : text) \(unit)"
+    }
+
     public static func format(_ amount: Double, unit: String) -> String {
         if unit == "g" || unit == "ml" {
             let rounded = amount >= 100 ? (amount / 10).rounded() * 10 : max(1, amount.rounded())
@@ -321,5 +327,80 @@ public enum QuantityFormatter {
             number = "\(whole) \(fractionText)"
         }
         return "\(number) \(agree(unit, plural: rounded >= 2))"
+    }
+}
+
+// MARK: - Recettes recommandées
+
+/// Une recette proposée, le nutriment qui la justifie et la raison affichée.
+public struct RecipeRecommendation: Hashable, Sendable, Identifiable {
+    public let recipe: Recipe
+    public let focus: Nutrient
+    public let reason: String
+    public var id: String { recipe.id }
+}
+
+/// Propose des recettes riches en nutriments utiles au profil déclaré (régime, carences connues).
+/// Les raisons restent factuelles : apport par portion d'après Ciqual, jamais d'effet promis sur les cheveux.
+public enum RecipeRecommender {
+    struct Focus {
+        let nutrient: Nutrient
+        let context: String
+    }
+
+    static func focuses(for profile: UserProfile) -> [Focus] {
+        var result: [Focus] = []
+        let deficiencies = profile.health.knownDeficiencies
+        if deficiencies.contains(.iron) { result.append(Focus(nutrient: .iron, context: "Tu as indiqué un manque de fer : associe ce plat à une source de vitamine C, et garde le suivi de ta carence avec ton médecin.")) }
+        if deficiencies.contains(.vitaminD) { result.append(Focus(nutrient: .vitaminD, context: "Tu as indiqué un manque de vitamine D : l'alimentation en apporte peu, ton médecin te dira si un complément est utile.")) }
+        if deficiencies.contains(.zinc) { result.append(Focus(nutrient: .zinc, context: "Tu as indiqué un manque de zinc.")) }
+        if deficiencies.contains(.vitaminB12) { result.append(Focus(nutrient: .vitaminB12, context: "Tu as indiqué un manque de vitamine B12 : parles-en à ton médecin pour son suivi.")) }
+        switch profile.diet {
+        case .vegan:
+            result.append(Focus(nutrient: .iron, context: "En alimentation végétalienne, le fer des végétaux est moins bien absorbé : vise des sources variées, avec de la vitamine C au même repas."))
+            result.append(Focus(nutrient: .zinc, context: "Le zinc est plus difficile à couvrir sans produits animaux."))
+        case .vegetarian:
+            result.append(Focus(nutrient: .iron, context: "Sans viande ni poisson, le fer demande un peu plus d'attention."))
+            result.append(Focus(nutrient: .zinc, context: "Sans viande ni poisson, le zinc demande un peu plus d'attention."))
+        case .pescatarian, .flexitarian, .omnivore:
+            break
+        }
+        // Repères généraux, toujours présents en dernier : protéines et fer sont les plus discutés dans les revues sur la chute.
+        result.append(Focus(nutrient: .protein, context: "Un apport suffisant en protéines fait partie d'une alimentation équilibrée."))
+        result.append(Focus(nutrient: .iron, context: "Le fer fait partie des nutriments les plus étudiés quand on s'intéresse à la chute des cheveux."))
+        var seen = Set<Nutrient>()
+        return result.filter { seen.insert($0.nutrient).inserted }
+    }
+
+    public static func recommend(profile: UserProfile, database: NutritionDatabase, limit: Int = 4) -> [RecipeRecommendation] {
+        let eligible = RecipeFilter.eligible(database.recipes, diet: profile.diet, restrictions: profile.health.restrictions, in: database)
+            .filter { $0.meal != .snack }
+        let facts = Dictionary(uniqueKeysWithValues: eligible.map { ($0.id, NutritionCalculator.facts(for: $0, in: database)) })
+        var picks: [RecipeRecommendation] = []
+        var usedMeals: [MealType: Int] = [:]
+        for focus in focuses(for: profile) {
+            let threshold = focus.nutrient == .protein ? 0.3 : 0.15
+            let ranked = eligible
+                .filter { recipe in !picks.contains { $0.recipe.id == recipe.id } }
+                .compactMap { recipe -> (Recipe, Double)? in
+                    guard let percent = facts[recipe.id]?.percentOfReference(focus.nutrient), percent >= threshold else { return nil }
+                    return (recipe, percent)
+                }
+                .sorted { lhs, rhs in
+                    // Varie les repas : une recette d'un repas déjà proposé passe après les autres.
+                    let l = usedMeals[lhs.0.meal, default: 0], r = usedMeals[rhs.0.meal, default: 0]
+                    return l != r ? l < r : lhs.1 > rhs.1
+                }
+            for (recipe, percent) in ranked.prefix(2) where picks.count < limit {
+                let amount = facts[recipe.id]?.amount(focus.nutrient) ?? 0
+                let label = focus.nutrient.label.prefix(1).lowercased() + focus.nutrient.label.dropFirst()
+                // Formulation factuelle (« apporte… ») : les allégations « source de » ou « riche en » sont réglementées (règlement (CE) 1924/2006).
+                let reason = "Apporte \(QuantityFormatter.nutrient(amount, unit: focus.nutrient.unit)) de \(label) par portion, soit \(Int((percent * 100).rounded())) % de la valeur de référence. \(focus.context)"
+                picks.append(RecipeRecommendation(recipe: recipe, focus: focus.nutrient, reason: reason))
+                usedMeals[recipe.meal, default: 0] += 1
+            }
+            if picks.count >= limit { break }
+        }
+        return picks
     }
 }

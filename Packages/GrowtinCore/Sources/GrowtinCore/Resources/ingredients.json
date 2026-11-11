@@ -60,14 +60,14 @@
   "aisle": "Crèmerie et œufs"
  },
  {
-  "id": "boisson-soja",
-  "name": "Boisson au soja enrichie en calcium",
-  "ciqualCode": 18901,
-  "kind": "plant",
+  "id": "beurre",
+  "name": "Beurre doux",
+  "ciqualCode": 16400,
+  "kind": "dairy",
   "allergens": [
-   "soy"
+   "lactose"
   ],
-  "aisle": "Épicerie"
+  "aisle": "Crèmerie et œufs"
  },
  {
   "id": "tofu",
@@ -234,6 +234,16 @@
   "aisle": "Épicerie"
  },
  {
+  "id": "moules",
+  "name": "Moules (chair)",
+  "ciqualCode": 10014,
+  "kind": "shellfish",
+  "allergens": [
+   "shellfish"
+  ],
+  "aisle": "Poissonnerie"
+ },
+ {
   "id": "crevettes",
   "name": "Crevettes décortiquées",
   "ciqualCode": 10021,
@@ -242,6 +252,14 @@
    "shellfish"
   ],
   "aisle": "Poissonnerie"
+ },
+ {
+  "id": "rumsteck",
+  "name": "Rumsteck de bœuf",
+  "ciqualCode": 6206,
+  "kind": "meat",
+  "allergens": [],
+  "aisle": "Boucherie"
  },
  {
   "id": "poulet-filet",
@@ -420,6 +438,14 @@
   "aisle": "Fruits et légumes"
  },
  {
+  "id": "echalote",
+  "name": "Échalote",
+  "ciqualCode": 20097,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
   "id": "ail",
   "name": "Ail",
   "ciqualCode": 11000,
@@ -463,6 +489,14 @@
   "id": "chou-kale",
   "name": "Chou kale",
   "ciqualCode": 20218,
+  "kind": "plant",
+  "allergens": [],
+  "aisle": "Fruits et légumes"
+ },
+ {
+  "id": "champignons",
+  "name": "Champignons de Paris",
+  "ciqualCode": 20056,
   "kind": "plant",
   "allergens": [],
   "aisle": "Fruits et légumes"

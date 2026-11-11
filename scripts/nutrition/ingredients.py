@@ -47,7 +47,9 @@ INGREDIENTS = {
     # Poissons, viandes
     "saumon": ("Pavé de saumon", 26036, "fish", ["fish"], POISSON),
     "thon": ("Thon au naturel (conserve)", 26039, "fish", ["fish"], EPICERIE),
+    "moules": ("Moules (chair)", 10014, "shellfish", ["shellfish"], POISSON),
     "crevettes": ("Crevettes décortiquées", 10021, "shellfish", ["shellfish"], POISSON),
+    "rumsteck": ("Rumsteck de bœuf", 6206, "meat", [], BOUCHERIE),
     "poulet-filet": ("Filet de poulet", 36017, "meat", [], BOUCHERIE),
     "poulet-ailes": ("Ailes de poulet", 36023, "meat", [], BOUCHERIE),
 
@@ -75,6 +77,7 @@ INGREDIENTS = {
     "concombre": ("Concombre", 20019, "plant", [], FRUITS),
     "oignon": ("Oignon jaune", 20239, "plant", [], FRUITS),
     "oignon-rouge": ("Oignon rouge", 20238, "plant", [], FRUITS),
+    "echalote": ("Échalote", 20097, "plant", [], FRUITS),
     "ail": ("Ail", 11000, "plant", [], FRUITS),
     "carotte": ("Carotte", 20009, "plant", [], FRUITS),
     "courgette": ("Courgette", 20020, "plant", [], FRUITS),

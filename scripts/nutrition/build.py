@@ -9,7 +9,7 @@ import xlrd
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from ingredients import INGREDIENTS  # noqa: E402
-from recipes import RECIPES  # noqa: E402
+from recipes import RECIPES, TIPS  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(ROOT, "Packages/GrowtinCore/Sources/GrowtinCore/Resources")
@@ -80,8 +80,10 @@ def main(path):
             "id": r["id"], "title": r["title"], "meal": r["meal"], "servings": r["servings"],
             "prepMinutes": r["prep"], "cookMinutes": r["cook"], "difficulty": r["difficulty"],
             "summary": r["summary"], "ingredients": items, "steps": r["steps"], "substitutions": r["substitutions"],
-            "photo": photo,
+            "photo": photo, "tip": TIPS.get(r["id"]),
         })
+        if r["id"] not in TIPS:
+            errors.append(f"Astuce manquante : {r['id']}")
 
     credits = json.load(open(os.path.join(HERE, "photo_credits.json")))
     for r in recipes_out:

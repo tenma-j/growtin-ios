@@ -5,3 +5,4 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 Growtin-iOS.zip
+__pycache__/

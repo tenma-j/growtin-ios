@@ -88,6 +88,8 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
     /// Nom du fichier image embarqué dans l'application.
     public let photo: String
     public let photoCredit: PhotoCredit?
+    /// Astuce pratique (technique, conservation, association d'aliments).
+    public let tip: String?
 
     public var totalMinutes: Int { prepMinutes + cookMinutes }
 }

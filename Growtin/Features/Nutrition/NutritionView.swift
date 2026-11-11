@@ -44,6 +44,7 @@ struct NutritionView: View {
                             }
                             .buttonStyle(.plain)
                         }
+                        if query.isEmpty { forYou }
                         planShortcuts
                         filters
                         personalizationNote
@@ -170,7 +171,7 @@ struct NutritionView: View {
     private func openDemoScreenIfNeeded() {
         switch DemoLaunch.screen {
         case "recipe":
-            if let recipe = store.recipeOfTheDay(for: model.profile, day: today) { path = [.recipe(recipe.id)] }
+            path = [.recipe("moules-marinieres-persil")]
         case "mealPlan":
             store.generateWeek(startingOn: NutritionStore.weekStart(for: today), profile: model.profile)
             path = [.mealPlan]
@@ -184,6 +185,65 @@ struct NutritionView: View {
 }
 
 /// Photo d'une recette (embarquée), réduite à la taille d'affichage.
+extension NutritionView {
+    /// Recettes choisies selon le régime, les allergies et les carences déclarées.
+    @ViewBuilder
+    var forYou: some View {
+        if let profile = model.profile, let database = store.database {
+            let picks = RecipeRecommender.recommend(profile: profile, database: database)
+            if !picks.isEmpty {
+                VStack(alignment: .leading, spacing: GT.Spacing.s) {
+                    SectionHeader(title: "Pour toi", subtitle: "D'après ton régime et les informations de santé que tu as partagées.")
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: GT.Spacing.s) {
+                            ForEach(picks) { pick in
+                                NavigationLink(value: NutritionRoute.recipe(pick.recipe.id)) {
+                                    RecommendedRecipeCard(recommendation: pick)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollIndicators(.hidden)
+                    .contentMargins(.horizontal, 0)
+                }
+            }
+        }
+    }
+}
+
+struct RecommendedRecipeCard: View {
+    let recommendation: RecipeRecommendation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear
+                .frame(width: 270, height: 140)
+                .overlay { RecipePhoto(recipe: recommendation.recipe, maxPixelSize: 600) }
+                .clipped()
+            VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
+                Text("\(recommendation.recipe.meal.label) · \(recommendation.recipe.totalMinutes) min").gtEyebrowStyle()
+                Text(recommendation.recipe.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2, reservesSpace: true)
+                    .multilineTextAlignment(.leading)
+                Text(recommendation.reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(4, reservesSpace: true)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(GT.Spacing.s)
+            .frame(width: 270, alignment: .leading)
+        }
+        .background(Color.gtSurface)
+        .clipShape(.rect(cornerRadius: GT.Radius.card))
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct RecipePhoto: View {
     let recipe: Recipe
     var maxPixelSize = 700
