@@ -70,7 +70,7 @@ extension AppModel {
                          takenAt: day.date(calendar: calendar))
             }
         }
-        // Une lecture IA de démonstration sur la photo la plus récente de la première zone.
+        // Une lecture de démonstration sur la photo la plus récente de la première zone.
         if let zone = PhotoZone.suggested(for: profile.zones).first,
            let first = PhotoTimeline.photos(photos, zone: zone).first, let latest = PhotoTimeline.latest(photos, zone: zone),
            first.id != latest.id {

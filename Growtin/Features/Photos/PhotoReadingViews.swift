@@ -1,7 +1,7 @@
 import GrowtinCore
 import SwiftUI
 
-/// Point d'entrée « Lecture IA » d'une photo : bouton, résultat enregistré, feuille de consentement.
+/// Point d'entrée « Lecture Growtin' » d'une photo : bouton, résultat enregistré, feuille de consentement.
 struct PhotoReadingSection: View {
     @Environment(AppModel.self) private var model
     let entry: PhotoEntry
@@ -24,7 +24,7 @@ struct PhotoReadingSection: View {
                 PhotoReadingCard(reading: reading, reference: reading.comparedWith.flatMap(model.photo(id:)))
             }
             if model.coach.service.isAvailable {
-                Button(reading == nil ? (reference == nil ? "Lire cette photo avec l'IA" : "Lire l'évolution avec l'IA") : "Relire avec l'IA",
+                Button(reading == nil ? (reference == nil ? "Lire cette photo avec Growtin'" : "Lire l'évolution avec Growtin'") : "Relire avec Growtin'",
                        systemImage: "eye") { showingSheet = true }
                     .gtProminentButton()
                     .frame(maxWidth: .infinity)
@@ -55,7 +55,7 @@ struct PhotoReadingConsentSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: GT.Spacing.l) {
                     StepHeader(eyebrow: "Lecture de photo", title: "Un regard neutre sur ta photo",
-                               subtitle: "L'IA décrit ce qui est visible pour t'aider à mieux regarder tes photos. Ce n'est pas un examen médical.")
+                               subtitle: "Growtin' décrit ce qui est visible pour t'aider à mieux regarder tes photos. Ce n'est pas un examen médical.")
                     GTCard {
                         line("photo.on.rectangle", "Ce qui est envoyé",
                              compare && previous != nil
@@ -142,7 +142,7 @@ struct PhotoReadingCard: View {
     var body: some View {
         GTCard {
             HStack {
-                Label("Lecture IA", systemImage: "eye").font(.headline)
+                Label("Lecture Growtin'", systemImage: "eye").font(.headline)
                 Spacer()
                 Text(reading.createdAt.formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary)
             }
