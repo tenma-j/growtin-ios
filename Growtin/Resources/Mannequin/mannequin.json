@@ -1084,18 +1084,18 @@
    "meshes": [
     {
      "material": 0,
-     "vertexCount": 13117,
-     "indexCount": 78120
+     "vertexCount": 14378,
+     "indexCount": 83316
     },
     {
      "material": 1,
-     "vertexCount": 734,
-     "indexCount": 3687
+     "vertexCount": 1753,
+     "indexCount": 8790
     },
     {
      "material": 2,
-     "vertexCount": 270,
-     "indexCount": 1017
+     "vertexCount": 1599,
+     "indexCount": 7482
     }
    ]
   },
@@ -2177,18 +2177,18 @@
    "meshes": [
     {
      "material": 0,
-     "vertexCount": 13198,
-     "indexCount": 77316
+     "vertexCount": 18063,
+     "indexCount": 99276
     },
     {
      "material": 1,
-     "vertexCount": 1653,
-     "indexCount": 7521
+     "vertexCount": 6200,
+     "indexCount": 30222
     },
     {
      "material": 2,
-     "vertexCount": 507,
-     "indexCount": 1833
+     "vertexCount": 2955,
+     "indexCount": 13620
     }
    ]
   }

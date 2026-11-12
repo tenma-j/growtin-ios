@@ -20,6 +20,9 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    lisse (sans visage), pose debout bras le long du corps, mains détendues, poids lissés aux pliures (épaules,
    hanches, coudes, genoux). La tenue fait partie de la surface du corps : la peau est découpée le long de courbes
    nettes (champs scalaires lisses), la zone de tissu est légèrement gonflée et lissée ; rien ne peut passer à travers.
+   Près des lignes de la tenue, les triangles sont subdivisés (milieux replacés sur la surface lisse) et les champs
+   sont recalculés exactement sur chaque nouveau sommet : bords droits et bretelles nettes, même pour une bande plus
+   étroite qu'un triangle du corps.
    Export de `Growtin/Resources/Mannequin/mannequin-{female,male}.bin` (un maillage par matière) et `mannequin.json`.
 2. `motions.py` : bibliothèque des mouvements, écrite dans
    `Packages/GrowtinCore/Sources/GrowtinCore/Resources/motions.json` après contrôle des os et des régions.

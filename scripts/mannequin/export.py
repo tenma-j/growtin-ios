@@ -257,57 +257,77 @@ def build(data, sex):
         # poids d'origine (sans les articulations d'appoint) : zones du corps pour dessiner la tenue
         cols = [i for i, nme in enumerate(order) if nme.startswith(prefixes) and i < W.shape[1]]
         return W[:, cols].sum(1)
-    w_arm = wsum(("upperarm", "lowerarm", "wrist", "finger", "metacarpal"))
-    w_shoulder = wsum(("clavicle", "shoulder01"))
-    w_leg_low = wsum(("lowerleg", "foot", "toes"))
-    def thigh_t(side):
-        a_, b2 = newheads["upperleg01" + side], newheads["lowerleg01" + side]
-        ax = b2 - a_
-        return (v - a_) @ ax / (ax @ ax), np.linalg.norm(ax)
-    tL, lenL = thigh_t(".L"); tR, lenR = thigh_t(".R")
-    t_side = np.where(v[:, 0] >= 0, tL, tR); thigh_len = (lenL + lenR) / 2
+    w_arm0 = wsum(("upperarm", "lowerarm", "wrist", "finger", "metacarpal"))
+    w_shoulder0 = wsum(("clavicle", "shoulder01"))
+    w_leg_low0 = wsum(("lowerleg", "foot", "toes"))
     waist_y = newheads["spine04"][1] + (0.005 if sex == "male" else -0.005)
     leg_cut = 0.40 if sex == "male" else 0.30
-    f_shorts = np.minimum.reduce([(leg_cut - t_side) * thigh_len, waist_y - v[:, 1], (0.5 - w_arm) * 0.1, (0.5 - w_leg_low) * 0.1])
-    f_band = np.minimum(f_shorts, v[:, 1] - (waist_y - 0.036))
-    cloth_fields, trim_fields = [f_shorts], [f_band]
+    def smoothstep(a, b, x):
+        t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
+    def smax(a, b, k):
+        h = np.maximum(k - np.abs(a - b), 0) / k
+        return np.maximum(a, b) + h * h * k / 4
     if sex == "female":
         chest = (np.abs(v[:, 0]) > 0.04) & (np.abs(v[:, 0]) < 0.13) & (v[:, 1] > newheads["spine02"][1]) & (v[:, 1] < newheads["neck01"][1])
         apex = v[chest][np.argmax(v[chest][:, 2])]
         lo, hi = apex[1] - 0.09, apex[1] + 0.07
-        def smoothstep(a, b, x):
-            t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
-        def smax(a, b, k):
-            h = np.maximum(k - np.abs(a - b), 0) / k
-            return np.maximum(a, b) + h * h * k / 4
-        # Brassière de sport : décolleté arrondi devant, dos droit, bretelles croisées en dos nageur,
-        # jonctions arrondies (union douce des champs).
         sx = 0.5 * (abs(newheads["clavicle.L"][0]) + abs(newheads["upperarm01.L"][0])) - 0.012
         z_mid = newheads["spine02"][2] + 0.05
-        front = smoothstep(z_mid - 0.05, z_mid + 0.05, v[:, 2])
-        neckline = (apex[1] + 0.025) + (hi + 0.01 - apex[1] - 0.025) * np.clip(np.abs(v[:, 0]) / sx, 0, 1.4) ** 2
-        top_edge = front * neckline + (1 - front) * (hi - 0.015)
-        f_body = np.minimum.reduce([v[:, 1] - lo, top_edge - v[:, 1], (0.3 - w_arm - w_shoulder) * 0.1])
         shoulder_top = newheads["upperarm01.L"][1] + 0.05
-        racer = 0.035 + (sx - 0.035) * smoothstep(hi - 0.04, shoulder_top, v[:, 1])      # dos nageur : les bretelles se rejoignent
-        centre = front * sx + (1 - front) * racer
-        w_head = wsum(("head", "neck"))
-        # bornes purement géométriques (des bords nets, pas des poids d'os bruités)
-        f_straps = np.minimum.reduce([0.018 - np.abs(np.abs(v[:, 0]) - centre), v[:, 1] - (lo + 0.04),
-                                      (shoulder_top + 0.10) - v[:, 1]])
-        f_top = smax(f_body, f_straps, 0.012)
-        f_top_band = np.minimum(f_top, (lo + 0.026) - v[:, 1])
-        cloth_fields.append(f_top); trim_fields.append(f_top_band)
+
+    def outfit(v, w_arm, w_shoulder, w_leg_low):
+        """Champs de la tenue (positifs dedans) : tissu et liseré. Évalués exactement en chaque sommet : un min ou
+        un max de plusieurs bornes n'est pas linéaire, son interpolation sur un sommet de coupe serait fausse."""
+        def thigh_t(side):
+            a_, b2 = newheads["upperleg01" + side], newheads["lowerleg01" + side]
+            ax = b2 - a_
+            return (v - a_) @ ax / (ax @ ax), np.linalg.norm(ax)
+        tL, lenL = thigh_t(".L"); tR, lenR = thigh_t(".R")
+        t_side = np.where(v[:, 0] >= 0, tL, tR); thigh_len = (lenL + lenR) / 2
+        f_shorts = np.minimum.reduce([(leg_cut - t_side) * thigh_len, waist_y - v[:, 1], (0.5 - w_arm) * 0.1, (0.5 - w_leg_low) * 0.1])
+        f_band = np.minimum(f_shorts, v[:, 1] - (waist_y - 0.036))
+        cloth, trim = [f_shorts], [f_band]
+        if sex == "female":
+            # Brassière de sport : décolleté arrondi devant, dos droit, bretelles croisées en dos nageur,
+            # jonctions arrondies (union douce des champs) ; bornes géométriques (bords nets).
+            front = smoothstep(z_mid - 0.05, z_mid + 0.05, v[:, 2])
+            neckline = (apex[1] + 0.025) + (hi + 0.01 - apex[1] - 0.025) * np.clip(np.abs(v[:, 0]) / sx, 0, 1.4) ** 2
+            top_edge = front * neckline + (1 - front) * (hi - 0.015)
+            f_body = np.minimum.reduce([v[:, 1] - lo, top_edge - v[:, 1], (0.3 - w_arm - w_shoulder) * 0.1])
+            racer = 0.035 + (sx - 0.035) * smoothstep(hi - 0.04, shoulder_top, v[:, 1])      # dos nageur
+            centre = front * sx + (1 - front) * racer
+            f_straps = np.minimum.reduce([0.018 - np.abs(np.abs(v[:, 0]) - centre), v[:, 1] - (lo + 0.04),
+                                          (shoulder_top + 0.10) - v[:, 1]])
+            f_top = smax(f_body, f_straps, 0.012)
+            cloth.append(f_top); trim.append(np.minimum(f_top, (lo + 0.026) - v[:, 1]))
+        return np.maximum.reduce(cloth), np.maximum.reduce(trim)
+
     # Le tissu fait partie de la surface du corps : la peau est découpée le long des lignes du vêtement
     # (courbes nettes), la zone de tissu est légèrement gonflée et lissée (sans relief du corps dessous).
     # Une seule surface : rien ne peut passer à travers le vêtement.
-    f_cloth = np.maximum.reduce(cloth_fields)
-    f_trim = np.maximum.reduce(trim_fields)
-    v, nrm, bone_idx, bone_w, tris, (f_cloth, f_trim) = split_along(v, nrm, bone_idx, bone_w, tris, f_cloth, [f_cloth, f_trim])
+    # Triangles fins près des lignes de la tenue : la découpe suit alors des courbes nettes, même pour une bande
+    # plus étroite qu'un triangle du corps (liseré, bretelles).
+    aux = [w_arm0, w_shoulder0, w_leg_low0]
+    for margin in (0.012, 0.005):
+        f_cloth, f_trim = outfit(v, *aux)
+        near = (np.abs(f_cloth) < margin) | (np.abs(f_trim) < margin)
+        v, nrm, bone_idx, bone_w, tris, aux = refine_near(v, nrm, bone_idx, bone_w, tris, near, aux)
+    w_arm0, w_shoulder0, w_leg_low0 = aux
+    f_cloth, _ = outfit(v, w_arm0, w_shoulder0, w_leg_low0)
+    n_before = len(v)
+    v, nrm, bone_idx, bone_w, tris, (w_arm, w_shoulder, w_leg_low) = split_along(
+        v, nrm, bone_idx, bone_w, tris, f_cloth, [w_arm0, w_shoulder0, w_leg_low0])
+    f_cloth, f_trim = outfit(v, w_arm, w_shoulder, w_leg_low)
+    f_cloth[n_before:] = 0.0                                   # sommets de coupe : exactement sur le bord du tissu
+    f_trim[np.abs(f_trim) < 1e-9] = 0.0
     v, nrm, bone_idx, bone_w, tris, (f_cloth, f_trim) = split_along(v, nrm, bone_idx, bone_w, tris, f_trim, [f_cloth, f_trim])
+    area = 0.5 * np.linalg.norm(np.cross(v[tris[:, 1]] - v[tris[:, 0]], v[tris[:, 2]] - v[tris[:, 0]]), axis=1)
+    tris = tris[area > 1e-11]                                 # triangles plats laissés par la découpe
     def ramp(f, width):
         t = np.clip(f / width, 0, 1); return t * t * (3 - 2 * t)
-    want = 0.003 * ramp(f_cloth, 0.010) + 0.0015 * ramp(f_trim, 0.003)
+    # épaisseur du tissu, en pente douce depuis le bord (sur plus d'un triangle : pas de marche visible) ;
+    # le liseré est au même niveau que le tissu (une marche plus étroite qu'un triangle se voit en dents de scie)
+    want = 0.003 * ramp(f_cloth, 0.016)
     n0 = normals_of(v, tris)
     p0 = v.copy()
     pos = v + n0 * want[:, None]
@@ -315,7 +335,10 @@ def build(data, sex):
     strength = (ramp(f_cloth - 0.004, 0.016) * ramp(np.abs(f_trim) - 0.002, 0.008))[:, None]
     avg2 = adjacency(len(v), tris)
     for _ in range(40):
-        pos = pos + 0.5 * strength * (avg2 @ pos - pos)
+        # lissage selon la normale uniquement : le tissu se tend par-dessus le relief du corps, sans glisser le long
+        # de la surface (un glissement ferait passer des triangles par-dessus les lignes de découpe : bords dentelés)
+        lap = avg2 @ pos - pos
+        pos = pos + 0.5 * strength * (lap * n0).sum(1)[:, None] * n0
         d = ((pos - p0) * n0).sum(1)
         pos = pos + n0 * np.maximum(want - d, 0)[:, None]
     v = pos
@@ -325,6 +348,55 @@ def build(data, sex):
     return dict(order=order, parents=parents, halves=halves, heads=newheads, tails=newtails,
                 v=v.astype(np.float32), n=nrm.astype(np.float32), tris=tris, bone_idx=bone_idx, bone_w=bone_w,
                 tri_material=tri_material)
+
+def refine_near(v, n, bi, bw, tris, near, extras):
+    """Subdivise (milieux des arêtes) les triangles qui touchent un sommet « near », sans fissure : les voisins
+    reçoivent une coupe en 2 ou 3 (raffinement rouge-vert). Poids d'os et « extras » interpolés."""
+    P, N, BI, BW = list(v), list(n), list(bi), list(bw)
+    X = [list(e) for e in extras]
+    mids = {}
+    def mid(i, j):
+        key = (min(i, j), max(i, j))
+        if key not in mids:
+            # milieu replacé sur la surface lisse que décrivent les normales (tessellation de Phong, α = 3/4) :
+            # pas de facettes visibles là où le maillage est subdivisé
+            m_ = (v[i] + v[j]) / 2
+            qi = m_ - ((m_ - v[i]) @ n[i]) * n[i]; qj = m_ - ((m_ - v[j]) @ n[j]) * n[j]
+            p = 0.25 * m_ + 0.375 * (qi + qj)
+            nn = n[i] + n[j]; nn = nn / (np.linalg.norm(nn) + 1e-12)
+            w = {}
+            for b_, x in zip(bi[i], bw[i] * 0.5): w[int(b_)] = w.get(int(b_), 0) + x
+            for b_, x in zip(bi[j], bw[j] * 0.5): w[int(b_)] = w.get(int(b_), 0) + x
+            top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
+            tot = sum(x for _, x in top) or 1
+            bix = np.zeros(4, np.uint16); bwx = np.zeros(4, np.float32)
+            for k, (b_, x) in enumerate(top): bix[k] = b_; bwx[k] = x / tot
+            mids[key] = len(P); P.append(p); N.append(nn); BI.append(bix); BW.append(bwx)
+            for e, xs in zip(extras, X):
+                xs.append((e[i] + e[j]) / 2)
+        return mids[key]
+    red = near[tris].any(1)
+    marked = set()
+    for a, b, c in tris[red]:
+        marked |= {(min(a, b), max(a, b)), (min(b, c), max(b, c)), (min(c, a), max(c, a))}
+    T = []
+    for t in tris:
+        e = [(min(t[r], t[(r + 1) % 3]), max(t[r], t[(r + 1) % 3])) in marked for r in range(3)]
+        k = sum(e)
+        if k == 0:
+            T.append(list(t)); continue
+        if k == 3:
+            a, b, c = t; ab, bc, ca = mid(a, b), mid(b, c), mid(c, a)
+            T += [[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]; continue
+        for r in range(3):                       # rotation : l'arête coupée (ou la première des deux) en tête
+            a, b, c = t[r], t[(r + 1) % 3], t[(r + 2) % 3]
+            if k == 1 and e[r]:
+                ab = mid(a, b); T += [[a, ab, c], [ab, b, c]]; break
+            if k == 2 and e[r] and e[(r + 1) % 3]:
+                ab, bc = mid(a, b), mid(b, c)
+                T += [[ab, b, bc], [a, ab, bc], [a, bc, c]]; break
+    return (np.array(P), np.array(N), np.array(BI, np.uint16), np.array(BW, np.float32), np.array(T, int),
+            [np.array(xs) for xs in X])
 
 def split_along(v, n, bi, bw, tris, f, extras):
     """Coupe les triangles qui traversent la ligne f = 0 (sommets de coupe partagés : maillage sans fissure).
