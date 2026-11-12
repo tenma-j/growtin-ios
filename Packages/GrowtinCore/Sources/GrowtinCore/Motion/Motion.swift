@@ -331,19 +331,28 @@ public struct Skeleton: Sendable {
     /// Rotation locale d'une articulation d'appoint : la moitié de celle de son os.
     public static func halfRotation(_ q: Quat) -> Quat { Quat.slerp(.identity, q, 0.5) }
 
+    /// Rotation locale de chaque articulation dans une pose : appoints compris (moitié de la rotation de leur os),
+    /// et rotation globale du corps incluse dans celle de la racine.
+    public func localRotations(_ pose: ResolvedPose) -> [Quat] {
+        joints.enumerated().map { i, joint in
+            var local = pose.rotations[joint.name] ?? .identity
+            if let half = joint.half { local = Self.halfRotation(pose.rotations[half] ?? .identity) }
+            if parentIndex[i] == nil { local = pose.rootRotation * local }
+            return local
+        }
+    }
+
     /// Rotations et positions monde de chaque articulation (les parents précèdent toujours leurs enfants).
     public func worldTransforms(_ pose: ResolvedPose, rootLift: Double = 0) -> (rotations: [Quat], positions: [Vec3]) {
+        let local = localRotations(pose)
         var R = [Quat](repeating: .identity, count: joints.count)
         var P = [Vec3](repeating: .zero, count: joints.count)
         for (i, joint) in joints.enumerated() {
-            var local = pose.rotations[joint.name] ?? .identity
-            if let half = joint.half { local = Self.halfRotation(pose.rotations[half] ?? .identity) }
             if let p = parentIndex[i] {
-                R[i] = R[p] * local
+                R[i] = R[p] * local[i]
                 P[i] = P[p] + R[p].rotate(joint.position - joints[p].position)
             } else {
-                local = pose.rootRotation * local
-                R[i] = local
+                R[i] = local[i]
                 P[i] = joint.position + pose.rootOffset + Vec3(0, rootLift, 0)
             }
         }

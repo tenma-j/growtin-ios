@@ -50,6 +50,15 @@ répartie entre le parent, l'appoint et l'os, si bien qu'aucun mélange ne dépa
 reste arrondie au lieu de se pincer en angle vif. Elles ne figurent pas dans les poses : l'app et les aperçus les
 recalculent à chaque image.
 
-Format binaire `GTM4` : en-tête (`GTM4`, nombre de maillages), puis pour chaque maillage (peau, tissu, liseré, découpés dans la même surface) :
-matière (uint32 : 0 peau, 1 tissu, 2 liseré), nombre de sommets, nombre d'indices (uint32), positions et normales
-(float32 ×3), indices d'os (uint16 ×4), poids (float32 ×4), indices de triangles (uint32).
+Huit influences d'os par sommet (`INFLUENCES` dans `export.py`) : autour des épaules, jusqu'à 7 os comptent ; avec 4,
+certains sommets perdaient jusqu'à 28 % de leur poids et la peau se froissait entre la bretelle et le cou, bras levés.
+
+Dans l'app, la surface est déformée sur le processeur (`SurfaceDeformer`, GrowtinCore) : skinning linéaire, puis
+normales recalculées sur les triangles déformés (sommets dédoublés le long de la tenue soudés). Le skinning du GPU
+se contentait de tourner les normales avec les os ; dans une pliure très ouverte (épaule bras levés), elles déviaient
+jusqu'à 90° de la surface réelle et l'éclairage dessinait une tache blanche.
+
+Format binaire `GTM5` (lu par `MannequinFile`, GrowtinCore) : en-tête (`GTM5`, nombre de maillages, influences par
+sommet), puis pour chaque maillage (peau, tissu, liseré, découpés dans la même surface) : matière (uint32 : 0 peau,
+1 tissu, 2 liseré), nombre de sommets, nombre d'indices (uint32), positions et normales (float32 ×3), indices d'os
+(uint16 × influences, de la plus forte à la plus faible), poids (float32 × influences), indices de triangles (uint32).

@@ -19,29 +19,24 @@ enum MannequinBody: String, CaseIterable, Identifiable {
 /// Corps issus des ressources MakeHuman, dans le domaine public (CC0 1.0).
 final class MannequinAsset {
     struct Meta: Decodable {
-        struct Mesh: Decodable {
-            let material: Int
-            let vertexCount: Int
-            let indexCount: Int
-        }
         struct Body: Decodable {
             let joints: [SkeletonJoint]
-            let meshes: [Mesh]
         }
         let bodies: [String: Body]
     }
 
-    /// Matériaux : 0 peau, 1 tissu, 2 liseré de couleur.
+    /// Un maillage par matière : 0 peau, 1 tissu, 2 liseré de couleur.
     struct Mesh {
         let material: Int
-        let geometry: SCNGeometry
-        let boneIndices: SCNGeometrySource
-        let boneWeights: SCNGeometrySource
+        /// Plage de ses sommets dans la surface déformée (`file.surface`).
+        let vertexRange: Range<Int>
+        let element: SCNGeometryElement
     }
 
     enum LoadError: Error { case missing, corrupt }
 
     let skeleton: Skeleton
+    let file: MannequinFile
     let meshes: [Mesh]
     /// Sommets du corps échantillonnés pour poser le personnage au sol.
     let samples: [SkinSample]
@@ -64,57 +59,51 @@ final class MannequinAsset {
         }
         let meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: metaURL))
         guard let info = meta.bodies[body.rawValue] else { throw LoadError.corrupt }
-        let data = try Data(contentsOf: binURL)
-        guard data.count >= 8, data.prefix(4) == Data("GTM4".utf8) else { throw LoadError.corrupt }
-        skeleton = Skeleton(joints: info.joints)
-
-        var offset = 8
-        func readUInt32() -> Int {
-            defer { offset += 4 }
-            return Int(data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.littleEndian)
+        let skeleton = Skeleton(joints: info.joints)
+        let file = try MannequinFile(data: Data(contentsOf: binURL))
+        let jointCount = skeleton.joints.count
+        guard file.surface.bones.allSatisfy({ Int($0) < jointCount }) else { throw LoadError.corrupt }
+        self.skeleton = skeleton
+        self.file = file
+        meshes = file.meshes.map { mesh in
+            let indices = mesh.indices.withUnsafeBytes { Data($0) }
+            return Mesh(material: mesh.material, vertexRange: mesh.vertexRange,
+                        element: SCNGeometryElement(data: indices, primitiveType: .triangles, primitiveCount: mesh.indices.count / 3,
+                                                    bytesPerIndex: 4))
         }
-        func slice(_ length: Int) throws -> Data {
-            guard offset + length <= data.count else { throw LoadError.corrupt }
-            defer { offset += length }
-            return data.subdata(in: offset..<(offset + length))
-        }
+        samples = file.groundingSamples()
+    }
 
-        var meshes: [Mesh] = []
-        var samples: [SkinSample] = []
-        for _ in info.meshes {
-            let material = readUInt32(), n = readUInt32(), m = readUInt32()
-            let positions = try slice(n * 12), normals = try slice(n * 12)
-            let boneIndexData = try slice(n * 8), weights = try slice(n * 16), indices = try slice(m * 4)
-
-            let vertexSource = SCNGeometrySource(data: positions, semantic: .vertex, vectorCount: n, usesFloatComponents: true,
-                                                 componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
-            let normalSource = SCNGeometrySource(data: normals, semantic: .normal, vectorCount: n, usesFloatComponents: true,
-                                                 componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
-            let element = SCNGeometryElement(data: indices, primitiveType: .triangles, primitiveCount: m / 3, bytesPerIndex: 4)
-            let geometry = SCNGeometry(sources: [vertexSource, normalSource], elements: [element])
-            let boneIndices = SCNGeometrySource(data: boneIndexData, semantic: .boneIndices, vectorCount: n, usesFloatComponents: false,
-                                                componentsPerVector: 4, bytesPerComponent: 2, dataOffset: 0, dataStride: 8)
-            let boneWeights = SCNGeometrySource(data: weights, semantic: .boneWeights, vectorCount: n, usesFloatComponents: true,
-                                                componentsPerVector: 4, bytesPerComponent: 4, dataOffset: 0, dataStride: 16)
-            meshes.append(Mesh(material: material, geometry: geometry, boneIndices: boneIndices, boneWeights: boneWeights))
-
-            // Mise au sol : un sommet sur 7, sur toute la surface (peau et tissu font partie du même corps).
-            do {
-                positions.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-                    boneIndexData.withUnsafeBytes { (b: UnsafeRawBufferPointer) in
-                        weights.withUnsafeBytes { (w: UnsafeRawBufferPointer) in
-                            let pf = p.bindMemory(to: Float.self), bi = b.bindMemory(to: UInt16.self), wf = w.bindMemory(to: Float.self)
-                            for i in stride(from: 0, to: n, by: 7) {
-                                samples.append(SkinSample(position: Vec3(Double(pf[i * 3]), Double(pf[i * 3 + 1]), Double(pf[i * 3 + 2])),
-                                                          bones: (0..<4).map { Int(bi[i * 4 + $0]) },
-                                                          weights: (0..<4).map { Double(wf[i * 4 + $0]) }))
-                            }
-                        }
-                    }
-                }
+    /// Repli sans Metal : géométrie de référence et skinning SceneKit (4 influences au plus par sommet, les plus fortes).
+    func skinnedGeometry(for mesh: Mesh) -> (geometry: SCNGeometry, boneIndices: SCNGeometrySource, boneWeights: SCNGeometrySource) {
+        let surface = file.surface, range = mesh.vertexRange, k = file.influences
+        let positions = surface.rest[(range.lowerBound * 3)..<(range.upperBound * 3)].withUnsafeBytes { Data($0) }
+        let normals = surface.restNormals[(range.lowerBound * 3)..<(range.upperBound * 3)].withUnsafeBytes { Data($0) }
+        var bones: [UInt16] = [], weights: [Float] = []
+        bones.reserveCapacity(range.count * 4)
+        weights.reserveCapacity(range.count * 4)
+        for i in range {
+            // Les influences sont rangées de la plus forte à la plus faible.
+            let used = min(k, 4)
+            let total = (0..<used).reduce(Float(0)) { $0 + surface.weights[i * k + $1] }
+            for j in 0..<4 {
+                bones.append(j < used ? UInt16(surface.bones[i * k + j]) : 0)
+                weights.append(j < used && total > 0 ? surface.weights[i * k + j] / total : 0)
             }
         }
-        self.meshes = meshes
-        self.samples = samples
+        let n = range.count
+        let geometry = SCNGeometry(sources: [
+            SCNGeometrySource(data: positions, semantic: .vertex, vectorCount: n, usesFloatComponents: true,
+                              componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12),
+            SCNGeometrySource(data: normals, semantic: .normal, vectorCount: n, usesFloatComponents: true,
+                              componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12),
+        ], elements: [mesh.element])
+        let boneIndices = SCNGeometrySource(data: bones.withUnsafeBytes { Data($0) }, semantic: .boneIndices, vectorCount: n,
+                                            usesFloatComponents: false, componentsPerVector: 4, bytesPerComponent: 2,
+                                            dataOffset: 0, dataStride: 8)
+        let boneWeights = SCNGeometrySource(data: weights.withUnsafeBytes { Data($0) }, semantic: .boneWeights, vectorCount: n,
+                                            usesFloatComponents: true, componentsPerVector: 4, bytesPerComponent: 4,
+                                            dataOffset: 0, dataStride: 16)
+        return (geometry, boneIndices, boneWeights)
     }
 }

@@ -33,7 +33,7 @@
      "tail": [
       0.0,
       1.02422,
-      -0.10418
+      -0.10419
      ]
     },
     {
@@ -42,7 +42,7 @@
      "head": [
       0.0,
       1.02422,
-      -0.10418
+      -0.10419
      ],
      "tail": [
       0.0,
@@ -2177,18 +2177,18 @@
    "meshes": [
     {
      "material": 0,
-     "vertexCount": 18063,
-     "indexCount": 99276
+     "vertexCount": 18057,
+     "indexCount": 99252
     },
     {
      "material": 1,
-     "vertexCount": 6200,
-     "indexCount": 30222
+     "vertexCount": 6256,
+     "indexCount": 30558
     },
     {
      "material": 2,
-     "vertexCount": 2955,
-     "indexCount": 13620
+     "vertexCount": 2953,
+     "indexCount": 13608
     }
    ]
   }

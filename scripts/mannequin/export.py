@@ -14,6 +14,10 @@ from rig import Rig, axis_angle  # noqa: E402
 REGIONS = ["skin", "head", "neck", "shoulders", "chest", "upperBack", "lowerBack", "abs", "biceps", "triceps",
            "forearms", "hands", "glutes", "quads", "hamstrings", "calves", "shins", "feet"]
 CLOTHING = ["none", "shorts", "top"]
+# Influences d'os gardées par sommet. Autour des épaules, jusqu'à 7 os comptent (colonne, clavicule, omoplate, appoint,
+# bras, poitrine) : n'en garder que 4 faisait perdre jusqu'à 28 % du poids à certains sommets, d'où une peau froissée
+# entre la bretelle et le cou quand les bras montent au-dessus de la tête. Avec 8, la perte reste sous 2 %.
+INFLUENCES = 8
 
 def adjacency(n, tris):
     i = np.concatenate([tris[:, 0], tris[:, 1], tris[:, 2], tris[:, 1], tris[:, 2], tris[:, 0]])
@@ -38,7 +42,7 @@ def normals_of(v, tris):
     return vn / (np.linalg.norm(vn, axis=1, keepdims=True) + 1e-12)
 
 def smooth_weights(W, avg, order, iterations=8, lam=0.5):
-    """Lisse les poids dans les zones de transition entre os (sauf mains et tête), puis garde les 4 plus forts."""
+    """Lisse les poids dans les zones de transition entre os (sauf mains et tête), puis garde les plus forts."""
     def cols(prefixes):
         return [i for i, n in enumerate(order) if n.startswith(prefixes)]
     hands = W[:, cols(("wrist", "finger"))].sum(1)
@@ -52,7 +56,7 @@ def smooth_weights(W, avg, order, iterations=8, lam=0.5):
     Ws = W.copy()
     for _ in range(iterations):
         Ws = Ws + lam * m * (avg @ Ws - Ws)
-    top = np.argsort(-Ws, axis=1)[:, :4]
+    top = np.argsort(-Ws, axis=1)[:, :INFLUENCES]
     tw = np.take_along_axis(Ws, top, 1)
     tw = np.clip(tw, 0, None); s = tw.sum(1, keepdims=True)
     tw = tw / np.maximum(s, 1e-9)
@@ -109,7 +113,7 @@ def add_half_joints(order, parents, bone_idx, bone_w):
         sa[lo] = t[lo] * (1 - 2 * f[lo]) / a[lo]; sb[lo] = 0; wh[lo] = t[lo] * 2 * f[lo]
         sa[hi] = 0; sb[hi] = t[hi] * (2 * f[hi] - 1) / b[hi]; wh[hi] = t[hi] * (2 - 2 * f[hi])
         W[:, par] *= sa[:, None]; W[:, child] *= sb[:, None]; W[:, h] += wh
-    top = np.argsort(-W, axis=1)[:, :4]
+    top = np.argsort(-W, axis=1)[:, :INFLUENCES]
     tw = np.take_along_axis(W, top, 1)
     tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
     return names, parents, halves, top.astype(np.uint16), tw.astype(np.float32)
@@ -367,9 +371,9 @@ def refine_near(v, n, bi, bw, tris, near, extras):
             w = {}
             for b_, x in zip(bi[i], bw[i] * 0.5): w[int(b_)] = w.get(int(b_), 0) + x
             for b_, x in zip(bi[j], bw[j] * 0.5): w[int(b_)] = w.get(int(b_), 0) + x
-            top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
+            top = sorted(w.items(), key=lambda kv: -kv[1])[:INFLUENCES]
             tot = sum(x for _, x in top) or 1
-            bix = np.zeros(4, np.uint16); bwx = np.zeros(4, np.float32)
+            bix = np.zeros(INFLUENCES, np.uint16); bwx = np.zeros(INFLUENCES, np.float32)
             for k, (b_, x) in enumerate(top): bix[k] = b_; bwx[k] = x / tot
             mids[key] = len(P); P.append(p); N.append(nn); BI.append(bix); BW.append(bwx)
             for e, xs in zip(extras, X):
@@ -412,9 +416,9 @@ def split_along(v, n, bi, bw, tris, f, extras):
             w = {}
             for b_, x in zip(bi[i], bw[i] * (1 - t)): w[int(b_)] = w.get(int(b_), 0) + x
             for b_, x in zip(bi[j], bw[j] * t): w[int(b_)] = w.get(int(b_), 0) + x
-            top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
+            top = sorted(w.items(), key=lambda kv: -kv[1])[:INFLUENCES]
             tot = sum(x for _, x in top) or 1
-            bix = np.zeros(4, np.uint16); bwx = np.zeros(4, np.float32)
+            bix = np.zeros(INFLUENCES, np.uint16); bwx = np.zeros(INFLUENCES, np.float32)
             for k, (b_, x) in enumerate(top): bix[k] = b_; bwx[k] = x / tot
             cut[key] = len(P); P.append(p); N.append(nn); BI.append(bix); BW.append(bwx)
             for e, xs in zip(extras, X):
@@ -439,7 +443,7 @@ def split_along(v, n, bi, bw, tris, f, extras):
     return (np.array(P), np.array(N), np.array(BI, np.uint16), np.array(BW, np.float32), np.array(T, int), out_extras)
 
 def export(sex, b):
-    """Format GTM4 : plusieurs maillages (corps puis vêtements), chacun avec son matériau et ses poids."""
+    """Format GTM5 : plusieurs maillages (peau, tissu, liseré), chacun avec son matériau et INFLUENCES os par sommet."""
     os.makedirs(OUT, exist_ok=True)
     # Un maillage par matière (peau, tissu, liseré), découpés dans la même surface.
     meshes = []
@@ -451,7 +455,7 @@ def export(sex, b):
         remap = -np.ones(len(b["v"]), int); remap[used] = np.arange(len(used))
         meshes.append(dict(v=b["v"][used], n=b["n"][used], tris=remap[sel], bi=b["bone_idx"][used], bw=b["bone_w"][used], material=mat))
     with open(os.path.join(OUT, f"mannequin-{sex}.bin"), "wb") as fh:
-        fh.write(struct.pack("<4sI", b"GTM4", len(meshes)))
+        fh.write(struct.pack("<4sII", b"GTM5", len(meshes), INFLUENCES))
         for m in meshes:
             idx = m["tris"].astype("<u4").ravel()
             fh.write(struct.pack("<III", m["material"], len(m["v"]), len(idx)))

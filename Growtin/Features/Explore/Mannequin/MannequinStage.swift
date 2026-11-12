@@ -1,5 +1,6 @@
 import Foundation
 import GrowtinCore
+import Metal
 import SceneKit
 import simd
 import UIKit
@@ -14,8 +15,22 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private let container = SCNNode()          // angle de vue propre au mouvement
     private let propsNode = SCNNode()
     private var meshNodes: [SCNNode] = []
-    private var boneNodes: [SCNNode] = []
     private var asset: MannequinAsset?
+
+    /// Corps déformé sur le processeur, normales recalculées sur la surface déformée (voir `SurfaceDeformer`) :
+    /// chaque maillage lit ses positions et normales dans deux tampons Metal réécrits à chaque image.
+    /// Le skinning de SceneKit se contentait de tourner les normales avec les os : épaule bras levés, l'éclairage
+    /// faisait apparaître une tache blanche.
+    private struct DeformedMesh {
+        let range: Range<Int>
+        let positions: MTLBuffer
+        let normals: MTLBuffer
+    }
+    private var deformer: SurfaceDeformer?
+    private var deformedMeshes: [DeformedMesh] = []
+    /// Repli sans Metal : skinning SceneKit, un nœud par articulation.
+    private var boneNodes: [SCNNode] = []
+    private var jointCount = 0
 
     // État d'animation, partagé avec le fil de rendu.
     private struct Key {
@@ -99,50 +114,92 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         meshNodes.forEach { $0.removeFromParentNode() }
         boneNodes.first?.removeFromParentNode()
 
-        // Squelette : un nœud par articulation, orientations neutres dans la pose de référence.
-        var nodes: [SCNNode] = []
-        for (i, joint) in asset.skeleton.joints.enumerated() {
-            let node = SCNNode()
-            node.name = joint.name
-            if let p = asset.skeleton.parentIndex[i] {
-                let d = joint.position - asset.skeleton.joints[p].position
-                node.simdPosition = SIMD3(Float(d.x), Float(d.y), Float(d.z))
-                nodes[p].addChildNode(node)
-            } else {
-                let h = joint.position
-                node.simdPosition = SIMD3(Float(h.x), Float(h.y), Float(h.z))
-                container.addChildNode(node)
-            }
-            nodes.append(node)
-        }
-        let inverseBinds: [NSValue] = asset.skeleton.joints.map { joint in
-            let h = joint.position
-            return NSValue(scnMatrix4: SCNMatrix4MakeTranslation(Float(-h.x), Float(-h.y), Float(-h.z)))
-        }
         let materials = [Self.skinMaterial(), Self.fabricMaterial(), Self.accentMaterial()]
+        func material(_ index: Int) -> SCNMaterial { materials[min(max(index, 0), materials.count - 1)] }
         var newMeshNodes: [SCNNode] = []
-        for mesh in asset.meshes {
-            let geometry = mesh.geometry.copy() as! SCNGeometry
-            geometry.materials = [materials[min(mesh.material, materials.count - 1)]]
-            let node = SCNNode(geometry: geometry)
-            node.castsShadow = true
-            let skinner = SCNSkinner(baseGeometry: geometry, bones: nodes, boneInverseBindTransforms: inverseBinds,
-                                     boneWeights: mesh.boneWeights, boneIndices: mesh.boneIndices)
-            skinner.skeleton = nodes.first
-            node.skinner = skinner
-            container.addChildNode(node)
-            newMeshNodes.append(node)
+        var nodes: [SCNNode] = []
+        var newDeformer: SurfaceDeformer?
+        var newDeformed: [DeformedMesh] = []
+
+        if let device = MTLCreateSystemDefaultDevice(), let cpu = SurfaceDeformer(surface: asset.file.surface, skeleton: asset.skeleton) {
+            for mesh in asset.meshes {
+                let length = max(mesh.vertexRange.count, 1) * 12
+                guard let positions = device.makeBuffer(length: length, options: .storageModeShared),
+                      let normals = device.makeBuffer(length: length, options: .storageModeShared) else { break }
+                // Pose de référence jusqu'à la première image.
+                cpu.copy(vertices: mesh.vertexRange, positions: positions.contents(), normals: normals.contents())
+                newDeformed.append(DeformedMesh(range: mesh.vertexRange, positions: positions, normals: normals))
+            }
+            if newDeformed.count == asset.meshes.count {
+                newDeformer = cpu
+                for (mesh, buffers) in zip(asset.meshes, newDeformed) {
+                    let count = mesh.vertexRange.count
+                    let geometry = SCNGeometry(sources: [
+                        SCNGeometrySource(buffer: buffers.positions, vertexFormat: .float3, semantic: .vertex, vertexCount: count,
+                                          dataOffset: 0, dataStride: 12),
+                        SCNGeometrySource(buffer: buffers.normals, vertexFormat: .float3, semantic: .normal, vertexCount: count,
+                                          dataOffset: 0, dataStride: 12),
+                    ], elements: [mesh.element])
+                    geometry.materials = [material(mesh.material)]
+                    // Boîte englobante fixe et large : la surface change à chaque image (allongé, assis, bras levés).
+                    geometry.boundingBox = (min: SCNVector3(x: -1.6, y: -0.4, z: -1.6), max: SCNVector3(x: 1.6, y: 2.6, z: 1.6))
+                    let node = SCNNode(geometry: geometry)
+                    node.castsShadow = true
+                    container.addChildNode(node)
+                    newMeshNodes.append(node)
+                }
+            } else {
+                newDeformed = []
+            }
+        }
+
+        if newDeformer == nil {
+            // Repli : squelette SceneKit, un nœud par articulation, orientations neutres dans la pose de référence.
+            for (i, joint) in asset.skeleton.joints.enumerated() {
+                let node = SCNNode()
+                node.name = joint.name
+                if let p = asset.skeleton.parentIndex[i] {
+                    let d = joint.position - asset.skeleton.joints[p].position
+                    node.simdPosition = SIMD3(Float(d.x), Float(d.y), Float(d.z))
+                    nodes[p].addChildNode(node)
+                } else {
+                    let h = joint.position
+                    node.simdPosition = SIMD3(Float(h.x), Float(h.y), Float(h.z))
+                    container.addChildNode(node)
+                }
+                nodes.append(node)
+            }
+            let inverseBinds: [NSValue] = asset.skeleton.joints.map { joint in
+                let h = joint.position
+                return NSValue(scnMatrix4: SCNMatrix4MakeTranslation(Float(-h.x), Float(-h.y), Float(-h.z)))
+            }
+            for mesh in asset.meshes {
+                let skinned = asset.skinnedGeometry(for: mesh)
+                skinned.geometry.materials = [material(mesh.material)]
+                let node = SCNNode(geometry: skinned.geometry)
+                node.castsShadow = true
+                let skinner = SCNSkinner(baseGeometry: skinned.geometry, bones: nodes, boneInverseBindTransforms: inverseBinds,
+                                         boneWeights: skinned.boneWeights, boneIndices: skinned.boneIndices)
+                skinner.skeleton = nodes.first
+                node.skinner = skinner
+                container.addChildNode(node)
+                newMeshNodes.append(node)
+            }
         }
 
         // Aucun appel à SceneKit sous le verrou (le fil de rendu le prend en tenant déjà la scène).
-        let rootPosition = nodes.first?.simdPosition ?? .zero
+        let rootPosition = asset.skeleton.joints.first.map { SIMD3(Float($0.position.x), Float($0.position.y), Float($0.position.z)) } ?? .zero
         let pairs = asset.skeleton.halfSource.enumerated().compactMap { i, s in s.map { (joint: i, source: $0) } }
+        let count = asset.skeleton.joints.count
         lock.lock()
         self.asset = asset
         meshNodes = newMeshNodes
         boneNodes = nodes
+        deformer = newDeformer
+        deformedMeshes = newDeformed
+        jointCount = count
         halfPairs = pairs
-        lastRotations = Array(repeating: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), count: nodes.count)
+        lastRotations = Array(repeating: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), count: count)
         lastRoot = rootPosition
         lock.unlock()
 
@@ -174,11 +231,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             return pose
         }
         func key(_ pose: ResolvedPose, time: Double, lift: Double, ease: String?) -> Key {
-            let rotations = skeleton.joints.enumerated().map { (i, joint) -> simd_quatf in
-                var q = pose.rotations[joint.name] ?? .identity
-                if let half = joint.half { q = Skeleton.halfRotation(pose.rotations[half] ?? .identity) }
-                if skeleton.parentIndex[i] == nil { q = pose.rootRotation * q }
-                return simd_quatf(ix: Float(q.x), iy: Float(q.y), iz: Float(q.z), r: Float(q.w))
+            let rotations = skeleton.localRotations(pose).map { q in
+                simd_quatf(ix: Float(q.x), iy: Float(q.y), iz: Float(q.z), r: Float(q.w))
             }
             let root = rootBind + pose.rootOffset
             return Key(time: time, rotations: rotations,
@@ -256,7 +310,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
         lock.lock()
         defer { lock.unlock() }
-        guard keys.count > 1, boneNodes.count == keys[0].rotations.count else { return }
+        guard keys.count > 1, jointCount == keys[0].rotations.count else { return }
         if startTime == nil {
             startTime = time
             transitionStart = time
@@ -287,8 +341,15 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         for pair in halfPairs where pair.joint < rotations.count && pair.source < rotations.count {
             rotations[pair.joint] = simd_slerp(simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), rotations[pair.source], 0.5)
         }
-        for (node, q) in zip(boneNodes, rotations) { node.simdOrientation = q }
-        boneNodes.first?.simdPosition = root
+        if let deformer {
+            deformer.deform(rotations: rotations.map(\.vector), root: root)
+            for mesh in deformedMeshes {
+                deformer.copy(vertices: mesh.range, positions: mesh.positions.contents(), normals: mesh.normals.contents())
+            }
+        } else {
+            for (node, q) in zip(boneNodes, rotations) { node.simdOrientation = q }
+            boneNodes.first?.simdPosition = root
+        }
         lastRotations = rotations
         lastRoot = root
     }
