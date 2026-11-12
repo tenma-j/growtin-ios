@@ -34,7 +34,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      par objectif, puis chaque main de chaque image clé, qui s'enfonce dans le corps est ramenée à sa surface le
      long de la normale de la peau (2 mm de jeu), avec la même orientation et le coude du même côté. Les objectifs
      des mains posées sont donc pris un peu sous la peau : la mise en contact les pose exactement dessus, quelle que
-     soit la morphologie. Environ une minute pour les deux corps ;
+     soit la morphologie. Quand le buste, les épaules ou le bassin bougent (respiration, haussements d'épaules,
+     abdos, extension du dos, cercles de hanches), `keep_hands` garde les mains au même endroit de la partie du corps
+     qui les porte. Une transition où une main traverserait le corps reçoit trois points de passage, mains écartées
+     de 3 cm de la peau, sur la même courbe de vitesse. Environ deux minutes et demie pour les deux corps ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
 3. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :

@@ -98,6 +98,7 @@ from motion_eval import Body, resolve, local_rotations  # noqa: E402
 from scipy.spatial import cKDTree  # noqa: E402
 MESH = Body.from_resources(BODY, os.path.join(ROOT, "Growtin/Resources/Mannequin"))
 CONTACT_GAP = 0.002                                     # jeu laissé entre la main et la peau (m)
+TRANSIT_GAP = 0.03                                      # écart à la peau au milieu d'une transition qui la frôle
 
 def _bone_weight(prefixes, side):
     ids = [i for i, n in enumerate(MESH.names) if n.startswith(prefixes) and n.endswith("." + side)]
@@ -107,13 +108,16 @@ HAND_VERTS = {s: np.where(_bone_weight(("finger", "wrist"), s) > 0.5)[0] for s i
 BODY_VERTS = {s: np.where((_bone_weight(("finger", "wrist", "lowerarm", "upperarm"), s) < 0.05)
                           & (_bone_weight(("finger", "wrist"), "R" if s == "L" else "L") < 0.05))[0] for s in "LR"}
 
-def hand_push(pose, side, reach=0.08):
-    """Déplacement qui sort la main du corps (None si elle ne s'y enfonce pas)."""
+def posed_skin(pose):
+    """Peau entière dans cette pose (positions, normales), comme dans l'app."""
     r = resolve(pose, POSES)
     R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
-    h, b = HAND_VERTS[side], BODY_VERTS[side]
-    hv, _ = MESH.rig.skin(MESH.v[h], MESH.n[h], MESH.bi[h], MESH.bw[h], R, Pj)
-    bv, bn = MESH.rig.skin(MESH.v[b], MESH.n[b], MESH.bi[b], MESH.bw[b], R, Pj)
+    return MESH.rig.skin(MESH.v, MESH.n, MESH.bi, MESH.bw, R, Pj)
+
+def hand_push(pose, side, reach=0.08, skin=None, gap=CONTACT_GAP):
+    """Déplacement qui sort la main du corps, à « gap » de la peau (None si elle ne s'y enfonce pas)."""
+    v, n = skin if skin is not None else posed_skin(pose)
+    hv, bv, bn = v[HAND_VERTS[side]], v[BODY_VERTS[side]], n[BODY_VERTS[side]]
     near = np.all((bv > hv.min(0) - reach) & (bv < hv.max(0) + reach), axis=1)
     if not near.any():
         return None
@@ -125,18 +129,18 @@ def hand_push(pose, side, reach=0.08):
     if inside.sum() < 3:
         return None
     out = bn[j[inside]].mean(0); out /= np.linalg.norm(out)
-    return out * (depth[inside].max() + CONTACT_GAP)
+    return out * (depth[inside].max() + gap)
 
 _settled = {}
-def settle_hands(pose):
+def settle_hands(pose, gap=CONTACT_GAP):
     """Image clé d'un mouvement : chaque main qui s'enfonce dans le corps (buste penché après coup, main sur la tête,
     bras le long de cuisses larges…) est ramenée à sa surface, avec la même orientation et le coude du même côté."""
-    key = json.dumps(pose, sort_keys=True, default=lambda o: o.tolist() if hasattr(o, "tolist") else float(o))
+    key = f"{gap}:" + json.dumps(pose, sort_keys=True, default=lambda o: o.tolist() if hasattr(o, "tolist") else float(o))
     if key in _settled:
         return _settled[key]
     p = pose
     for side in "LR":
-        push = hand_push(p, side)
+        push = hand_push(p, side, gap=gap)
         sgn = 1 if side == "L" else -1
         for _ in range(8):
             if push is None:
@@ -151,9 +155,39 @@ def settle_hands(pose):
             if np.linalg.norm(pole) < 1e-3:
                 pole = np.array([sgn * 1.0, -1.0, -0.3])
             p = ik.place_hand(p, side, w + push, fingers, palm, pole)
-            push = hand_push(p, side)
+            push = hand_push(p, side, gap=gap)
     _settled[key] = p
     return p
+
+def support_bone(pose, side):
+    """Os du corps qui porte la main dans cette pose (celui dont la peau est la plus proche de la paume)."""
+    r = resolve(pose, POSES)
+    R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
+    h, b = HAND_VERTS[side], BODY_VERTS[side]
+    hv, _ = MESH.rig.skin(MESH.v[h], MESH.n[h], MESH.bi[h], MESH.bw[h], R, Pj)
+    bv, _ = MESH.rig.skin(MESH.v[b], MESH.n[b], MESH.bi[b], MESH.bw[b], R, Pj)
+    dist, j = cKDTree(bv).query(hv)
+    near = j[dist < dist.min() + 0.03]
+    bones = MESH.bi[b[near], 0]
+    name = MESH.names[int(np.bincount(bones).argmax())]
+    return MESH.rig.halves.get(name, name)                 # articulation d'appoint : l'os qu'elle double
+
+def keep_hands(pose, rest, sides="LR"):
+    """Mains posées sur le corps dans « rest » (cuisses, hanches, côtes) : dans « pose » (buste penché, épaules
+    haussées, bassin qui tourne…), elles restent au même endroit de cette partie du corps ; seuls les bras s'adaptent."""
+    rest_p = rest if isinstance(rest, dict) else P(rest)
+    R0, P0 = ik.fk(rest_p); R1, P1 = ik.fk(pose)
+    kw = {}
+    for side in sides:
+        sgn = 1 if side == "L" else -1
+        bone = support_bone(rest_p, side)
+        move = R1[bone] @ R0[bone].T
+        w = P0[f"wrist.{side}"]; f = P0[f"finger3-1.{side}"] - w
+        n = sgn * np.cross(f, P0[f"finger2-1.{side}"] - P0[f"finger5-1.{side}"])
+        e = P0[f"lowerarm01.{side}"] - P0[f"upperarm01.{side}"]
+        kw.update({side: P1[bone] + move @ (w - P0[bone]), f"fingers_{side}": move @ f, f"palm_{side}": move @ n,
+                   f"pole_{side}": tuple(move @ e)})
+    return hands(pose, **kw)
 
 def pinned_sides(pose):
     """Côtés dont la main a été placée par objectif (cherche aussi dans les poses de base)."""
@@ -359,9 +393,61 @@ POSES["chairSit"] = hands(P("chairLegs"),
                           pole_L=(1, -0.3, -0.6), pole_R=(-1, -0.3, -0.6))
 
 MOTIONS = {}
+def blend(a, b, u):
+    """Pose intermédiaire telle que l'app l'interpole : rotations locales sphériques, décalage de la racine linéaire."""
+    from scipy.spatial.transform import Rotation, Slerp
+    from ik import to_euler
+    ra, rb = resolve(a, POSES), resolve(b, POSES)
+    la, lb = local_rotations(ra, MESH.names), local_rotations(rb, MESH.names)
+    bones, root = {}, np.eye(3)
+    for name in MESH.names:
+        if name in MESH.rig.halves:
+            continue
+        m = Slerp([0, 1], Rotation.from_matrix([la.get(name, np.eye(3)), lb.get(name, np.eye(3))]))(u).as_matrix()
+        if name == "root":
+            root = m
+        else:
+            e = to_euler(m)
+            if max(abs(x) for x in e) >= 0.05:
+                bones[name] = e
+    x, y, z = to_euler(root)
+    off = (1 - u) * np.asarray(ra["root"]["offset"], float) + u * np.asarray(rb["root"]["offset"], float)
+    p = {"bones": bones, "root": {"rot": [["x", x], ["y", y], ["z", z]], "offset": [float(c) for c in off]}}
+    if not (ra["ground"] and rb["ground"]):
+        p["ground"] = False
+    return p
+
+def crosses_body(a, b):
+    """Entre deux images clés, une main passe-t-elle dans le corps ?"""
+    for u in (0.25, 0.5, 0.75):
+        m = blend(a, b, u); skin = posed_skin(m)
+        if any(hand_push(m, side, skin=skin) is not None for side in "LR"):
+            return True
+    return False
+
+# Points de passage d'une transition : avancement (courbe « inOut » de l'app) et instant correspondant.
+WAYPOINTS = [(p, float(np.real([r for r in np.roots([-2, 3, 0, -p]) if 0 <= np.real(r) <= 1 and abs(np.imag(r)) < 1e-9][0])))
+             for p in (0.25, 0.5, 0.75)]
+
+def contact_transitions(keys):
+    """Transition où une main traverserait le corps (la main va attraper le talon, passe d'une cuisse à l'autre
+    genou…) : trois points de passage sont ajoutés, mains écartées de la peau, sur la même courbe de vitesse
+    (« in » au départ, linéaire, « out » à l'arrivée)."""
+    out = [keys[0]]
+    for a, b in zip(keys, keys[1:]):
+        if b.get("ease", "inOut") == "inOut" and b["t"] > a["t"] and a["pose"] is not b["pose"] and crosses_body(a["pose"], b["pose"]):
+            span = b["t"] - a["t"]
+            for i, (progress, at) in enumerate(WAYPOINTS):
+                pose = settle_hands(blend(a["pose"], b["pose"], progress), gap=TRANSIT_GAP)
+                out.append(K(a["t"] + span * at, pose, "in" if i == 0 else "linear"))
+            b = dict(b, ease="out")
+        out.append(b)
+    return out
+
 def motion(mid, keys, muscles=(), yaw=30, props=(), pitch=8, support=None):
     for k in keys:
         k["pose"] = settle_hands(shoulder_rhythm(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"])))
+    keys = contact_transitions(keys)
     MOTIONS[mid] = {"keys": keys, "muscles": list(muscles), "camera": {"yaw": yaw, "pitch": pitch}, "props": list(props)}
     if support: MOTIONS[mid]["support"] = support
 
@@ -373,7 +459,11 @@ MAT = prop("mat", "root", 0, (0, 0, 0), floor=True)
 
 def breathe(base, cycle=5.0, extra=None):
     inhale = dict(BREATH_IN); inhale.update(extra or {})
-    return [K(0, base), K(cycle / 2, P(base, **inhale)), K(cycle, base)]
+    up = P(base, **inhale)
+    pins = pinned_sides(POSES[base] if isinstance(base, str) else base)
+    if pins:
+        up = keep_hands(up, base, "".join(sorted(pins)))     # mains posées : elles ne bougent pas avec la poitrine
+    return [K(0, base), K(cycle / 2, up), K(cycle, base)]
 
 def circle_keys(n, period, build, ease="linear"):
     """n images clés régulières sur un tour (la dernière reprend la première)."""
@@ -504,7 +594,7 @@ _l = lunge_keys("L", 0)
 motion("gentle-lunge", _l + lunge_keys("R", 5.4)[1:], muscles=("quads", "glutes"), yaw=70)
 
 def quad_stretch():
-    p = P("stand", upperleg01_L=[10, 0, -2], lowerleg01_L=[145, 0, 0], foot_L=[30, 0, 0], upperarm01_R=[0, 0, 40], **open_hand(0.4, "R"))
+    p = P("stand", upperleg01_L=[10, 0, -2], lowerleg01_L=[145, 0, 0], foot_L=[30, 0, 0], upperarm01_R=[0, 0, -40], **open_hand(0.4, "R"))
     heel = joints(p)["foot.L"]
     return hands(p, L=heel + [0.02, 0.06, -0.06], pole_L=(0.6, -0.2, -1))
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
@@ -528,7 +618,8 @@ motion("shoulder-rolls", circle_keys(12, 4.2, roll), muscles=("shoulders", "uppe
 shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 0])
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(3.2, P("stand", **shrug_up)),
                   K(3.6, "stand", "out"), K(5, "stand")], muscles=("upperBack", "neck"), yaw=25)
-motion("chair-shrugs", [K(0, "chairSit"), K(1.2, P("chairSit", clavicle=[0, 0, 22])), K(3.2, P("chairSit", clavicle=[0, 0, 22])),
+_chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22]), "chairSit")
+motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(3.2, _chair_shrug),
                         K(3.6, "chairSit", "out"), K(5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
 
 def neck_tilt(base):
@@ -560,20 +651,6 @@ squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
 
 # Cercles de hanches : le bassin dessine un cercle, les pieds restent posés, le buste reste au-dessus.
-def hands_on_pelvis(pose, rest):
-    """Mains posées sur le bassin dans « rest » : replacées pour suivre le bassin (racine) de « pose »."""
-    R0, P0 = ik.fk(rest); R1, P1 = ik.fk(pose)
-    move = R1["root"] @ R0["root"].T
-    place = lambda x: P1["root"] + move @ (np.asarray(x) - P0["root"])
-    kw = {}
-    for side in "LR":
-        sgn = 1 if side == "L" else -1
-        w = P0[f"wrist.{side}"]; f = P0[f"finger3-1.{side}"] - w
-        n = sgn * np.cross(f, P0[f"finger2-1.{side}"] - P0[f"finger5-1.{side}"])
-        e = P0[f"lowerarm01.{side}"] - P0[f"upperarm01.{side}"]
-        kw.update({side: place(w), f"fingers_{side}": move @ f, f"palm_{side}": move @ n, f"pole_{side}": tuple(e)})
-    return hands(pose, **kw)
-
 def hip_circle(theta):
     r = 0.08 * S_LEG
     ox, oz = r * np.cos(theta), r * np.sin(theta)
@@ -581,7 +658,7 @@ def hip_circle(theta):
     p = P("handsHips", root={"rot": [["z", -tilt_z], ["x", tilt_x]], "offset": [ox, -0.025, oz]},
           spine05=[-tilt_x * 0.6, 0, tilt_z * 0.6], spine03=[-tilt_x * 0.7, 0, tilt_z * 0.7], spine01=[-tilt_x * 0.4, 0, tilt_z * 0.4])
     # Les mains restent posées sur les hanches pendant que le bassin tourne.
-    return hands_on_pelvis(legs(p, L=ankle("L"), R=ankle("R")), "handsHips")
+    return keep_hands(legs(p, L=ankle("L"), R=ankle("R")), "handsHips")
 motion("hip-circles", circle_keys(12, 4.8, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
 
 # Cercles de cheville : main gauche à plat contre le mur, genou droit levé, la cheville dessine des cercles.
@@ -596,8 +673,10 @@ side_bend = lambda a: P("stand", upperarm01=[0, 0, 168], lowerarm01=[-6, 0, 0], 
                         spine01=[0, 0, a * 0.25], **open_hand(0.9))
 motion("overhead-stretch", [K(0, "stand"), K(2, side_bend(0)), K(4, side_bend(22)), K(6, side_bend(0)), K(8, side_bend(-22)), K(10, side_bend(0)), K(12, "stand")],
        muscles=("upperBack", "abs", "shoulders"), yaw=10)
-motion("back-extension", [K(0, "handsHips"), K(2, P("handsHips", spine04=[-5, 0, 0], spine03=[-5, 0, 0], spine02=[-4, 0, 0], neck01=[-8, 0, 0], head=[-8, 0, 0])),
-                          K(4, "handsHips"), K(6, P("handsHips", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[8, 0, 0], neck01=[14, 0, 0], head=[10, 0, 0])),
+# Les mains restent sur les hanches pendant que le haut du dos s'étire puis s'arrondit.
+_ext = keep_hands(P("handsHips", spine04=[-5, 0, 0], spine03=[-5, 0, 0], spine02=[-4, 0, 0], neck01=[-8, 0, 0], head=[-8, 0, 0]), "handsHips")
+_flex = keep_hands(P("handsHips", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[8, 0, 0], neck01=[14, 0, 0], head=[10, 0, 0]), "handsHips")
+motion("back-extension", [K(0, "handsHips"), K(2, _ext), K(4, "handsHips"), K(6, _flex),
                           K(8, "handsHips")], muscles=("lowerBack", "abs"), yaw=70)
 
 # ─── Yoga (sur un tapis) ───
@@ -779,8 +858,8 @@ motion("bed-knees-chest", [K(0, kc0), K(3, kc1), K(6, kc0)], muscles=("lowerBack
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
 motion("fists-clench", [K(0, "chairSit"), K(1, clench), K(3, clench), K(3.5, "chairSit", "out"), K(6, "chairSit")],
        muscles=("forearms", "biceps", "hands"), yaw=35, props=(CHAIR,))
-motion("abs-contract", [K(0, "chairSit"), K(1.5, P("chairSit", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[4, 0, 0])),
-                        K(3, P("chairSit", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[4, 0, 0])), K(4.5, "chairSit")],
+_curl = keep_hands(P("chairSit", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[4, 0, 0]), "chairSit")
+motion("abs-contract", [K(0, "chairSit"), K(1.5, _curl), K(3, _curl), K(4.5, "chairSit")],
        muscles=("abs",), yaw=60, props=(CHAIR,))
 legs_out = P("chairSit", ground=False, lowerleg01=[12, 0, 0], foot=[-22, 0, 0])
 motion("legs-tense", [K(0, "chairSit"), K(1.5, legs_out), K(3, legs_out), K(4.5, "chairSit")], muscles=("quads", "shins", "calves"),
