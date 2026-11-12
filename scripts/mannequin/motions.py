@@ -384,14 +384,15 @@ POSES["crossLegged"] = hands(P("crossLeggedLegs"),
                              L=_cl["lowerleg01.L"] + [-0.06, 0.0, 0.0], R=_cl["lowerleg01.R"] + [0.06, 0.0, 0.0],
                              fingers_L=[0.35, -0.1, 1], palm_L=[0, 1, 0], fingers_R=[-0.35, -0.1, 1], palm_R=[0, 1, 0],
                              pole_L=(1, -0.6, -0.4), pole_R=(-1, -0.6, -0.4))
-# Assis sur une chaise, mains posées à plat sur les cuisses.
+# Assis sur une chaise, mains posées à plat sur les cuisses. Coudes vers l'arrière plutôt que sur les côtés et doigts un peu
+# tournés vers l'intérieur : la main reste dans l'axe de l'avant-bras (poignet incliné de moins de 25°, au lieu de 48°).
 _ch = joints(P("chairLegs"))
 def _thigh(side, f):
     return _ch[f"upperleg01.{side}"] * (1 - f) + _ch[f"lowerleg01.{side}"] * f
 POSES["chairSit"] = hands(P("chairLegs"),
                           L=_thigh("L", 0.55) + [0.0, 0.085, 0.0], R=_thigh("R", 0.55) + [0.0, 0.085, 0.0],
-                          fingers_L=[0, -0.15, 1], palm_L=[0, -1, 0], fingers_R=[0, -0.15, 1], palm_R=[0, -1, 0],
-                          pole_L=(1, -0.3, -0.6), pole_R=(-1, -0.3, -0.6))
+                          fingers_L=[-0.15, -0.15, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.15, 1], palm_R=[0, -1, 0],
+                          pole_L=(0.5, -0.3, -1), pole_R=(-0.5, -0.3, -1))
 
 MOTIONS = {}
 def blend(a, b, u):
@@ -812,9 +813,13 @@ def hamstring(side, hinge):
     J = joints(p)
     knee = J[f"lowerleg01.{side}"]; thigh = (J[f"upperleg01.{side}"] + knee) / 2
     hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.055, 0]
-    return hands(p, L=hand_on + [0.06, 0, 0], R=hand_on + [-0.06, 0, 0],             # côte à côte sans se chevaucher
-                 fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0, -0.3, 1], palm_R=[0, -1, 0],
-                 pole_L=(1, -0.6, -0.3), pole_R=(-1, -0.6, -0.3))
+    # Une main sur la cuisse tendue, l'autre sur le genou plié : un bras qui irait vers la jambe tendue traverserait ce genou.
+    knee_o = J[f"lowerleg01.{o}"]; thigh_o = (J[f"upperleg01.{o}"] + knee_o) / 2
+    rest_o = knee_o * 0.75 + thigh_o * 0.25 + [0, 0.06, 0]
+    assert side == "L"                                   # côté droit : mirror_pose
+    return hands(p, L=hand_on, R=rest_o,
+                 fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.3, 1], palm_R=[0, -1, 0],
+                 pole_L=(1, -0.6, -0.3), pole_R=(-0.5, -0.3, -1))
 hL0, hL1 = hamstring("L", 0), hamstring("L", 24)
 hR0, hR1 = mirror_pose(hL0), mirror_pose(hL1)
 motion("bed-hamstring", [K(0, "chairSit"), K(1.6, hL0), K(3.4, hL1), K(7.4, hL1), K(9.0, hL0), K(10.4, "chairSit"),
@@ -828,8 +833,9 @@ def figure4(lean):
     knee_L = joints(p)["lowerleg01.L"]
     p = legs(p, R=knee_L + [0.0, 0.1, -0.06], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
     J = joints(p)
+    # Main sur le genou ouvert : doigts vers l'intérieur, dans le prolongement de l'avant-bras (poignet sans inclinaison).
     return hands(p, L=J["foot.R"] + [0.0, 0.06, 0.02], R=J["lowerleg01.R"] + [0.03, 0.07, -0.02],
-                 fingers_L=[-0.4, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.2, -0.3, 1], palm_R=[0, -1, 0],
+                 fingers_L=[-0.4, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.8, -0.3, 1], palm_R=[0, -1, 0],
                  pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
 f0, f1 = figure4(0), figure4(16)
 f0m, f1m = mirror_pose(f0), mirror_pose(f1)

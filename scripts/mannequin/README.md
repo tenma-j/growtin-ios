@@ -29,7 +29,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - poses clés en angles par articulation, ou par objectifs résolus par cinématique inverse (`ik.py`) : pieds qui
      restent posés (pas chassés, fentes, squats, cercles de hanches), mains posées sur les genoux, les cuisses,
      un mur, le crâne, mains jointes (arbre, salutation : doigts tendus dans le plan de la paume, pouces le long
-     des index) ;
+     des index). Mains posées sur les cuisses (assis) et sur le genou (étirement « 4 ») : orientées dans le
+     prolongement de l'avant-bras (coudes vers l'arrière, doigts un peu vers l'intérieur), le poignet reste incliné
+     de moins de 25° sur le côté ; au-delà, le skinning le casse en arête. Étirement de l'arrière des cuisses : une
+     main sur la cuisse tendue, l'autre sur le genou plié (un bras tendu vers l'autre jambe traverserait ce genou) ;
    - contacts : le script lit les corps de l'app (`Growtin/Resources/Mannequin`, même skinning). Une main placée
      par objectif, puis chaque main de chaque image clé, qui s'enfonce dans le corps est ramenée à sa surface le
      long de la normale de la peau (2 mm de jeu), avec la même orientation et le coude du même côté. Les objectifs
