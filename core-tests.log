@@ -1,0 +1,290 @@
+Building for debugging...
+[0/13] /Users/runner/work/growtin-ios/growtin-ios/Packages/GrowtinCore/.build/x86_64-apple-macosx/debug/GrowtinCorePackageTests.derived/runner.swift
+[1/13] Copying motions.json
+[1/13] Copying recipes.json
+[2/13] Copying sources.json
+[2/13] Copying ingredients.json
+[3/13] Copying ciqual-subset.json
+[6/13] Copying Info.plist
+[7/13] Write sources
+[10/13] Write swift-version-1977FEB4D2752686.txt
+[12/33] Compiling GrowtinCore MannequinFile.swift
+[13/33] Compiling GrowtinCore Motion.swift
+[14/33] Compiling GrowtinCore SurfaceDeformer.swift
+[15/33] Compiling GrowtinCore NutritionEngine.swift
+[16/33] Compiling GrowtinCore NutritionModels.swift
+[17/33] Compiling GrowtinCore Comparability.swift
+[18/39] Compiling GrowtinCore CoachModels.swift
+[19/39] Compiling GrowtinCore Evidence.swift
+[20/39] Compiling GrowtinCore EvidenceCatalog.swift
+[21/39] Compiling GrowtinCore Articles.swift
+[22/39] Compiling GrowtinCore Exercises.swift
+[23/39] Compiling GrowtinCore HabitForecaster.swift
+[24/39] Compiling GrowtinCore Roadmap.swift
+[25/39] Compiling GrowtinCore ImageQuality.swift
+[26/39] Compiling GrowtinCore PhotoModels.swift
+[27/39] Compiling GrowtinCore ProfileEnums.swift
+[28/39] Compiling GrowtinCore UserProfile.swift
+[29/39] Compiling GrowtinCore Habit.swift
+[30/39] Compiling GrowtinCore RoutineEngine.swift
+[31/39] Emitting module GrowtinCore
+[32/39] Compiling GrowtinCore SafetyScreener.swift
+[33/39] Compiling GrowtinCore Subscription.swift
+[34/39] Compiling GrowtinCore Greeting.swift
+[35/39] Compiling GrowtinCore DayKey.swift
+[36/39] Compiling GrowtinCore Tracking.swift
+[37/39] Compiling GrowtinCore resource_bundle_accessor.swift
+[38/49] Emitting module GrowtinCoreTests
+[39/49] Compiling GrowtinCoreTests CoachTests.swift
+[40/49] Compiling GrowtinCoreTests ExploreTests.swift
+[41/49] Compiling GrowtinCoreTests ForecastAndSafetyTests.swift
+[42/49] Compiling GrowtinCoreTests MannequinFileTests.swift
+[43/49] Compiling GrowtinCoreTests MotionTests.swift
+[44/49] Compiling GrowtinCoreTests NutritionTests.swift
+[45/49] Compiling GrowtinCoreTests PhotoTests.swift
+[46/49] Compiling GrowtinCoreTests RoutineEngineTests.swift
+[47/49] Compiling GrowtinCoreTests SubscriptionTests.swift
+[48/51] Compiling GrowtinCoreTests SurfaceDeformerTests.swift
+[49/51] Compiling GrowtinCoreTests TrackingTests.swift
+[50/53] Emitting module GrowtinCorePackageTests
+[51/53] Compiling GrowtinCorePackageTests runner.swift
+[51/53] Write Objects.LinkFileList
+[52/53] Linking GrowtinCorePackageTests
+Build complete! (63.94s)
+Test Suite 'All tests' started at 2026-11-12 22:25:13.113.
+Test Suite 'All tests' passed at 2026-11-12 22:25:13.116.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.002) seconds
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: x86_64-apple-macos14.0
+◇ Suite "Personnage 3D : fichiers des corps" started.
+◇ Suite "Personnage 3D : déformation de la surface" started.
+◇ Suite "Accueil" started.
+◇ Suite "Abonnement" started.
+◇ Suite "Prévisions d'habitudes" started.
+◇ Suite "Explorer : exercices et bibliothèque" started.
+◇ Suite "Zones et frise" started.
+◇ Suite "Signaux d'alerte" started.
+◇ Suite "Personnage 3D : mouvements" started.
+◇ Suite "Qualité des photos" started.
+◇ Suite "Fiches de preuve et sources" started.
+◇ Suite "Moteur de routine" started.
+◇ Suite "Jours calendaires" started.
+◇ Suite "Comparabilité des photos" started.
+◇ Suite "Nutrition" started.
+◇ Suite "Coach" started.
+◇ Suite "Feuille de route et photos" started.
+◇ Suite "Régularité" started.
+◇ Test "Copie d'une plage de sommets vers des tampons serrés" started.
+◇ Test "Les deux corps se lisent : maillages, os, poids" started.
+◇ Test "Sommets dédoublés le long d'une ligne de la tenue : même normale des deux côtés" started.
+◇ Test "Format GTM4 (4 influences) et fichier tronqué" started.
+◇ Test "Bras levés au-dessus de la tête : surface et normales valides" started.
+◇ Test "Coude plié à 90° : partie rigide tournée, normales qui suivent la surface" started.
+◇ Test greetingByHour() started.
+◇ Test "Pose de référence : surface inchangée, normales de la surface" started.
+◇ Test "Les avantages annoncés existent et la sécurité reste gratuite" started.
+◇ Test "Même cinématique que le squelette du moteur de mouvements (racine tournée et déplacée)" started.
+◇ Test "Conditions de renouvellement complètes (règle 3.1.2)" started.
+◇ Test "Les jours sans donnée ne bloquent pas si la période est couverte" started.
+◇ Test "Économie de la formule annuelle" started.
+◇ Test "La projection reste dans les bornes" started.
+◇ Test "Données constantes : pas de tendance calculable" started.
+◇ Test "Résumé de l'état d'abonnement" started.
+◇ Test "Données insuffisantes en dessous de 14 jours" started.
+◇ Test "Chaque article cite des sources existantes" started.
+◇ Test "Tendance croissante, bornes physiques et objectif" started.
+◇ Test "La fiche s'ouvre sur un vrai mouvement, pas sur l'échauffement" started.
+◇ Test "Libellés de période" started.
+◇ Test "Recommandations d'activité : raisons tirées du profil et des bilans" started.
+◇ Test "Chaque exercice est complet et sourcé" started.
+◇ Test "Les articles ne donnent ni dosage ni consigne d'arrêt de traitement" started.
+◇ Test "Zones suggérées à partir de l'onboarding" started.
+◇ Test "Aucun exercice ne revendique d'effet sur les cheveux" started.
+◇ Test "Dernière série et comparaison par défaut" started.
+◇ Test "Aucun faux positif sur un texte banal" started.
+◇ Test "Lecture IA : photo précédente, résumé des conditions, anciens enregistrements" started.
+◇ Test "Détresse détectée en priorité, avec le 3114" started.
+◇ Test "Articulation d'appoint : la moitié de la rotation de son os" started.
+◇ Test "Insensible aux accents et à la casse" started.
+◇ Test "Cinématique et mise au sol sur un squelette simple" started.
+◇ Test "Le message de grossesse ne demande jamais d'arrêter un traitement" started.
+◇ Test "La bibliothèque est cohérente : os, régions, temps (pour chaque corps)" started.
+◇ Test "Quaternions : rotations d'Euler dans l'ordre X, Y, Z" started.
+◇ Test "Miroir automatique pour le côté droit" started.
+◇ Test "Profil : grossesse et traitement déclaré" started.
+◇ Test "Articulations d'appoint des personnages : épaules, coudes, hanches, genoux" started.
+◇ Test "Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit" started.
+◇ Test "Profil : symptômes déclarés et ordre par gravité" started.
+◇ Test "Chaque étape d'exercice a une animation existante (pour chaque corps)" started.
+◇ Test "Une image texturée est nette, une image uniforme est floue" started.
+◇ Test "La base documentaire embarquée se charge" started.
+◇ Test "Luminosité et écrêtage" started.
+◇ Test "Les sources ont une URL https et une date de vérification" started.
+◇ Test "Dimensions invalides refusées" started.
+◇ Test "Chaque source citée par une fiche existe dans la base vérifiée" started.
+◇ Test "Chaque modèle d'habitude pointe vers une fiche existante" started.
+◇ Test "Repère protéique EFSA calculé uniquement avec un poids d'adulte" started.
+◇ Test "Aucune raison ne promet une repousse" started.
+◇ Test "La routine reste courte et contient toujours le bilan du jour" started.
+◇ Test "Chaque fiche avec un niveau de preuve a au moins une source" started.
+◇ Test "Pas d'oléagineux proposés en cas d'allergie aux fruits à coque" started.
+◇ Test "Le rappel de traitement n'apparaît que si un traitement médicamenteux est déclaré" started.
+◇ Test "Formatage des heures de sommeil" started.
+◇ Test "La raison du sommeil cite la réponse et précise l'absence d'effet démontré" started.
+◇ Test "Pas de massage proposé si le cuir chevelu est irrité" started.
+◇ Test "Ajout de jours à travers un changement d'heure et un changement d'année" started.
+◇ Test "Cadrage et luminosité différents pénalisés" started.
+◇ Test "Aller-retour texte" started.
+◇ Test "Aucun rapport ne mesure les cheveux" started.
+◇ Test "Zones différentes : non comparable" started.
+◇ Test "Intervalle court signalé, ordre indifférent" started.
+◇ Test "Chaque recette a une astuce" started.
+◇ Test "Cheveux mouillés et lumière différente : peu fiable" started.
+◇ Test "Conditions identiques : comparable" started.
+◇ Test "Calcul exact sur une recette connue" started.
+◇ Test "Liste de courses : quantités ajustées aux portions et additionnées" started.
+◇ Test "Planning de la semaine sans doublon et liste de courses" started.
+◇ Test "Formatage des quantités et accords" started.
+◇ Test "Recherche insensible aux accents, y compris dans les ingrédients" started.
+◇ Test "Recette du jour stable et variée" started.
+◇ Test "Valeurs nutritionnelles plausibles par portion" started.
+◇ Test "La base embarquée se charge et chaque recette est cohérente" started.
+◇ Test "Filtres : régime et allergies" started.
+◇ Test "Le contexte ne contient ni prénom ni âge exact" started.
+◇ Test "Les rôles des nutriments ne promettent jamais de repousse" started.
+◇ Test "Découpage des citations" started.
+◇ Test "Recettes recommandées selon le régime et les carences déclarées" started.
+◇ Test "Les anciens profils sans consentement Coach se décodent" started.
+◇ Test "Les précisions « Autre » et les soins rejoignent le contexte" started.
+◇ Test case passing 1 argument body → "female" to "Les deux corps se lisent : maillages, os, poids" started.
+◇ Test "Quota restant" started.
+◇ Test case passing 1 argument body → "male" to "Les deux corps se lisent : maillages, os, poids" started.
+◇ Test "Statut des étapes selon l'avancement" started.
+◇ Test case passing 1 argument body → "female" to "Bras levés au-dessus de la tête : surface et normales valides" started.
+◇ Test case passing 1 argument body → "male" to "Bras levés au-dessus de la tête : surface et normales valides" started.
+◇ Test "Calendrier des photos" started.
+◇ Test "Aucune étape ne promet de résultat" started.
+◇ Test "Une habitude ajoutée ou retirée ne fausse pas l'historique" started.
+◇ Test "Ratio du jour et régularité sur une période" started.
+◇ Test "Pas de régularité sans habitude prévue" started.
+◇ Test "Une réalisation d'une habitude retirée n'est pas comptée" started.
+◇ Test "Le bilan du jour borne ses valeurs" started.
+◇ Test case passing 1 argument body → "male" to "La bibliothèque est cohérente : os, régions, temps (pour chaque corps)" started.
+◇ Test case passing 1 argument body → "female" to "La bibliothèque est cohérente : os, régions, temps (pour chaque corps)" started.
+◇ Test case passing 1 argument body → "male" to "Articulations d'appoint des personnages : épaules, coudes, hanches, genoux" started.
+◇ Test case passing 1 argument body → "female" to "Articulations d'appoint des personnages : épaules, coudes, hanches, genoux" started.
+◇ Test case passing 1 argument body → "male" to "Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit" started.
+◇ Test case passing 1 argument body → "female" to "Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit" started.
+◇ Test case passing 1 argument body → "male" to "Chaque étape d'exercice a une animation existante (pour chaque corps)" started.
+◇ Test case passing 1 argument body → "female" to "Chaque étape d'exercice a une animation existante (pour chaque corps)" started.
+✔ Test "Copie d'une plage de sommets vers des tampons serrés" passed after 2.552 seconds.
+✔ Test "Format GTM4 (4 influences) et fichier tronqué" passed after 2.552 seconds.
+✔ Test "Sommets dédoublés le long d'une ligne de la tenue : même normale des deux côtés" passed after 2.552 seconds.
+✔ Test "Les deux corps se lisent : maillages, os, poids" with 2 test cases passed after 2.553 seconds.
+✔ Test "Coude plié à 90° : partie rigide tournée, normales qui suivent la surface" passed after 2.553 seconds.
+✔ Test greetingByHour() passed after 2.553 seconds.
+✔ Test "Pose de référence : surface inchangée, normales de la surface" passed after 2.553 seconds.
+✔ Test "Les avantages annoncés existent et la sécurité reste gratuite" passed after 2.553 seconds.
+✔ Test "Même cinématique que le squelette du moteur de mouvements (racine tournée et déplacée)" passed after 2.553 seconds.
+✔ Test "Conditions de renouvellement complètes (règle 3.1.2)" passed after 2.553 seconds.
+✔ Test "Les jours sans donnée ne bloquent pas si la période est couverte" passed after 2.553 seconds.
+✔ Test "Économie de la formule annuelle" passed after 2.553 seconds.
+✔ Test "La projection reste dans les bornes" passed after 2.553 seconds.
+✔ Test "Données constantes : pas de tendance calculable" passed after 2.553 seconds.
+✔ Test "Résumé de l'état d'abonnement" passed after 2.553 seconds.
+✔ Test "Données insuffisantes en dessous de 14 jours" passed after 2.554 seconds.
+✔ Test "Chaque article cite des sources existantes" passed after 2.554 seconds.
+✔ Test "La fiche s'ouvre sur un vrai mouvement, pas sur l'échauffement" passed after 2.554 seconds.
+✔ Test "Tendance croissante, bornes physiques et objectif" passed after 2.554 seconds.
+✔ Test "Recommandations d'activité : raisons tirées du profil et des bilans" passed after 2.554 seconds.
+✔ Test "Libellés de période" passed after 2.554 seconds.
+✔ Test "Chaque exercice est complet et sourcé" passed after 2.554 seconds.
+✔ Test "Les articles ne donnent ni dosage ni consigne d'arrêt de traitement" passed after 2.554 seconds.
+✔ Test "Zones suggérées à partir de l'onboarding" passed after 2.554 seconds.
+✔ Test "Aucun exercice ne revendique d'effet sur les cheveux" passed after 2.554 seconds.
+✔ Test "Aucun faux positif sur un texte banal" passed after 2.554 seconds.
+✔ Test "Dernière série et comparaison par défaut" passed after 2.554 seconds.
+✔ Test "Détresse détectée en priorité, avec le 3114" passed after 2.554 seconds.
+✔ Test "Bras levés au-dessus de la tête : surface et normales valides" with 2 test cases passed after 2.556 seconds.
+✔ Test "Lecture IA : photo précédente, résumé des conditions, anciens enregistrements" passed after 2.554 seconds.
+✔ Test "Insensible aux accents et à la casse" passed after 2.554 seconds.
+✔ Test "Le message de grossesse ne demande jamais d'arrêter un traitement" passed after 2.554 seconds.
+✔ Test "Articulation d'appoint : la moitié de la rotation de son os" passed after 2.554 seconds.
+✔ Test "Cinématique et mise au sol sur un squelette simple" passed after 2.554 seconds.
+✔ Test "Quaternions : rotations d'Euler dans l'ordre X, Y, Z" passed after 2.554 seconds.
+✔ Test "Profil : grossesse et traitement déclaré" passed after 2.554 seconds.
+✔ Test "Miroir automatique pour le côté droit" passed after 2.554 seconds.
+✔ Test "La bibliothèque est cohérente : os, régions, temps (pour chaque corps)" with 2 test cases passed after 2.555 seconds.
+✔ Test "Articulations d'appoint des personnages : épaules, coudes, hanches, genoux" with 2 test cases passed after 2.554 seconds.
+✔ Test "Profil : symptômes déclarés et ordre par gravité" passed after 2.554 seconds.
+✔ Test "Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit" with 2 test cases passed after 2.554 seconds.
+✔ Test "Une image texturée est nette, une image uniforme est floue" passed after 2.554 seconds.
+✔ Test "La base documentaire embarquée se charge" passed after 2.554 seconds.
+✔ Test "Les sources ont une URL https et une date de vérification" passed after 2.554 seconds.
+✔ Test "Luminosité et écrêtage" passed after 2.554 seconds.
+✔ Test "Dimensions invalides refusées" passed after 2.554 seconds.
+✔ Test "Chaque source citée par une fiche existe dans la base vérifiée" passed after 2.554 seconds.
+✔ Test "Chaque modèle d'habitude pointe vers une fiche existante" passed after 2.554 seconds.
+✔ Test "Repère protéique EFSA calculé uniquement avec un poids d'adulte" passed after 2.554 seconds.
+✔ Test "La routine reste courte et contient toujours le bilan du jour" passed after 2.554 seconds.
+✔ Test "Chaque fiche avec un niveau de preuve a au moins une source" passed after 2.554 seconds.
+✔ Test "Pas d'oléagineux proposés en cas d'allergie aux fruits à coque" passed after 2.554 seconds.
+✔ Test "Aucune raison ne promet une repousse" passed after 2.555 seconds.
+✔ Test "Le rappel de traitement n'apparaît que si un traitement médicamenteux est déclaré" passed after 2.554 seconds.
+✔ Test "Pas de massage proposé si le cuir chevelu est irrité" passed after 2.554 seconds.
+✔ Test "La raison du sommeil cite la réponse et précise l'absence d'effet démontré" passed after 2.554 seconds.
+✔ Test "Ajout de jours à travers un changement d'heure et un changement d'année" passed after 2.554 seconds.
+✔ Test "Cadrage et luminosité différents pénalisés" passed after 2.554 seconds.
+✔ Test "Aller-retour texte" passed after 2.554 seconds.
+✔ Test "Aucun rapport ne mesure les cheveux" passed after 2.554 seconds.
+✔ Test "Zones différentes : non comparable" passed after 2.554 seconds.
+✔ Test "Intervalle court signalé, ordre indifférent" passed after 2.554 seconds.
+✔ Test "Cheveux mouillés et lumière différente : peu fiable" passed after 2.554 seconds.
+✔ Test "Conditions identiques : comparable" passed after 2.554 seconds.
+✔ Test "Formatage des heures de sommeil" passed after 2.555 seconds.
+✔ Test "Calcul exact sur une recette connue" passed after 2.554 seconds.
+✔ Test "Chaque recette a une astuce" passed after 2.555 seconds.
+✔ Test "Liste de courses : quantités ajustées aux portions et additionnées" passed after 2.555 seconds.
+✔ Test "Formatage des quantités et accords" passed after 2.554 seconds.
+✔ Test "Recherche insensible aux accents, y compris dans les ingrédients" passed after 2.555 seconds.
+✔ Test "Planning de la semaine sans doublon et liste de courses" passed after 2.555 seconds.
+✔ Test "Recette du jour stable et variée" passed after 2.555 seconds.
+✔ Test "La base embarquée se charge et chaque recette est cohérente" passed after 2.555 seconds.
+✔ Test "Le contexte ne contient ni prénom ni âge exact" passed after 2.555 seconds.
+✔ Test "Filtres : régime et allergies" passed after 2.555 seconds.
+✔ Test "Découpage des citations" passed after 2.555 seconds.
+✔ Test "Les rôles des nutriments ne promettent jamais de repousse" passed after 2.555 seconds.
+✔ Test "Les anciens profils sans consentement Coach se décodent" passed after 2.555 seconds.
+✔ Test "Les précisions « Autre » et les soins rejoignent le contexte" passed after 2.555 seconds.
+✔ Test "Quota restant" passed after 2.555 seconds.
+✔ Test "Statut des étapes selon l'avancement" passed after 2.548 seconds.
+✔ Test "Calendrier des photos" passed after 2.058 seconds.
+✔ Test "Aucune étape ne promet de résultat" passed after 2.058 seconds.
+✔ Test "Une habitude ajoutée ou retirée ne fausse pas l'historique" passed after 2.029 seconds.
+✔ Test "Pas de régularité sans habitude prévue" passed after 2.029 seconds.
+✔ Test "Une réalisation d'une habitude retirée n'est pas comptée" passed after 2.028 seconds.
+✔ Test "Le bilan du jour borne ses valeurs" passed after 2.028 seconds.
+✔ Suite "Personnage 3D : déformation de la surface" passed after 2.565 seconds.
+✔ Suite "Personnage 3D : fichiers des corps" passed after 2.565 seconds.
+✔ Suite "Accueil" passed after 2.565 seconds.
+✔ Suite "Abonnement" passed after 2.566 seconds.
+✔ Test "Valeurs nutritionnelles plausibles par portion" passed after 2.558 seconds.
+✔ Suite "Prévisions d'habitudes" passed after 2.565 seconds.
+✔ Suite "Explorer : exercices et bibliothèque" passed after 2.565 seconds.
+✔ Suite "Zones et frise" passed after 2.565 seconds.
+✔ Suite "Signaux d'alerte" passed after 2.565 seconds.
+✔ Suite "Qualité des photos" passed after 2.565 seconds.
+✔ Suite "Fiches de preuve et sources" passed after 2.565 seconds.
+✔ Suite "Moteur de routine" passed after 2.565 seconds.
+✔ Suite "Jours calendaires" passed after 2.565 seconds.
+✔ Suite "Comparabilité des photos" passed after 2.565 seconds.
+✔ Suite "Coach" passed after 2.566 seconds.
+✔ Suite "Feuille de route et photos" passed after 2.566 seconds.
+✔ Test "Chaque étape d'exercice a une animation existante (pour chaque corps)" with 2 test cases passed after 2.564 seconds.
+✔ Suite "Personnage 3D : mouvements" passed after 2.569 seconds.
+✔ Test "Ratio du jour et régularité sur une période" passed after 2.029 seconds.
+✔ Suite "Régularité" passed after 2.572 seconds.
+✔ Test "Recettes recommandées selon le régime et les carences déclarées" passed after 2.575 seconds.
+✔ Suite "Nutrition" passed after 2.582 seconds.
+✔ Test run with 91 tests in 18 suites passed after 2.585 seconds.
