@@ -224,13 +224,21 @@ public struct MotionLibrary: Sendable {
     /// Corps disponibles dans le fichier embarqué.
     public static let bodies = ["male", "female"]
 
-    public static func bundled(body: String = "male") throws -> MotionLibrary {
+    /// Toutes les versions embarquées (une par corps), lues en une seule fois.
+    public static func bundledBodies() throws -> [String: MotionLibrary] {
         guard let url = Bundle.module.url(forResource: "motions", withExtension: "json") else {
             throw CocoaError(.fileNoSuchFile)
         }
         let file = try JSONDecoder().decode(File.self, from: Data(contentsOf: url))
-        guard let set = file.bodies[body] ?? file.bodies["male"] else { throw CocoaError(.fileReadCorruptFile) }
-        return MotionLibrary(version: file.version, bones: file.bones, regions: file.regions, poses: set.poses, motions: set.motions)
+        return file.bodies.mapValues {
+            MotionLibrary(version: file.version, bones: file.bones, regions: file.regions, poses: $0.poses, motions: $0.motions)
+        }
+    }
+
+    public static func bundled(body: String = "male") throws -> MotionLibrary {
+        let all = try bundledBodies()
+        guard let library = all[body] ?? all["male"] else { throw CocoaError(.fileReadCorruptFile) }
+        return library
     }
 
     public func motion(_ id: String) -> Motion? { motions[id] }

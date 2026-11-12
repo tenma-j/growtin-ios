@@ -37,8 +37,9 @@ struct CueLabelStyle: LabelStyle {
 /// Bibliothèques de mouvements du personnage 3D (une par corps : homme, femme), chargées une seule fois.
 enum MotionCatalog {
     private static let libraries: [MannequinBody: MotionLibrary] = {
+        let all = (try? MotionLibrary.bundledBodies()) ?? [:]       // fichier lu une seule fois pour les deux corps
         var out: [MannequinBody: MotionLibrary] = [:]
-        for body in MannequinBody.allCases { out[body] = try? MotionLibrary.bundled(body: body.rawValue) }
+        for body in MannequinBody.allCases { out[body] = all[body.rawValue] }
         return out
     }()
 

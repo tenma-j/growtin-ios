@@ -26,28 +26,36 @@ xcrun simctl install "$DEVICE_ID" "$APP_PATH"
 
 capture() {
   local name="$1"; shift
-  xcrun simctl terminate "$DEVICE_ID" "$BUNDLE_ID" >/dev/null 2>&1 || true
-  xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID" "$@" >/dev/null
   # Attente adaptative : un écran vide (barre d'état seule) pèse moins de 150 Ko.
-  # On reprend la capture jusqu'à ce que l'interface soit affichée, puis on laisse les animations finir.
+  # On reprend la capture jusqu'à ce que l'interface soit affichée, puis on laisse les animations finir
+  # (SETTLE secondes ; plus long pour le personnage 3D, dont la première image est lente dans le simulateur).
+  # Si l'app reste vide, elle est relancée une fois.
   local size=0
-  for attempt in $(seq 1 15); do
-    sleep 3
-    xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null 2>&1 || continue
-    size=$(stat -f%z "$OUT_DIR/$name.png" 2>/dev/null || echo 0)
-    if [ "$size" -gt 150000 ]; then
-      sleep 2
-      xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null
-      break
-    fi
+  for launch in 1 2; do
+    xcrun simctl terminate "$DEVICE_ID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID" "$@" >/dev/null
+    for attempt in $(seq 1 12); do
+      sleep 3
+      xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null 2>&1 || continue
+      size=$(stat -f%z "$OUT_DIR/$name.png" 2>/dev/null || echo 0)
+      if [ "$size" -gt 150000 ]; then
+        sleep "${SETTLE:-2}"
+        xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name.png" >/dev/null
+        break 2
+      fi
+    done
+    echo "Écran encore vide : nouvelle tentative pour $name"
   done
   echo "Capture : $name ($((size / 1024)) Ko)"
 }
 
+# Écran avec le personnage 3D : on laisse le temps à la première image.
+capture3d() { SETTLE=8 capture "$@"; }
+
 # Plusieurs captures espacées d'un même écran (animation en cours).
 capture_seq() {
   local name="$1" count="$2" gap="$3"; shift 3
-  capture "$name-1" "$@"
+  capture3d "$name-1" "$@"
   for k in $(seq 2 "$count"); do
     sleep "$gap"
     xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name-$k.png" >/dev/null
@@ -62,7 +70,7 @@ for appearance in light dark; do
   capture "$appearance-53-photo-comparaison" -demoScreen photoCompare
   capture "$appearance-60-nutrition" -demoScreen nutrition
   capture "$appearance-30-coach" -demoScreen coach
-  capture "$appearance-41-exercice-guerrier" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 3 -demoFigure male
+  capture3d "$appearance-41-exercice-guerrier" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 3 -demoFigure male
   if [ "$appearance" = "light" ]; then
     for step in 1 2 3 4 5 6 7 8 9 10 11; do
       capture "light-02-onboarding-etape-$(printf "%02d" $step)" -demoScreen onboarding -demoStep "$step"
@@ -75,8 +83,8 @@ for appearance in light dark; do
     capture "light-16-premium" -demoScreen paywall
     capture "light-31-coach-consentement" -demoScreen coachConsent
     capture "light-40-explorer" -demoScreen explore
-    capture "light-41-exercice" -demoScreen exercise
-    capture "light-42-seance-exercice" -demoScreen exerciseSession
+    capture3d "light-41-exercice" -demoScreen exercise
+    capture3d "light-42-seance-exercice" -demoScreen exerciseSession
     capture "light-43-article" -demoScreen article
     capture "light-61-recette" -demoScreen recipe
     capture "light-62-planning" -demoScreen mealPlan
@@ -87,17 +95,17 @@ for appearance in light dark; do
     capture "light-54-photo-lecture-ia" -demoScreen photoReading
     capture "light-55-photo-lecture-consentement" -demoScreen photoReadingConsent
     # Personnage 3D : quelques mouvements, dont des suites d'images pour vérifier l'animation.
-    capture "light-45-yoga-arbre" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 4 -demoFigure male
-    capture "light-46-mobilite-epaules" -demoScreen exerciseStep -demoExercise mobilite-matin -demoStep 0 -demoFigure male
+    capture3d "light-45-yoga-arbre" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 4 -demoFigure male
+    capture3d "light-46-mobilite-epaules" -demoScreen exerciseStep -demoExercise mobilite-matin -demoStep 0 -demoFigure male
     capture_seq "light-47-pas-chasses" 3 0.7 -demoScreen exerciseStep -demoExercise cardio-leger -demoStep 1 -demoFigure male
     capture_seq "light-48-squat-chaise" 3 0.9 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 1 -demoFigure female
-    capture "light-49-chat-vache" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 5 -demoFigure female
+    capture3d "light-49-chat-vache" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 5 -demoFigure female
     capture_seq "light-35-echauffement-femme" 3 0.6 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 0 -demoFigure female
     capture_seq "light-36-salutation-femme" 2 1.5 -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 1 -demoFigure female
-    capture "light-37-scan-corporel-lit" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 0 -demoFigure male
+    capture3d "light-37-scan-corporel-lit" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 0 -demoFigure male
     capture_seq "light-38-etirement-cuisses" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 2 -demoFigure female
     capture_seq "light-39-etirement-hanches" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 3 -demoFigure male
     # En dernier : cette capture choisit le personnage féminin (préférence conservée par l'app).
-    capture "light-44-exercice-3d-sol" -demoScreen exerciseFloor
+    capture3d "light-44-exercice-3d-sol" -demoScreen exerciseFloor
   fi
 done
