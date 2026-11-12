@@ -52,6 +52,9 @@ recalculent à chaque image.
 
 Huit influences d'os par sommet (`INFLUENCES` dans `export.py`) : autour des épaules, jusqu'à 7 os comptent ; avec 4,
 certains sommets perdaient jusqu'à 28 % de leur poids et la peau se froissait entre la bretelle et le cou, bras levés.
+À moins de 3 cm des lignes de la tenue, là où le bras compte (emmanchure, bretelles), les poids sont remplacés par une
+solution harmonique (`harmonize_weights`) : les poids d'origine, linéaires par grand triangle, pliaient la surface à
+chaque arête bras levé et le bord de la brassière se dessinait en escalier sous l'aisselle.
 
 Dans l'app, la surface est déformée sur le processeur (`SurfaceDeformer`, GrowtinCore) : skinning linéaire, puis
 normales recalculées sur les triangles déformés (sommets dédoublés le long de la tenue soudés). Le skinning du GPU

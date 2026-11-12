@@ -27,6 +27,35 @@ def adjacency(n, tris):
     deg = np.asarray(A.sum(1)).ravel()
     return sp.diags(1 / np.maximum(deg, 1)) @ A
 
+def harmonize_weights(v, tris, bi, bw, free):
+    """Poids des sommets « libres » remplacés par la solution harmonique (poids d'arête 1/longueur, résolution exacte),
+    les autres sommets restant fixes : le champ de poids devient lisse dans toute la zone libre.
+
+    Les poids d'origine sont linéaires par grand triangle du corps : bras levé, le skinning plie la surface à chaque
+    arête de ces triangles, et le bord de la brassière sous l'aisselle se dessinait en escalier."""
+    import scipy.sparse.linalg as sla
+    n = len(v)
+    i = np.concatenate([tris[:, 0], tris[:, 1], tris[:, 2]]); j = np.concatenate([tris[:, 1], tris[:, 2], tris[:, 0]])
+    key = np.unique(np.minimum(i, j) * n + np.maximum(i, j)); a, b = key // n, key % n
+    w = 1.0 / np.maximum(np.linalg.norm(v[a] - v[b], axis=1), 1e-6)
+    A = sp.coo_matrix((np.concatenate([w, w]), (np.concatenate([a, b]), np.concatenate([b, a]))), shape=(n, n)).tocsr()
+    L = sp.diags(np.asarray(A.sum(1)).ravel()) - A
+    W = np.zeros((n, int(bi.max()) + 1))
+    for k in range(bi.shape[1]):
+        np.add.at(W, (np.arange(n), bi[:, k].astype(int)), bw[:, k])
+    f_idx, c_idx = np.where(free)[0], np.where(~free)[0]
+    if len(f_idx):
+        Lff = (L[f_idx][:, f_idx] + sp.identity(len(f_idx)) * 1e-9).tocsc()
+        solve = sla.factorized(Lff)
+        rhs = -(L[f_idx][:, c_idx] @ W[c_idx])
+        for col in np.where(np.abs(rhs).max(0) > 0)[0]:
+            W[f_idx, col] = solve(rhs[:, col])
+    W = np.clip(W, 0, None)
+    top = np.argsort(-W, axis=1)[:, :INFLUENCES]
+    tw = np.take_along_axis(W, top, 1)
+    tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
+    return top.astype(np.uint16), tw.astype(np.float32)
+
 def taubin(v, avg, strength, iterations, lam=0.6, mu=-0.63):
     s = strength[:, None]
     for _ in range(iterations):
@@ -327,6 +356,11 @@ def build(data, sex):
     v, nrm, bone_idx, bone_w, tris, (f_cloth, f_trim) = split_along(v, nrm, bone_idx, bone_w, tris, f_trim, [f_cloth, f_trim])
     area = 0.5 * np.linalg.norm(np.cross(v[tris[:, 1]] - v[tris[:, 0]], v[tris[:, 2]] - v[tris[:, 0]]), axis=1)
     tris = tris[area > 1e-11]                                 # triangles plats laissés par la découpe
+    # Poids lissés à moins de 3 cm des lignes de la tenue, là où le bras compte (emmanchure, bretelles) : le bord
+    # reste une courbe nette bras levés, au lieu d'un escalier sous l'aisselle.
+    arm_cols = np.array([nme.startswith(("upperarm", "lowerarm")) for nme in order])
+    arm_w = (bone_w * arm_cols[bone_idx.astype(int)]).sum(1)
+    bone_idx, bone_w = harmonize_weights(v, tris, bone_idx, bone_w, (np.abs(f_cloth) < 0.03) & (arm_w > 0.02))
     def ramp(f, width):
         t = np.clip(f / width, 0, 1); return t * t * (3 - 2 * t)
     # épaisseur du tissu, en pente douce depuis le bord (sur plus d'un triangle : pas de marche visible) ;
