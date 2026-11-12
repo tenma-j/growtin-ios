@@ -33,6 +33,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private var transitionStart: TimeInterval?
     private var lastRotations: [simd_quatf] = []
     private var lastRoot: SIMD3<Float> = .zero
+    /// Articulations d'appoint (indice, os doublé) : recalculées à chaque image, la moitié de la rotation de l'os.
+    private var halfPairs: [(joint: Int, source: Int)] = []
     private let transitionDuration = 0.5
 
     private(set) var currentBody: MannequinBody?
@@ -129,10 +131,12 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
 
         // Aucun appel à SceneKit sous le verrou (le fil de rendu le prend en tenant déjà la scène).
         let rootPosition = nodes.first?.simdPosition ?? .zero
+        let pairs = asset.skeleton.halfSource.enumerated().compactMap { i, s in s.map { (joint: i, source: $0) } }
         lock.lock()
         self.asset = asset
         meshNodes = newMeshNodes
         boneNodes = nodes
+        halfPairs = pairs
         lastRotations = Array(repeating: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), count: nodes.count)
         lastRoot = rootPosition
         lock.unlock()
@@ -167,6 +171,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         func key(_ pose: ResolvedPose, time: Double, lift: Double, ease: String?) -> Key {
             let rotations = skeleton.joints.enumerated().map { (i, joint) -> simd_quatf in
                 var q = pose.rotations[joint.name] ?? .identity
+                if let half = joint.half { q = Skeleton.halfRotation(pose.rotations[half] ?? .identity) }
                 if skeleton.parentIndex[i] == nil { q = pose.rootRotation * q }
                 return simd_quatf(ix: Float(q.x), iy: Float(q.y), iz: Float(q.z), r: Float(q.w))
             }
@@ -271,6 +276,10 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 rotations = zip(from, rotations).map { simd_slerp($0, $1, s) }
                 root = simd_mix(fromRoot, root, SIMD3(repeating: s))
             }
+        }
+        // Appoints exacts à chaque image : la moitié de la rotation interpolée de leur os.
+        for pair in halfPairs where pair.joint < rotations.count && pair.source < rotations.count {
+            rotations[pair.joint] = simd_slerp(simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), rotations[pair.source], 0.5)
         }
         for (node, q) in zip(boneNodes, rotations) { node.simdOrientation = q }
         boneNodes.first?.simdPosition = root

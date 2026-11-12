@@ -98,6 +98,43 @@ struct MotionTests {
         }
     }
 
+    @Test("Articulation d'appoint : la moitié de la rotation de son os")
+    func halfJoint() {
+        let skeleton = Skeleton(joints: [
+            SkeletonJoint(name: "root", parent: nil, head: [0, 1, 0]),
+            SkeletonJoint(name: "upperarm01.L", parent: "root", head: [0.2, 1, 0]),
+            SkeletonJoint(name: "upperarm01-half.L", parent: "root", head: [0.2, 1, 0], half: "upperarm01.L"),
+        ])
+        #expect(skeleton.halfSource == [nil, nil, 1])
+        // Bras levé sur le côté à 90° : l'appoint est à 45°, à mi-chemin entre le bras et le tronc.
+        let pose = ResolvedPose(rotations: ["upperarm01.L": Quat(eulerXYZ: Vec3(0, 0, 90))], rootRotation: .identity,
+                                rootOffset: .zero, ground: false)
+        let down = skeleton.worldTransforms(pose).rotations[2].rotate(Vec3(0, -1, 0))
+        #expect(abs(down.x - sin(.pi / 4)) < 1e-9 && abs(down.y + cos(.pi / 4)) < 1e-9)
+    }
+
+    @Test("Articulations d'appoint des personnages : épaules, coudes, hanches, genoux", arguments: MotionLibrary.bodies)
+    func bundledHalfJoints(body: String) throws {
+        struct Meta: Decodable {
+            struct Body: Decodable { let joints: [SkeletonJoint] }
+            let bodies: [String: Body]
+        }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("Growtin/Resources/Mannequin/mannequin.json")
+        let meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: url))
+        let skeleton = Skeleton(joints: try #require(meta.bodies[body]).joints)
+        let halves = skeleton.joints.filter { $0.half != nil }
+        #expect(Set(halves.compactMap(\.half)) == Set(["upperarm01", "lowerarm01", "upperleg01", "lowerleg01"].flatMap { [$0 + ".L", $0 + ".R"] }))
+        for joint in halves {
+            let source = try #require(skeleton.index[joint.half!])
+            // Même point et même parent que l'os doublé ; absent des poses (il suit son os).
+            #expect(joint.parent == skeleton.joints[source].parent, "\(joint.name)")
+            #expect(joint.position == skeleton.joints[source].position, "\(joint.name)")
+            #expect(!library.bones.contains(joint.name), "\(joint.name)")
+        }
+    }
+
     @Test("Cinématique et mise au sol sur un squelette simple")
     func kinematicsAndGrounding() {
         let skeleton = Skeleton(joints: [

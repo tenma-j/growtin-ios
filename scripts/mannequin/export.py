@@ -58,6 +58,62 @@ def smooth_weights(W, avg, order, iterations=8, lam=0.5):
     tw = tw / np.maximum(s, 1e-9)
     return top.astype(np.uint16), tw.astype(np.float32)
 
+# Articulations d'appoint : (os doublé, os du côté parent dont la peau se mélange à la sienne dans la pliure).
+HALF_JOINTS = []
+for _s in (".L", ".R"):
+    HALF_JOINTS += [
+        ("upperarm01" + _s, ["spine01", "spine02", "spine03", "clavicle" + _s, "shoulder01" + _s, "neck01"]),
+        ("lowerarm01" + _s, ["upperarm01" + _s, "upperarm02" + _s]),
+        ("upperleg01" + _s, ["pelvis" + _s, "spine05", "spine04", "spine03", "root"]),
+        ("lowerleg01" + _s, ["upperleg01" + _s, "upperleg02" + _s]),
+    ]
+
+def half_joint_name(bone):
+    base, side = bone.rsplit(".", 1)
+    return f"{base}-half.{side}"
+
+def add_half_joints(order, parents, bone_idx, bone_w):
+    """Articulations d'appoint à mi-rotation : épaules, coudes, hanches, genoux.
+
+    Dans une pliure, un sommet partagé entre deux os prend la moyenne de deux positions (skinning linéaire) :
+    la pliure se pince et forme un angle vif. L'appoint, placé au même point que l'os, tourne de la moitié de
+    son angle ; la part de chaque sommet est répartie entre le parent, l'appoint et l'os, si bien qu'aucun
+    mélange ne dépasse la moitié de l'angle : la pliure reste arrondie et garde son volume.
+    Renvoie (noms, parents, appoints {appoint: os}, indices, poids)."""
+    names = list(order); parents = dict(parents)
+    children = {}
+    for n in names:
+        children.setdefault(parents[n], []).append(n)
+    def subtree(n):
+        out = [n]
+        for c in children.get(n, []):
+            out += subtree(c)
+        return out
+    index = {n: i for i, n in enumerate(names)}
+    nb = len(names)
+    W = np.zeros((len(bone_idx), nb + len(HALF_JOINTS)))
+    for k in range(bone_idx.shape[1]):
+        np.add.at(W, (np.arange(len(bone_idx)), bone_idx[:, k].astype(int)), bone_w[:, k])
+    halves = {}
+    for j, (bone, parent_side) in enumerate(HALF_JOINTS):
+        h = nb + j
+        name = half_joint_name(bone)
+        names.append(name); parents[name] = parents[bone]; halves[name] = bone
+        child = [index[n] for n in subtree(bone)]
+        par = [index[n] for n in parent_side if n in index]
+        a = W[:, par].sum(1); b = W[:, child].sum(1); t = a + b
+        mixed = (a > 1e-4) & (b > 1e-4)
+        f = np.where(mixed, b / np.maximum(t, 1e-9), 0.0)        # part de l'os : 0 côté parent, 1 côté os
+        lo = mixed & (f <= 0.5); hi = mixed & (f > 0.5)
+        sa = np.ones(len(W)); sb = np.ones(len(W)); wh = np.zeros(len(W))
+        sa[lo] = t[lo] * (1 - 2 * f[lo]) / a[lo]; sb[lo] = 0; wh[lo] = t[lo] * 2 * f[lo]
+        sa[hi] = 0; sb[hi] = t[hi] * (2 * f[hi] - 1) / b[hi]; wh[hi] = t[hi] * (2 - 2 * f[hi])
+        W[:, par] *= sa[:, None]; W[:, child] *= sb[:, None]; W[:, h] += wh
+    top = np.argsort(-W, axis=1)[:, :4]
+    tw = np.take_along_axis(W, top, 1)
+    tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
+    return names, parents, halves, top.astype(np.uint16), tw.astype(np.float32)
+
 def shortest_arc(a, b):
     a = a / np.linalg.norm(a); b = b / np.linalg.norm(b)
     axis = np.cross(a, b); s = np.linalg.norm(axis)
@@ -189,13 +245,17 @@ def build(data, sex):
     newheads = {n: p + shift for n, p in newheads.items()}
     newtails = {n: p + shift for n, p in newtails.items()}
     nrm = normals_of(v, tris)
-
-    nrm = normals_of(v, tris)
+    # 2 bis. Articulations d'appoint aux pliures (la pose debout devient la pose de référence : elles y sont neutres).
+    parents = {n: bones[n]["parent"] for n in order}
+    order, parents, halves, bone_idx, bone_w = add_half_joints(order, parents, bone_idx, bone_w)
+    for name, bone in halves.items():
+        newheads[name] = newheads[bone].copy(); newtails[name] = newtails[bone].copy()
 
     # 3. Vêtements : coques séparées, découpées le long de lignes lisses, portées par les mêmes os.
     names_arr = np.array(order)
     def wsum(prefixes):
-        cols = [i for i, nme in enumerate(order) if nme.startswith(prefixes)]
+        # poids d'origine (sans les articulations d'appoint) : zones du corps pour dessiner la tenue
+        cols = [i for i, nme in enumerate(order) if nme.startswith(prefixes) and i < W.shape[1]]
         return W[:, cols].sum(1)
     w_arm = wsum(("upperarm", "lowerarm", "wrist", "finger", "metacarpal"))
     w_shoulder = wsum(("clavicle", "shoulder01"))
@@ -262,7 +322,7 @@ def build(data, sex):
     nrm = normals_of(v, tris)
     centre_f = (f_cloth[tris].mean(1), f_trim[tris].mean(1))
     tri_material = np.where(centre_f[1] > 0, 2, np.where(centre_f[0] > 0, 1, 0))
-    return dict(order=order, parents={n: bones[n]["parent"] for n in order}, heads=newheads, tails=newtails,
+    return dict(order=order, parents=parents, halves=halves, heads=newheads, tails=newtails,
                 v=v.astype(np.float32), n=nrm.astype(np.float32), tris=tris, bone_idx=bone_idx, bone_w=bone_w,
                 tri_material=tri_material)
 
@@ -327,8 +387,9 @@ def export(sex, b):
             fh.write(m["bi"].astype("<u2").tobytes()); fh.write(m["bw"].astype("<f4").tobytes())
             fh.write(idx.tobytes())
     return {
-        "joints": [{"name": k, "parent": b["parents"][k], "head": [round(float(x), 5) for x in b["heads"][k]],
-                    "tail": [round(float(x), 5) for x in b["tails"][k]]} for k in b["order"]],
+        "joints": [dict({"name": k, "parent": b["parents"][k], "head": [round(float(x), 5) for x in b["heads"][k]],
+                         "tail": [round(float(x), 5) for x in b["tails"][k]]},
+                        **({"half": b["halves"][k]} if k in b["halves"] else {})) for k in b["order"]],
         "meshes": [{"material": m["material"], "vertexCount": len(m["v"]), "indexCount": int(m["tris"].size)} for m in meshes],
     }, meshes
 
@@ -405,7 +466,8 @@ if __name__ == "__main__":
             V, Nn, T, BI, BW, M = map(np.concatenate, (V, Nn, T, BI, BW, M))
             np.savez(f"{preview}/{sex}.npz", v=V, n=Nn, tris=T, bone_idx=BI, bone_w=BW, tri_mat=M, body_count=len(V),
                      order=np.array(b["order"]), heads=np.array([b["heads"][k] for k in b["order"]]),
-                     parents=np.array([b["parents"][k] or "" for k in b["order"]]))
+                     parents=np.array([b["parents"][k] or "" for k in b["order"]]),
+                     halves=np.array([(b["order"].index(h), b["order"].index(o)) for h, o in b["halves"].items()]))
             cols = [MATERIAL_COLORS[int(x)] for x in M]
             render(V, Nn, T, cols, f"{preview}/{sex}-front.png", yaw=25)
             render(V, Nn, T, cols, f"{preview}/{sex}-back.png", yaw=160)

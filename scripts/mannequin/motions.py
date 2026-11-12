@@ -726,7 +726,8 @@ def check(poses, motions, bones, where):
 
 if __name__ == "__main__":
     import runpy
-    bones = [j["name"] for j in META["bodies"]["male"]["joints"]]
+    # Os animés (les articulations d'appoint suivent leur os : elles ne figurent pas dans les poses).
+    bones = [j["name"] for j in META["bodies"]["male"]["joints"] if not j.get("half")]
     bvh_root = os.environ.get("CMU_BVH", "/home/user/una-dinosauria/cmu-mocap/data")
     previous = json.load(open(OUT)) if os.path.exists(OUT) else {}
     bodies = {}
@@ -736,7 +737,7 @@ if __name__ == "__main__":
         poses, motions = ns["POSES"], ns["MOTIONS"]
         check(poses, motions, bones, body)
         if os.path.isdir(bvh_root):
-            motions.update(ns["build_mocap"](bvh_root, META["bodies"][body]["joints"]))
+            motions.update(ns["build_mocap"](bvh_root, [j for j in META["bodies"][body]["joints"] if not j.get("half")]))
         else:
             print("Captures CMU introuvables : les mouvements captés du fichier précédent sont conservés.")
             old = previous.get("bodies", {}).get(body, {}).get("motions", previous.get("motions", {}))

@@ -32,7 +32,8 @@ class IK:
     def __init__(self, joints, poses):
         names = [j["name"] for j in joints]
         self.names = names
-        self.rig = Rig(names, {j["name"]: j["parent"] for j in joints}, {j["name"]: np.array(j["head"], float) for j in joints})
+        self.rig = Rig(names, {j["name"]: j["parent"] for j in joints}, {j["name"]: np.array(j["head"], float) for j in joints},
+                       {j["name"]: j["half"] for j in joints if j.get("half")})
         self.H = {n: self.rig.heads[i] for i, n in enumerate(names)}
         self.poses = poses
 

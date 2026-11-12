@@ -55,7 +55,8 @@ class Body:
         self.bi, self.bw = d["bone_idx"], d["bone_w"]
         self.names = [str(x) for x in d["order"]]
         parents = {n: (str(p) or None) for n, p in zip(self.names, d["parents"])}
-        self.rig = Rig(self.names, parents, {n: h for n, h in zip(self.names, d["heads"])})
+        halves = {self.names[int(h)]: self.names[int(b)] for h, b in d["halves"]} if "halves" in d.files else {}
+        self.rig = Rig(self.names, parents, {n: h for n, h in zip(self.names, d["heads"])}, halves)
         self.tri_mat = d["tri_mat"] if "tri_mat" in d.files else np.zeros(len(self.tris), int)
         body_count = int(d["body_count"]) if "body_count" in d.files else len(self.v)
         self.sample = np.arange(0, body_count, 7)

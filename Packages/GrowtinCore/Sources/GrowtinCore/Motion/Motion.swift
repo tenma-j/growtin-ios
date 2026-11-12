@@ -294,13 +294,22 @@ public struct SkeletonJoint: Decodable, Sendable {
     public let name: String
     public let parent: String?
     public let head: [Double]
+    /// Articulation d'appoint (épaule, coude, hanche, genou) : placée au même point que cet os, elle prend la moitié
+    /// de sa rotation. La peau de la pliure la suit en partie, ce qui garde la pliure arrondie au lieu d'un angle vif.
+    public let half: String?
     public var position: Vec3 { Vec3(head[0], head[1], head[2]) }
+
+    public init(name: String, parent: String?, head: [Double], half: String? = nil) {
+        self.name = name; self.parent = parent; self.head = head; self.half = half
+    }
 }
 
 public struct Skeleton: Sendable {
     public let joints: [SkeletonJoint]
     public let parentIndex: [Int?]
     public let index: [String: Int]
+    /// Pour chaque articulation d'appoint, l'indice de l'os dont elle prend la moitié de la rotation.
+    public let halfSource: [Int?]
 
     public init(joints: [SkeletonJoint]) {
         self.joints = joints
@@ -308,7 +317,11 @@ public struct Skeleton: Sendable {
         for (i, j) in joints.enumerated() { idx[j.name] = i }
         index = idx
         parentIndex = joints.map { $0.parent.flatMap { idx[$0] } }
+        halfSource = joints.map { $0.half.flatMap { idx[$0] } }
     }
+
+    /// Rotation locale d'une articulation d'appoint : la moitié de celle de son os.
+    public static func halfRotation(_ q: Quat) -> Quat { Quat.slerp(.identity, q, 0.5) }
 
     /// Rotations et positions monde de chaque articulation (les parents précèdent toujours leurs enfants).
     public func worldTransforms(_ pose: ResolvedPose, rootLift: Double = 0) -> (rotations: [Quat], positions: [Vec3]) {
@@ -316,6 +329,7 @@ public struct Skeleton: Sendable {
         var P = [Vec3](repeating: .zero, count: joints.count)
         for (i, joint) in joints.enumerated() {
             var local = pose.rotations[joint.name] ?? .identity
+            if let half = joint.half { local = Self.halfRotation(pose.rotations[half] ?? .identity) }
             if let p = parentIndex[i] {
                 R[i] = R[p] * local
                 P[i] = P[p] + R[p].rotate(joint.position - joints[p].position)

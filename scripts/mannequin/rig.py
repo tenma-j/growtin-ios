@@ -3,6 +3,8 @@
 Convention commune avec l'app : dans la pose de référence, chaque os a l'orientation du repère monde
 (X vers la gauche du personnage, Y vers le haut, Z vers l'avant). Une pose donne pour chaque os une
 rotation locale (angles d'Euler en degrés, appliqués dans l'ordre X puis Y puis Z), relative à son parent.
+Articulations d'appoint (épaules, coudes, hanches, genoux) : placées au même point que l'os qu'elles doublent,
+elles prennent la moitié de sa rotation ; la peau de la pliure les suit, ce qui garde son volume.
 """
 import numpy as np
 
@@ -18,12 +20,24 @@ def euler(xyz):
     x, y, z = xyz
     return axis_angle([0, 0, 1], z) @ axis_angle([0, 1, 0], y) @ axis_angle([1, 0, 0], x)
 
+def half_rotation(R):
+    """Moitié d'une rotation (même axe, angle divisé par deux, par le chemin le plus court)."""
+    c = np.clip((np.trace(R) - 1) / 2, -1, 1); ang = np.arccos(c)
+    if ang < 1e-7:
+        return np.eye(3)
+    ax = np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]])
+    if np.linalg.norm(ax) < 1e-7:                       # demi-tour : l'axe est le vecteur propre de valeur 1
+        w, V = np.linalg.eigh((R + np.eye(3)) / 2); ax = V[:, np.argmax(w)]
+    return axis_angle(ax, np.degrees(ang / 2))
+
 class Rig:
-    def __init__(self, names, parents, heads):
+    def __init__(self, names, parents, heads, halves=None):
         self.names = list(names)
         self.index = {n: i for i, n in enumerate(self.names)}
         self.parents = [parents[n] for n in self.names]
         self.heads = np.array([heads[n] for n in self.names], float)
+        # Articulations d'appoint : {appoint: os} ; l'appoint prend la moitié de la rotation locale de l'os.
+        self.halves = dict(halves or {})
 
     def fk(self, local, root_offset=(0, 0, 0)):
         """local : {os: matrice 3×3}. Renvoie (rotations monde, positions monde des articulations)."""
@@ -31,6 +45,8 @@ class Rig:
         R = np.zeros((n, 3, 3)); P = np.zeros((n, 3))
         for i, name in enumerate(self.names):
             L = local.get(name, np.eye(3))
+            if name in self.halves:
+                L = half_rotation(local.get(self.halves[name], np.eye(3)))
             p = self.parents[i]
             if p is None:
                 R[i] = L; P[i] = self.heads[i] + np.asarray(root_offset, float)

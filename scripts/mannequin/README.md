@@ -40,6 +40,13 @@ pour l'homme comme pour la femme. Bras levés : la clavicule et l'omoplate parti
 scapulo-huméral), ce qui évite l'épaule écrasée du skinning linéaire. Mouvements au lit : `support` donne la hauteur
 du matelas sur lequel le corps repose.
 
+Articulations d'appoint (`upperarm01-half.L`, `lowerarm01-half.L`, `upperleg01-half.L`, `lowerleg01-half.L` et leurs
+pendants à droite) : placées au même point que l'os qu'elles doublent (champ `half` dans `mannequin.json`), elles
+prennent la moitié de sa rotation. Dans une pliure (épaule, coude, hanche, genou), la peau partagée entre deux os est
+répartie entre le parent, l'appoint et l'os, si bien qu'aucun mélange ne dépasse la moitié de l'angle : la pliure
+reste arrondie au lieu de se pincer en angle vif. Elles ne figurent pas dans les poses : l'app et les aperçus les
+recalculent à chaque image.
+
 Format binaire `GTM4` : en-tête (`GTM4`, nombre de maillages), puis pour chaque maillage (peau, tissu, liseré, découpés dans la même surface) :
 matière (uint32 : 0 peau, 1 tissu, 2 liseré), nombre de sommets, nombre d'indices (uint32), positions et normales
 (float32 ×3), indices d'os (uint16 ×4), poids (float32 ×4), indices de triangles (uint32).
