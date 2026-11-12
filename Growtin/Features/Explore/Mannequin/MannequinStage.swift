@@ -43,6 +43,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private var framing: (motion: Motion, keyPositions: [[Vec3]])?
     private var requestedMotion: String?
     private var appliedMotion: String?
+    /// Le premier cadrage est immédiat (pas de caméra qui part du sol) ; les suivants sont animés.
+    private var hasFramed = false
 
     /// Studio lumineux : fond uni, sol mat éclairé qui se fond dans le fond au loin (brouillard de la même couleur).
     /// Un peu plus tamisé quand l'app est en apparence sombre.
@@ -72,6 +74,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         camera.screenSpaceAmbientOcclusionIntensity = 1.1
         camera.screenSpaceAmbientOcclusionRadius = 0.12
         cameraNode.camera = camera
+        // Position d'attente, en face du personnage, avant le premier cadrage.
+        cameraNode.simdPosition = SIMD3(0, 1.05, 5.6)
+        cameraNode.simdLook(at: SIMD3(0, 0.9, 0))
         scene.rootNode.addChildNode(cameraNode)
         setDark(false)
     }
@@ -221,7 +226,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
 
         buildProps(motion.props, keyPositions: jointPositions)
         framing = (motion, jointPositions)
-        frameCamera(animated: true)
+        frameCamera(animated: hasFramed)
+        hasFramed = true
     }
 
     /// Rotation libre du personnage au doigt (en radians).
