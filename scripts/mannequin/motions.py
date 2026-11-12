@@ -191,6 +191,32 @@ def hands(pose, L=None, R=None, fingers_L=None, fingers_R=None, palm_L=None, pal
         p["_pinned"] = sorted(set(p.get("_pinned", [])) | {side})
     return p
 
+def joined_thumbs(pose, sides=("L", "R")):
+    """Mains jointes : pouces le long des index, dans le plan de la paume (sinon chaque pouce traverse l'autre main)."""
+    from ik import to_euler
+    from rig import axis_angle
+    p = pose
+    for side in sides:
+        R, Pos = ik.fk(p)
+        w = Pos[f"wrist.{side}"]
+        fingers = Pos[f"finger3-1.{side}"] - w; fingers /= np.linalg.norm(fingers)
+        across = Pos[f"finger2-1.{side}"] - Pos[f"finger5-1.{side}"]               # de l'auriculaire vers l'index
+        across -= fingers * (across @ fingers); across /= np.linalg.norm(across)
+        palm = np.cross(fingers, across) * (1 if side == "L" else -1)               # côté paume
+        want = 0.72 * fingers + 0.68 * across - 0.12 * palm; want /= np.linalg.norm(want)
+        for bone, child in (("finger1-1", "finger1-2"), ("finger1-2", "finger1-3")):
+            R, Pos = ik.fk(p)
+            u = Pos[f"{child}.{side}"] - Pos[f"{bone}.{side}"]; u /= np.linalg.norm(u)
+            axis = np.cross(u, want); sn = np.linalg.norm(axis)
+            if sn < 1e-6:
+                continue
+            delta = axis_angle(axis / sn, np.degrees(np.arctan2(sn, u @ want)))
+            parent = ik.rig.parents[ik.rig.index[f"{bone}.{side}"]]
+            local = R[parent].T @ delta @ R[f"{bone}.{side}"]
+            p = with_bones(p, {f"{bone}_{side}": to_euler(local)})
+        p = with_bones(p, {f"finger1-3_{side}": [0.0, 0.0, 0.0]})
+    return p
+
 STAND = joints(P("stand"))
 ANK = {s: STAND[f"foot.{s}"].copy() for s in "LR"}      # chevilles au sol, pieds largeur de bassin
 FLOOR_ANKLE = float(ANK["L"][1])
@@ -479,8 +505,8 @@ motion("mountain", breathe(mountain, cycle=6), yaw=15, props=(MAT,))
 # Salutation des bras : les bras montent devant soi jusqu'au-dessus de la tête, paumes jointes, puis redescendent.
 arms_front_up = P(mountain, upperarm01=[-90, 0, 5], lowerarm01=[-4, 0, 0])
 _up = P(mountain, clavicle=[0, 0, 10], spine01=[-4, 0, 0], neck01=[-6, 0, 0], head=[-8, 0, 0])
-salute = hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
-               fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3))
+salute = joined_thumbs(hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
+                             fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3)))
 motion("arm-raise", [K(0, mountain), K(2.4, arms_front_up), K(4.2, salute), K(5.6, salute), K(7.4, arms_front_up), K(9.4, mountain), K(10.4, mountain)],
        muscles=("shoulders",), yaw=40, props=(MAT,))
 
@@ -529,10 +555,12 @@ def tree(stage, arms):
         p = P(p, **open_hand(1.0))
         p = hands(p, L=[PALM, CHEST[0], CHEST[1]], R=[-PALM, CHEST[0], CHEST[1]], fingers_L=[0, 1, 0.25], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0.25], palm_R=[1, 0, 0], pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
+        p = joined_thumbs(p)
     elif arms == "up":
         p = P(p, clavicle=[0, 0, 10], **open_hand(1.0))
         p = hands(p, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3))
+        p = joined_thumbs(p)
     return p
 _tree = [tree(0, "down"), tree(1, "prayer"), tree(2, "prayer"), tree(2, "up")]
 _treeR = [mirror_pose(x) for x in _tree]
