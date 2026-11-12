@@ -61,8 +61,8 @@ Config/                   Entitlements (chiffrement des données)
 ## Personnage 3D des exercices
 
 Les séances de l'onglet Explorer sont montrées par un personnage 3D animé (femme ou homme selon le profil, modifiable),
-en tenue de sport, dans un studio lumineux rendu avec SceneKit (sol, ombres douces, rotation au doigt) : 49 mouvements,
-accessoires (chaise, table, mur, encadrement de porte, tapis de yoga).
+en tenue de sport, dans un studio lumineux rendu avec SceneKit (sol, ombres douces, rotation au doigt) : 50 mouvements,
+calculés séparément pour chaque corps, accessoires (chaise, table, mur, encadrement de porte, tapis de yoga, lit).
 Le corps provient des ressources de [MakeHuman](https://github.com/makehumancommunity/makehuman), publiées dans le
 domaine public (CC0 1.0). La marche et la boxe dans le vide sont des captures du
 [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) (financement NSF EIA-0196217) ; les autres

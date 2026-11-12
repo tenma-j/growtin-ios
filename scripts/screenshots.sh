@@ -92,6 +92,10 @@ for appearance in light dark; do
     capture_seq "light-47-pas-chasses" 3 0.7 -demoScreen exerciseStep -demoExercise cardio-leger -demoStep 1 -demoFigure male
     capture_seq "light-48-squat-chaise" 3 0.9 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 1 -demoFigure female
     capture "light-49-chat-vache" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 5 -demoFigure female
+    capture_seq "light-36-salutation-femme" 2 1.5 -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 1 -demoFigure female
+    capture "light-37-scan-corporel-lit" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 0 -demoFigure male
+    capture_seq "light-38-etirement-cuisses" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 2 -demoFigure female
+    capture_seq "light-39-etirement-hanches" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 3 -demoFigure male
     # En dernier : cette capture choisit le personnage féminin (préférence conservée par l'app).
     capture "light-44-exercice-3d-sol" -demoScreen exerciseFloor
   fi

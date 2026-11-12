@@ -16,7 +16,6 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private var meshNodes: [SCNNode] = []
     private var boneNodes: [SCNNode] = []
     private var asset: MannequinAsset?
-    private let library: MotionLibrary?
 
     // État d'animation, partagé avec le fil de rendu.
     private struct Key {
@@ -56,7 +55,6 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private var isDark: Bool?
 
     override init() {
-        library = MotionCatalog.library
         super.init()
         scene.fogStartDistance = 5
         scene.fogEndDistance = 14
@@ -151,7 +149,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     func play(_ motionID: String) {
         requestedMotion = motionID
         guard motionID != appliedMotion else { return }
-        guard let asset, let library, let motion = library.motion(motionID) ?? library.motion("breathe-stand") else { return }
+        // Chaque corps a sa propre version des mouvements (mains jointes, pieds posés au bon endroit).
+        guard let asset, let body = currentBody, let library = MotionCatalog.library(for: body),
+              let motion = library.motion(motionID) ?? library.motion("breathe-stand") else { return }
         appliedMotion = motionID
         currentMotion = motionID
 
@@ -199,7 +199,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             var lift = 0.0
             for frame in motion.keys {
                 let pose = scaled(library.resolve(frame.pose))
-                if pose.ground { lift = Grounding.lift(for: pose, skeleton: skeleton, samples: asset.samples) }
+                if pose.ground { lift = Grounding.lift(for: pose, skeleton: skeleton, samples: asset.samples) + (motion.support ?? 0) }
                 computed.append(key(pose, time: frame.t, lift: lift, ease: frame.ease))
                 jointPositions.append(skeleton.worldTransforms(pose, rootLift: lift).positions)
             }
@@ -350,6 +350,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         let dark = Self.pbr(UIColor(red: 0.18, green: 0.18, blue: 0.2, alpha: 1), roughness: 0.5, metalness: 0.4)
         let wall = Self.pbr(UIColor(red: 0.90, green: 0.90, blue: 0.88, alpha: 1), roughness: 0.95)
         let mat = Self.pbr(UIColor(red: 0.35, green: 0.56, blue: 0.46, alpha: 1), roughness: 0.92)
+        let linen = Self.pbr(UIColor(red: 0.93, green: 0.925, blue: 0.91, alpha: 1), roughness: 0.95)
+        let pillowCloth = Self.pbr(UIColor(red: 0.97, green: 0.965, blue: 0.95, alpha: 1), roughness: 0.95)
+        let throwCloth = Self.pbr(UIColor(red: 0.55, green: 0.66, blue: 0.6, alpha: 1), roughness: 0.95)
 
         for prop in props {
             let keyIndex = min(max(prop.key ?? 0, 0), max(keyPositions.count - 1, 0))
@@ -389,6 +392,20 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 box(0.08, 2.4, 3.0, SIMD3(0.04, 1.2, 0), wall, chamfer: 0)
             case "mat":
                 box(1.85, 0.012, 0.64, SIMD3(0, 0.006, 0), mat, chamfer: 0.005)
+            case "bed":
+                // Lit le long de X, tête vers −X : sommier en bois, matelas épais aux bords arrondis, tête de lit,
+                // plaid replié au pied. Posé au sol, le matelas est à 50 cm ; sinon il arrive sous l'ancre.
+                let mattressTop = prop.floor == true ? Float(0.5) : top
+                let frameTop = mattressTop - 0.19
+                for x: Float in [-0.92, 0.92] {
+                    for z: Float in [-0.64, 0.64] { box(0.06, 0.1, 0.06, SIMD3(x, 0.05, z), dark, chamfer: 0.01) }
+                }
+                box(2.0, max(frameTop - 0.1, 0.05), 1.46, SIMD3(0, (frameTop + 0.1) / 2, 0), wood, chamfer: 0.02)
+                box(1.96, 0.2, 1.42, SIMD3(0, mattressTop - 0.1, 0), linen, chamfer: 0.06)
+                box(0.07, mattressTop + 0.45, 1.46, SIMD3(-1.03, (mattressTop + 0.45) / 2, 0), wood, chamfer: 0.025)
+                box(0.42, 0.05, 1.38, SIMD3(0.7, mattressTop + 0.02, 0), throwCloth, chamfer: 0.025)
+            case "pillow":
+                box(0.34, 0.1, 0.56, SIMD3(0, top - 0.05, 0), pillowCloth, chamfer: 0.045)
             case "door":
                 // Montants juste à l'extérieur des avant-bras, quelle que soit la carrure du personnage.
                 var half: Float = 0.5

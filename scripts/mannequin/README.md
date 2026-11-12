@@ -17,9 +17,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
 ## Pipeline
 
 1. `export.py <makehuman/data> [--preview dossier]` : morphologie (athlétique, proportions idéales), tête de mannequin
-   lisse (sans visage), pose debout bras le long du corps, mains détendues ; tenue en coques séparées découpées
-   selon des champs scalaires lisses (bords nets) ; export de `Growtin/Resources/Mannequin/mannequin-{female,male}.bin`
-   et `mannequin.json`.
+   lisse (sans visage), pose debout bras le long du corps, mains détendues, poids lissés aux pliures (épaules,
+   hanches, coudes, genoux). La tenue fait partie de la surface du corps : la peau est découpée le long de courbes
+   nettes (champs scalaires lisses), la zone de tissu est légèrement gonflée et lissée ; rien ne peut passer à travers.
+   Export de `Growtin/Resources/Mannequin/mannequin-{female,male}.bin` (un maillage par matière) et `mannequin.json`.
 2. `motions.py` : bibliothèque des mouvements, écrite dans
    `Packages/GrowtinCore/Sources/GrowtinCore/Resources/motions.json` après contrôle des os et des régions.
    - poses clés en angles par articulation, ou par objectifs résolus par cinématique inverse (`ik.py`) : pieds qui
@@ -33,9 +34,12 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
 4. `solve_poses.py <corps.npz>` : outil d'auteur des poses au sol (à quatre pattes, tailleur, papillon, enfant).
 5. `mocap_preview.py` : aperçu d'un extrait de capture avant de l'ajouter.
 
-Les décalages de la racine sont calculés sur le squelette masculin ; `motions.json` porte sa hauteur de bassin
-(`referenceHeight`) et l'app les met à l'échelle de chaque corps.
+`motions.json` (format 3) contient une version de chaque mouvement par corps (`bodies.male`, `bodies.female`) :
+le script est rejoué pour chaque squelette, si bien que les mains jointes se touchent et que les pieds restent posés
+pour l'homme comme pour la femme. Bras levés : la clavicule et l'omoplate participent au mouvement (rythme
+scapulo-huméral), ce qui évite l'épaule écrasée du skinning linéaire. Mouvements au lit : `support` donne la hauteur
+du matelas sur lequel le corps repose.
 
-Format binaire `GTM4` : en-tête (`GTM4`, nombre de maillages), puis pour chaque maillage (corps, puis vêtements) :
+Format binaire `GTM4` : en-tête (`GTM4`, nombre de maillages), puis pour chaque maillage (peau, tissu, liseré, découpés dans la même surface) :
 matière (uint32 : 0 peau, 1 tissu, 2 liseré), nombre de sommets, nombre d'indices (uint32), positions et normales
 (float32 ×3), indices d'os (uint16 ×4), poids (float32 ×4), indices de triangles (uint32).

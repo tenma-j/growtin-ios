@@ -34,9 +34,16 @@ struct CueLabelStyle: LabelStyle {
     }
 }
 
-/// Bibliothèque de mouvements du personnage 3D, chargée une seule fois.
+/// Bibliothèques de mouvements du personnage 3D (une par corps : homme, femme), chargées une seule fois.
 enum MotionCatalog {
-    static let library: MotionLibrary? = try? MotionLibrary.bundled()
+    private static let libraries: [MannequinBody: MotionLibrary] = {
+        var out: [MannequinBody: MotionLibrary] = [:]
+        for body in MannequinBody.allCases { out[body] = try? MotionLibrary.bundled(body: body.rawValue) }
+        return out
+    }()
+
+    static func library(for body: MannequinBody) -> MotionLibrary? { libraries[body] ?? libraries[.male] }
+    static var library: MotionLibrary? { library(for: .male) }
 
     static func caption(for step: ExerciseStep) -> String? {
         BodyRegionLabel.text(step.focus ?? library?.motion(step.motion)?.muscles ?? [])

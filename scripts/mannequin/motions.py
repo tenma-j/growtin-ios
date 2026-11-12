@@ -11,8 +11,10 @@ Valeurs données pour le côté gauche ; une clé sans côté s'applique aux deu
   clavicle : Z > 0 hausser l'épaule · Y > 0 serrer l'omoplate vers l'arrière
 Racine : rotations successives autour des axes du monde, puis décalage ; chaque image clé est posée au sol.
 Les poses où un pied ou une main doit rester en place (pas chassés, fentes, squats, mains sur les genoux…)
-sont écrites par objectifs et résolues par cinématique inverse (ik.py), sur le squelette masculin ;
-l'app met les décalages de la racine à l'échelle de chaque corps.
+sont écrites par objectifs et résolues par cinématique inverse (ik.py), séparément pour chaque corps
+(homme, femme) : la bibliothèque contient une version de chaque mouvement par corps.
+Bras levés : la clavicule et l'omoplate participent au mouvement (rythme scapulo-huméral), ce qui évite
+l'épaule écrasée du skinning linéaire.
 Usage : python3 scripts/mannequin/motions.py
 """
 import json, os, sys
@@ -80,11 +82,85 @@ POSES = {
                    upperarm01=[-74, 0, 3], lowerarm01=[-4, 0, 0], lowerarm02=[0, -95, 0], wrist=[-28, 0, 74], neck01=[-6, 0, 0]),
     "crossLeggedLegs": P(upperleg01=[-127, 9, -85], lowerleg01=[121, 0, 0], foot=[0, 0, 0]),
     "chairLegs": P(upperleg01=[-88, 0, 4], lowerleg01=[88, 0, 0]),
-    "sitFloorLegs": P(root={"rot": [["y", 90]]}, upperleg01=[-90, 0, 2]),
 }
 
 META = json.load(open(MANNEQUIN))
-ik = IK(META["bodies"]["male"]["joints"], POSES)
+BODY = globals().get("BODY") or os.environ.get("MANNEQUIN_BODY", "male")
+ik = IK(META["bodies"][BODY]["joints"], POSES)
+PALM = 0.018 if BODY == "male" else 0.016          # demi-épaisseur de la main : paumes jointes sans se traverser
+SIDES = {n[:-2] for n in ik.names if n.endswith(".L")}
+
+def pinned_sides(pose):
+    """Côtés dont la main a été placée par objectif (cherche aussi dans les poses de base)."""
+    out = set()
+    while isinstance(pose, dict):
+        out |= set(pose.get("_pinned", []))
+        pose = pose.get("base")
+    return out
+
+def flatten(pose):
+    """Pose mise à plat (poses de base comprises), os latéralisés explicites."""
+    from motion_eval import resolve
+    r = resolve(pose, POSES)
+    out = {}
+    for k, v in r["bones"].items():
+        if max(abs(float(x)) for x in v) < 0.05:
+            continue                                              # rotation nulle : inutile de l'écrire
+        if k.endswith((".L", ".R")):
+            if k[:-2] in SIDES: out[k] = list(v)
+        elif k not in SIDES:
+            out[k] = list(v)
+    p = {"bones": out, "root": {"rot": [list(x) for x in r["root"]["rot"]], "offset": list(r["root"]["offset"])}}
+    if not r["ground"]: p["ground"] = False
+    pins = pinned_sides(pose)
+    if pins: p["_pinned"] = sorted(pins)
+    return p
+
+def rhythm_amount(elevation):
+    """Part de l'élévation du bras prise par la ceinture scapulaire (0 sous 60°, maximale bras à la verticale)."""
+    return float(np.clip((elevation - 60) / 108, 0, 1))
+
+def add_rhythm(pose, side, amount):
+    """Ajoute l'élévation de la clavicule et la rotation de l'omoplate (mêmes valeurs que les essais visuels)."""
+    p = flatten(pose)
+    for bone, deg in (("clavicle", 23.5), ("shoulder01", 22.0)):
+        key = f"{bone}.{side}"
+        cur = p["bones"].get(key, [0.0, 0.0, 0.0])
+        add = sided(side, [0, 0, deg * amount])
+        p["bones"][key] = [cur[0] + add[0], cur[1] + add[1], cur[2] + add[2]]
+    return p
+
+def arm_elevation(pose, side, target=None):
+    """Angle (degrés) entre le bras (ou la direction épaule → objectif) et l'axe du buste vers le bas."""
+    R, Pp = ik.fk(pose)
+    a = Pp[f"upperarm01.{side}"]
+    b = np.asarray(target, float) if target is not None else Pp[f"lowerarm01.{side}"]
+    d = b - a; d /= np.linalg.norm(d) + 1e-9
+    down = R["spine01"] @ np.array([0, -1.0, 0])
+    return float(np.degrees(np.arccos(np.clip(d @ down, -1, 1))))
+
+def shoulder_rhythm(pose):
+    """Bras libres levés : la ceinture scapulaire participe, le bras garde son orientation dans l'espace."""
+    pins = pinned_sides(pose)
+    todo = {}
+    for side in "LR":
+        if side in pins:
+            continue
+        amt = rhythm_amount(arm_elevation(pose, side))
+        if amt > 0.02:
+            todo[side] = amt
+    if not todo:
+        return pose
+    R0, _ = ik.fk(pose)
+    p = pose
+    for side, amt in todo.items():
+        p = add_rhythm(p, side, amt)
+    R1, _ = ik.fk(p)
+    from ik import to_euler
+    for side in todo:
+        parent = ik.rig.parents[ik.rig.index[f"upperarm01.{side}"]]
+        p["bones"][f"upperarm01.{side}"] = to_euler(R1[parent].T @ R0[f"upperarm01.{side}"])
+    return p
 
 def joints(pose):
     return ik.fk(pose)[1]
@@ -99,20 +175,32 @@ def legs(pose, L=None, R=None, pole_L=(0, 0, 1), pole_R=(0, 0, 1), **kw):
     return p
 
 def hands(pose, L=None, R=None, fingers_L=None, fingers_R=None, palm_L=None, palm_R=None, pole_L=(1, -1, -0.3), pole_R=(-1, -1, -0.3)):
-    """Place les poignets (et oriente les mains si « fingers » et « palm » sont donnés)."""
+    """Place les poignets (et oriente les mains si « fingers » et « palm » sont donnés).
+    Si la main est au-dessus de l'épaule, la ceinture scapulaire monte d'abord (rythme scapulo-huméral)."""
     p = pose if isinstance(pose, dict) else P(pose)
     for side, target, fingers, palm, pole in (("L", L, fingers_L, palm_L, pole_L), ("R", R, fingers_R, palm_R, pole_R)):
         if target is None:
             continue
+        amt = rhythm_amount(arm_elevation(p, side, target))
+        if amt > 0.02:
+            p = add_rhythm(p, side, amt)
         if fingers is not None:
             p = ik.place_hand(p, side, target, fingers, palm, pole)
         else:
             p = with_bones(p, ik.arm(p, side, target, pole))
+        p["_pinned"] = sorted(set(p.get("_pinned", [])) | {side})
     return p
 
 STAND = joints(P("stand"))
 ANK = {s: STAND[f"foot.{s}"].copy() for s in "LR"}      # chevilles au sol, pieds largeur de bassin
 FLOOR_ANKLE = float(ANK["L"][1])
+# Repères du corps (les objectifs suivent la morphologie : homme ou femme).
+SH = STAND["upperarm01.L"]                               # épaule gauche
+ARM = float(np.linalg.norm(STAND["lowerarm01.L"] - SH) + np.linalg.norm(STAND["wrist.L"] - STAND["lowerarm01.L"]))
+S_LEG = float(STAND["upperleg01.L"][1] / 0.933)          # proportions des jambes par rapport au squelette masculin
+S_HIP = float(STAND["upperleg01.L"][0] / 0.108)
+OVERHEAD = [float(SH[1] + 0.88 * ARM), float(STAND["head"][2])]                         # mains jointes au-dessus de la tête
+CHEST = [float(STAND["spine01"][1] - 0.07), float(STAND["spine01"][2] + (0.27 if BODY == "male" else 0.23))]
 
 def ankle(side, dx=0.0, dz=0.0, lift=0.0, x=None):
     a = ANK[side].copy()
@@ -136,20 +224,14 @@ def mirror_pose(pose):
     o = r["root"]["offset"]
     p = {"bones": out, "root": {"rot": [[a, -d if a in ("y", "z") else d] for a, d in r["root"]["rot"]], "offset": [-o[0], o[1], o[2]]}}
     if not r["ground"]: p["ground"] = False
+    pins = pinned_sides(pose)
+    if pins: p["_pinned"] = sorted({"L": "R", "R": "L"}[x] for x in pins)
     return p
 
-POSES["handsHips"] = hands(P("stand"), L=[0.175, 0.99, -0.07], R=[-0.175, 0.99, -0.07],
+_hip = [float(STAND["upperleg01.L"][0] + 0.067), float(STAND["spine04"][1] - 0.03), float(STAND["spine04"][2] + 0.03)]
+POSES["handsHips"] = hands(P("stand"), L=_hip, R=[-_hip[0], _hip[1], _hip[2]],
                            fingers_L=[-0.2, -0.45, 1], palm_L=[-1, 0, 0], fingers_R=[0.2, -0.45, 1], palm_R=[1, 0, 0],
                            pole_L=(1, 0.1, -0.6), pole_R=(-1, 0.1, -0.6))
-
-# Assis au sol jambes tendues, mains posées au sol à côté des hanches (le personnage regarde vers +X, sa gauche est en −Z).
-_sf0 = joints(P("sitFloorLegs"))
-_floor = _sf0["upperleg01.L"][1] - 0.1
-POSES["sitFloor"] = hands(P("sitFloorLegs"),
-                          L=[_sf0["upperleg01.L"][0] - 0.1, _floor + 0.055, _sf0["upperleg01.L"][2] - 0.17],
-                          R=[_sf0["upperleg01.R"][0] - 0.1, _floor + 0.055, _sf0["upperleg01.R"][2] + 0.17],
-                          fingers_L=[0.5, -0.1, -0.5], palm_L=[0, -1, 0], fingers_R=[0.5, -0.1, 0.5], palm_R=[0, -1, 0],
-                          pole_L=(-1, -0.2, -0.3), pole_R=(-1, -0.2, 0.3))
 
 # Assis en tailleur, mains posées sur les genoux, paumes vers le ciel.
 _cl = joints(P("crossLeggedLegs"))
@@ -167,8 +249,11 @@ POSES["chairSit"] = hands(P("chairLegs"),
                           pole_L=(1, -0.3, -0.6), pole_R=(-1, -0.3, -0.6))
 
 MOTIONS = {}
-def motion(mid, keys, muscles=(), yaw=30, props=(), pitch=8):
+def motion(mid, keys, muscles=(), yaw=30, props=(), pitch=8, support=None):
+    for k in keys:
+        k["pose"] = shoulder_rhythm(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"]))
     MOTIONS[mid] = {"keys": keys, "muscles": list(muscles), "camera": {"yaw": yaw, "pitch": pitch}, "props": list(props)}
+    if support: MOTIONS[mid]["support"] = support
 
 def prop(kind, anchor=None, key=0, offset=(0, 0, 0), yaw=0, floor=False):
     return {"kind": kind, "anchor": anchor, "key": key, "offset": [float(x) for x in offset], "yaw": float(yaw), "floor": floor}
@@ -186,13 +271,13 @@ def circle_keys(n, period, build, ease="linear"):
 
 # ─── Respiration ───
 motion("breathe-stand", breathe("stand"), yaw=20)
-ribs = hands(P("stand"), L=[0.15, 1.13, 0.0], R=[-0.15, 1.13, 0.0],
+_rib = [float(SH[0] * 0.71), float(STAND["spine02"][1] - 0.01), float(STAND["spine02"][2] + 0.10)]
+ribs = hands(P("stand"), L=_rib, R=[-_rib[0], _rib[1], _rib[2]],
              fingers_L=[-0.6, -0.1, 0.8], palm_L=[-1, 0, -0.2], fingers_R=[0.6, -0.1, 0.8], palm_R=[1, 0, -0.2],
              pole_L=(1, -0.4, -0.5), pole_R=(-1, -0.4, -0.5))
 motion("rib-breathing", breathe(ribs), muscles=("chest", "abs"), yaw=20)
 motion("look-far", [K(0, P("stand", head=[-5, 0, 0])), K(3, P("stand", head=[-6, 12, 0], **BREATH_IN)),
                     K(6, P("stand", head=[-5, 0, 0])), K(9, P("stand", head=[-6, -12, 0], **BREATH_IN)), K(12, P("stand", head=[-5, 0, 0]))], yaw=25)
-motion("lying-breathe", breathe(P("supine", upperarm01=[0, 60, 18], **open_hand(0.5)), cycle=6), yaw=0, pitch=25, props=(MAT,))
 motion("chair-breathe", breathe("chairSit"), yaw=30, props=(CHAIR,))
 motion("seated-breathe", breathe("crossLegged", cycle=6), yaw=15, props=(MAT,))
 
@@ -230,7 +315,7 @@ motion("warmup-march", circle_keys(16, 3.2, warmup), muscles=("shoulders", "quad
 
 # Pas chassés : deux pas vers la droite, deux vers la gauche ; les pieds se posent vraiment, le bassin suit.
 def side_steps():
-    step, lift, soft = 0.30, 0.07, -0.035
+    step, lift, soft = 0.30 * S_LEG, 0.07 * S_LEG, -0.035 * S_LEG
     def pose(fl, fr, cx, lifted=None):
         p = P("stand", root={"offset": [cx, soft, 0]}, upperarm01=[-10, 0, 9], lowerarm01=[-40, 0, 0], **open_hand(0.6))
         tl = ankle("L", x=fl, lift=lift if lifted == "L" else 0)
@@ -252,6 +337,7 @@ motion("side-steps", side_steps(), muscles=("quads", "glutes", "calves"), yaw=8)
 
 # Squats partiels : on descend bras vers l'avant, on remonte en levant les bras au-dessus de la tête.
 def squat(depth, back, lean, arms):
+    depth, back = depth * S_LEG, back * S_LEG
     p = P("stand", root={"rot": [["x", lean]], "offset": [0, -depth, -back]}, spine04=[4, 0, 0], neck01=[-lean * 0.45, 0, 0], **arms)
     return legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.15, 0, 1), pole_R=(-0.15, 0, 1))
 arms_up = dict(upperarm01=[-8, 0, 168], lowerarm01=[-4, 0, 0], clavicle=[0, 0, 10], **open_hand(0.8))
@@ -295,6 +381,7 @@ motion("calf-raises", [K(0, "stand"), K(1, P("stand", foot=[28, 0, 5], toes=[-34
 def lunge_keys(side, t0):
     o = other(side)
     def pose(front_dz, lift, cz, depth, rear_heel):
+        front_dz, lift, cz, depth, rear_heel = (x * S_LEG for x in (front_dz, lift, cz, depth, rear_heel))
         p = P("handsHips", root={"offset": [0, -depth, cz]}, spine01=[-3, 0, 0])
         p = legs(p, **{side: ankle(side, dz=front_dz, lift=lift)}, **{f"pole_{side}": (0, 0, 1)})
         return legs(p, **{o: ankle(o, lift=rear_heel)}, **{f"pole_{o}": (0, -0.2, 1)},
@@ -311,7 +398,8 @@ def quad_stretch():
     heel = joints(p)["foot.L"]
     return hands(p, L=heel + [0.02, 0.06, -0.06], pole_L=(0.6, -0.2, -1))
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
-                   L=[0.05, 0.95, -0.27], R=[-0.05, 0.95, -0.27], pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
+                   L=[0.05, float(STAND["root"][1] + 0.02), float(STAND["root"][2] - 0.14)],
+                   R=[-0.05, float(STAND["root"][1] + 0.02), float(STAND["root"][2] - 0.14)], pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
 motion("cooldown-stretch", [K(0, "stand"), K(1.5, quad_stretch()), K(4.5, quad_stretch()), K(6, "stand"),
                             K(7.5, chest_open), K(10.5, chest_open), K(12, "stand")], muscles=("quads", "chest"), yaw=60)
 
@@ -333,7 +421,6 @@ def neck_tilt(base):
     tilt = lambda a: P(base, neck01=[0, 0, a * 0.35], neck02=[0, 0, a * 0.25], neck03=[0, 0, a * 0.2], head=[0, 0, a * 0.2])
     return [K(0, base), K(1.5, tilt(32)), K(3, tilt(32)), K(4.5, base), K(6, tilt(-32)), K(7.5, tilt(-32)), K(9, base)]
 motion("neck-tilt", neck_tilt("stand"), muscles=("neck",), yaw=10)
-motion("seated-neck", neck_tilt("crossLegged"), muscles=("neck", "upperBack"), yaw=10, props=(MAT,))
 motion("chin-tucks", [K(0, "stand"), K(1, P("stand", neck01=[-10, 0, 0], neck03=[-4, 0, 0], head=[14, 0, 0])),
                       K(3, P("stand", neck01=[-10, 0, 0], neck03=[-4, 0, 0], head=[14, 0, 0])), K(4, "stand")], muscles=("neck",), yaw=75)
 _trap = P("stand", neck01=[0, 0, 12], neck02=[0, 0, 9], neck03=[0, 0, 7], head=[0, 0, 7], clavicle_L=[0, 0, -6], **open_hand(0.9, "R"))
@@ -344,16 +431,15 @@ trap = hands(_trap, R=_tp["head"] + _hr @ [0.0, 0.185, 0.0], fingers_R=_hr @ [1,
 motion("trap-stretch", [K(0, "stand"), K(2, trap), K(6, trap), K(8, "stand")], muscles=("neck", "upperBack"), yaw=15)
 
 # Ouverture de poitrine dans l'encadrement d'une porte : avant-bras sur les montants, le buste avance.
-DOOR_X = 0.47
 def doorway(lean):
     p = P("stand", root={"offset": [0, 0, lean]}, spine01=[-3 - lean * 30, 0, 0], head=[-3, 0, 0], **open_hand(0.9))
     p = legs(p, L=ankle("L"), R=ankle("R"))
     sh = joints(P("stand"))
     for side, sg in (("L", 1), ("R", -1)):
-        p = hands(p, **{side: [sg * (DOOR_X - 0.05), 1.62, sh[f"upperarm01.{side}"][2] + 0.02]},
+        p = hands(p, **{side: [sg * float(SH[0] + 0.21), float(SH[1] + 0.24), sh[f"upperarm01.{side}"][2] + 0.02]},
                   **{f"fingers_{side}": [0, 1, 0], f"palm_{side}": [-sg, 0, 0.25], f"pole_{side}": (sg, -0.6, 0)})
     return p
-motion("doorway-stretch", [K(0, doorway(0.0)), K(2, doorway(0.13)), K(5, doorway(0.13)), K(7, doorway(0.0))],
+motion("doorway-stretch", [K(0, doorway(0.0)), K(2, doorway(0.13 * S_LEG)), K(5, doorway(0.13 * S_LEG)), K(7, doorway(0.0))],
        muscles=("chest", "shoulders"), yaw=62, props=(prop("door", "root", 0, (0, 0, 0.1), floor=True),))
 
 squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-20, 0, 0], spine01=[-5, 0, 0])
@@ -361,7 +447,7 @@ motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "s
 
 # Cercles de hanches : le bassin dessine un cercle, les pieds restent posés, le buste reste au-dessus.
 def hip_circle(theta):
-    r = 0.08
+    r = 0.08 * S_LEG
     ox, oz = r * np.cos(theta), r * np.sin(theta)
     tilt_z, tilt_x = 8 * np.cos(theta), -7 * np.sin(theta)
     p = P("handsHips", root={"rot": [["z", -tilt_z], ["x", tilt_x]], "offset": [ox, -0.025, oz]},
@@ -370,8 +456,7 @@ def hip_circle(theta):
 motion("hip-circles", circle_keys(12, 4.8, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
 
 # Cercles de cheville : main gauche à plat contre le mur, genou droit levé, la cheville dessine des cercles.
-WALL_X = 0.66
-_ank_base = hands(P("stand", **open_hand(1.0, "L")), L=[WALL_X - 0.035, 1.36, -0.02], fingers_L=[0, 1, 0.1], palm_L=[1, 0, 0], pole_L=(0.2, -1, -0.4))
+_ank_base = hands(P("stand", **open_hand(1.0, "L")), L=[float(SH[0] + 0.415), float(SH[1] - 0.02), -0.02], fingers_L=[0, 1, 0.1], palm_L=[1, 0, 0], pole_L=(0.2, -1, -0.4))
 def ankle_circle(theta):
     return P(_ank_base, upperleg01_R=[-38, 0, 3], lowerleg01_R=[52, 0, 0],
              foot_R=sided("R", [22 * np.cos(theta), 14 * np.sin(theta), -16 * np.sin(theta)]))
@@ -394,7 +479,7 @@ motion("mountain", breathe(mountain, cycle=6), yaw=15, props=(MAT,))
 # Salutation des bras : les bras montent devant soi jusqu'au-dessus de la tête, paumes jointes, puis redescendent.
 arms_front_up = P(mountain, upperarm01=[-90, 0, 5], lowerarm01=[-4, 0, 0])
 _up = P(mountain, clavicle=[0, 0, 10], spine01=[-4, 0, 0], neck01=[-6, 0, 0], head=[-8, 0, 0])
-salute = hands(_up, L=[0.03, 1.83, -0.03], R=[-0.03, 1.83, -0.03], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
+salute = hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
                fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3))
 motion("arm-raise", [K(0, mountain), K(2.4, arms_front_up), K(4.2, salute), K(5.6, salute), K(7.4, arms_front_up), K(9.4, mountain), K(10.4, mountain)],
        muscles=("shoulders",), yaw=40, props=(MAT,))
@@ -409,11 +494,11 @@ motion("forward-fold", [K(0, mountain), K(3, fold), K(6, fold), K(7.6, half_up),
 # Guerrier II : pieds très écartés, genou avant plié au-dessus de la cheville, bras à l'horizontale, regard sur la main avant.
 def warrior(bend):
     """bend = 0 : jambes tendues, pieds écartés ; 1 : guerrier II (côté gauche devant)."""
-    root = P("stand", root={"offset": [0.1 * bend, -0.14 - 0.09 * bend, 0]},
+    root = P("stand", root={"offset": [0.1 * bend * S_LEG, (-0.14 - 0.09 * bend) * S_LEG, 0]},
              upperarm01=[0, 0, 86 * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
              neck01=[0, 26 * bend, 0], neck02=[0, 16 * bend, 0], head=[0, 26 * bend, 0])
     # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
-    front = np.array([0.57, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-0.57, FLOOR_ANKLE, ANK["R"][2]])
+    front = np.array([0.57 * S_LEG, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-0.57 * S_LEG, FLOOR_ANKLE, ANK["R"][2]])
     p = legs(root, L=front, R=back, pole_L=(1, 0, 0.25), pole_R=(0, 0, 1),
              foot_yaw_L=90 * min(1, bend * 1.6), foot_yaw_R=12)
     return p
@@ -428,7 +513,7 @@ motion("warrior-two", [K(0, w0), K(1.6, wt), K(3.2, wl), K(5.2, P(wl, **CHEST_IN
 # mains jointes devant la poitrine, puis bras au-dessus de la tête.
 def tree(stage, arms):
     """stage : 0 debout, 1 pied contre le mollet, 2 pied contre la cuisse ; arms : « down », « prayer », « up »."""
-    shift = [0.0, 0.07, 0.085][stage]
+    shift = [0.0, 0.07 * S_HIP, 0.085 * S_HIP][stage]
     p = P(mountain, root={"offset": [shift, -0.01, 0]}, upperleg01_R=[0, 0, 5], foot_R=[0, 0, -5])
     p = legs(p, L=ankle("L"))
     if stage:
@@ -442,11 +527,11 @@ def tree(stage, arms):
             p = legs(p, R=target, pole_R=(-1, -0.1, 0.35), foot_yaw_R=-90, foot_pitch_R=75)
     if arms == "prayer":
         p = P(p, **open_hand(1.0))
-        p = hands(p, L=[0.03, 1.19, 0.15], R=[-0.03, 1.19, 0.15], fingers_L=[0, 1, 0.25], palm_L=[-1, 0, 0],
+        p = hands(p, L=[PALM, CHEST[0], CHEST[1]], R=[-PALM, CHEST[0], CHEST[1]], fingers_L=[0, 1, 0.25], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0.25], palm_R=[1, 0, 0], pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
     elif arms == "up":
         p = P(p, clavicle=[0, 0, 10], **open_hand(1.0))
-        p = hands(p, L=[0.03, 1.84, -0.03], R=[-0.03, 1.84, -0.03], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
+        p = hands(p, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3))
     return p
 _tree = [tree(0, "down"), tree(1, "prayer"), tree(2, "prayer"), tree(2, "up")]
@@ -480,26 +565,84 @@ child = P("stand", root={"rot": [["x", 94.5], ["y", 90]]}, upperleg01=[-154.5, 0
           upperarm01=[-166, 0, 6], lowerarm01=[-4, 0, 0], neck01=[-5, 0, 0], **open_hand(0.8))
 motion("child-pose", [K(0, child), K(3, P(child, **BREATH_IN)), K(6, child)], muscles=("lowerBack",), yaw=0, props=(MAT,))
 
-knees_up = P("supine", upperleg01=[-88, 0, 2], lowerleg01=[90, 0, 0], foot=[-6, 0, 0], upperarm01=[0, 0, 82], lowerarm01=[-4, 0, 0], **open_hand(0.6))
-twist = lambda a: P(knees_up, root={"rot": [["y", a], ["x", -90], ["y", 90]]}, spine05=[0, -a * 0.3, 0], spine04=[0, -a * 0.3, 0], spine03=[0, -a * 0.4, 0])
-motion("supine-twist", [K(0, knees_up), K(2, twist(42)), K(5, twist(42)), K(7, knees_up), K(9, twist(-42)), K(12, twist(-42)), K(14, knees_up)],
-       muscles=("lowerBack", "glutes"), yaw=-70, pitch=28, props=(MAT,))
-wall_legs = P("supine", upperleg01=[-88, 0, 2], foot=[-4, 0, 0], upperarm01=[0, 60, 40], **open_hand(0.5))
-motion("legs-up-wall", [K(0, wall_legs), K(3, P(wall_legs, **BREATH_IN)), K(6, wall_legs)], muscles=("hamstrings",), yaw=0,
-       props=(prop("wall", "lowerleg01.L", 0, (0.09, 0, 0), floor=True), MAT))
+# ─── Au lit : scan corporel et étirements du soir ───
+BED_TOP = 0.5
+BED_LYING = prop("bed", "root", 0, (-0.05, 0, 0), floor=True)            # allongé dans la longueur, tête vers −X
+PILLOW = prop("pillow", "head", 0, (-0.03, -0.085, 0))                    # sous l'arrière de la tête
+BED_SIT = prop("bed", "root", 0, (0, -0.105, -0.55))                      # assis au bord, le lit derrière soi
+HEAD_ON_PILLOW = dict(neck01=[16, 0, 0], head=[6, 0, 0])
 
-# Flexion assise : jambes tendues au sol, le buste s'allonge vers l'avant, mains le long des tibias.
-_sf = P("sitFloorLegs", root={"rot": [["x", 38], ["y", 90]]}, upperleg01=[-128, 0, 2], lowerleg01=[6, 0, 0], foot=[-8, 0, 0],
-        spine04=[6, 0, 0], spine03=[6, 0, 0], spine02=[6, 0, 0], neck01=[10, 0, 0], **open_hand(0.7))
-_sj = joints(_sf)
-seated_fold = hands(_sf, L=_sj["lowerleg01.L"] * 0.45 + _sj["foot.L"] * 0.55 + [0.02, 0.07, 0],
-                    R=_sj["lowerleg01.R"] * 0.45 + _sj["foot.R"] * 0.55 + [-0.02, 0.07, 0],
-                    pole_L=(-0.3, -0.5, -1), pole_R=(-0.3, -0.5, 1))
-motion("seated-forward-fold", [K(0, "sitFloor"), K(3, seated_fold), K(6, seated_fold), K(9, "sitFloor")], muscles=("hamstrings", "lowerBack"),
-       yaw=0, props=(MAT,))
-butterfly = P(upperleg01=[-138, 7, -74], lowerleg01=[114, 0, 0], foot=[-100, 0, -30], upperarm01=[-50, 0, -6], lowerarm01=[-22, 0, 0], **fist(0.5))
-motion("butterfly", [K(0, butterfly), K(3, P(butterfly, upperleg01=[-138, 7, -80], spine02=[4, 0, 0])), K(6, butterfly)],
-       muscles=("quads", "glutes"), yaw=15, props=(MAT,))
+lying_bed = P("supine", upperarm01=[0, 30, 8], lowerarm01=[-8, 0, 0], **HEAD_ON_PILLOW, **open_hand(0.5))
+motion("bed-rest", breathe(lying_bed, cycle=6), yaw=8, pitch=30, props=(BED_LYING, PILLOW), support=BED_TOP)
+
+motion("bed-sit-breathe", breathe("chairSit"), yaw=28, pitch=10, props=(BED_SIT,))
+motion("bed-neck", neck_tilt("chairSit"), muscles=("neck", "upperBack"), yaw=12, pitch=10, props=(BED_SIT,))
+
+# Arrière des cuisses : au bord du lit, une jambe tendue talon au sol, buste penché en avant dos long.
+_seat = joints("chairSit")
+LEG = float(np.linalg.norm(STAND["lowerleg01.L"] - STAND["upperleg01.L"]) + np.linalg.norm(STAND["foot.L"] - STAND["lowerleg01.L"]))
+def hamstring(side, hinge):
+    o = other(side)
+    p = P("chairSit", root={"rot": [["x", hinge]]}, spine04=[-hinge * 0.15, 0, 0], neck01=[-hinge * 0.4, 0, 0], **open_hand(0.6))
+    hip = joints(p)[f"upperleg01.{side}"]
+    floor_ankle = float(_seat[f"foot.{o}"][1])          # niveau du sol dans cette pose (avant mise au sol)
+    drop = hip[1] - (floor_ankle + 0.02)
+    reach = float(np.sqrt(max(LEG ** 2 - drop ** 2, 0.0))) * 0.985
+    p = legs(p, **{side: [float(hip[0]), floor_ankle + 0.02, float(hip[2] + reach)]}, **{f"foot_pitch_{side}": -28})
+    p = legs(p, **{o: _seat[f"foot.{o}"]})
+    J = joints(p)
+    knee = J[f"lowerleg01.{side}"]; thigh = (J[f"upperleg01.{side}"] + knee) / 2
+    hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.075, 0]
+    return hands(p, L=hand_on + [0.03, 0, 0], R=hand_on + [-0.03, 0, 0],
+                 fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0, -0.3, 1], palm_R=[0, -1, 0],
+                 pole_L=(1, -0.6, -0.3), pole_R=(-1, -0.6, -0.3))
+hL0, hL1 = hamstring("L", 0), hamstring("L", 24)
+hR0, hR1 = mirror_pose(hL0), mirror_pose(hL1)
+motion("bed-hamstring", [K(0, "chairSit"), K(1.6, hL0), K(3.4, hL1), K(7.4, hL1), K(9.0, hL0), K(10.4, "chairSit"),
+                         K(12.0, hR0), K(13.8, hR1), K(17.8, hR1), K(19.4, hR0), K(20.8, "chairSit")],
+       muscles=("hamstrings", "calves"), yaw=62, pitch=8, props=(BED_SIT,))
+
+# Hanches (« 4 ») : cheville droite posée sur le genou gauche, genou droit ouvert, léger penché en avant.
+def figure4(lean):
+    p = P("chairSit", spine04=[lean * 0.4, 0, 0], spine03=[lean * 0.3, 0, 0], spine02=[lean * 0.2, 0, 0], neck01=[-lean * 0.3, 0, 0],
+          **open_hand(0.6))
+    knee_L = joints(p)["lowerleg01.L"]
+    p = legs(p, R=knee_L + [0.0, 0.1, -0.06], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
+    J = joints(p)
+    return hands(p, L=J["foot.R"] + [0.0, 0.06, 0.02], R=J["lowerleg01.R"] + [0.03, 0.07, -0.02],
+                 fingers_L=[-0.4, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.2, -0.3, 1], palm_R=[0, -1, 0],
+                 pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
+f0, f1 = figure4(0), figure4(16)
+f0m, f1m = mirror_pose(f0), mirror_pose(f1)
+motion("bed-figure4", [K(0, "chairSit"), K(1.8, f0), K(3.4, f1), K(7.4, f1), K(8.8, f0), K(10.4, "chairSit"),
+                       K(12.2, f0m), K(13.8, f1m), K(17.8, f1m), K(19.2, f0m), K(20.8, "chairSit")],
+       muscles=("glutes", "lowerBack"), yaw=22, pitch=12, props=(BED_SIT,))
+
+# Torsion allongée sur le lit (bras ouverts sans dépasser du matelas).
+knees_bed = P("supine", upperleg01=[-88, 0, 2], lowerleg01=[90, 0, 0], foot=[-6, 0, 0], upperarm01=[0, 0, 52], lowerarm01=[-10, 0, 0],
+              **HEAD_ON_PILLOW, **open_hand(0.6))
+twist_bed = lambda a: P(knees_bed, root={"rot": [["y", a], ["x", -90], ["y", 90]]}, spine05=[0, -a * 0.3, 0], spine04=[0, -a * 0.3, 0],
+                        spine03=[0, -a * 0.4, 0], neck01=[16, a * 0.4, 0])
+motion("bed-twist", [K(0, knees_bed), K(2, twist_bed(40)), K(5, twist_bed(40)), K(7, knees_bed), K(9, twist_bed(-40)), K(12, twist_bed(-40)),
+                     K(14, knees_bed)], muscles=("lowerBack", "glutes"), yaw=-60, pitch=30, props=(BED_LYING, PILLOW), support=BED_TOP)
+
+# Genoux vers la poitrine : mains posées sur les genoux, coudes ouverts sur les côtés.
+def knees_chest(pull):
+    p = P("supine", upperleg01=[-128 - 10 * pull, 0, 8], lowerleg01=[138, 0, 0], foot=[25, 0, 0], **HEAD_ON_PILLOW, **open_hand(0.7))
+    R, J = ik.fk(p)
+    up = R["root"] @ np.array([0, 0, 1.0])               # « avant » du corps allongé : vers le plafond
+    toward_feet = R["root"] @ np.array([0, -1.0, 0])
+    out = {}
+    for s_ in "LR":
+        side_dir = R["root"] @ np.array([1.0 if s_ == "L" else -1.0, 0, 0])
+        out[s_] = J[f"lowerleg01.{s_}"] + up * 0.06 + toward_feet * 0.02
+    return hands(p, L=out["L"], R=out["R"],
+                 fingers_L=toward_feet + 0.4 * (R["root"] @ np.array([-1.0, 0, 0])), palm_L=-up,
+                 fingers_R=toward_feet + 0.4 * (R["root"] @ np.array([1.0, 0, 0])), palm_R=-up,
+                 pole_L=tuple(R["root"] @ np.array([1.0, 0, -0.3])), pole_R=tuple(R["root"] @ np.array([-1.0, 0, -0.3])))
+kc0, kc1 = knees_chest(0), knees_chest(1)
+motion("bed-knees-chest", [K(0, kc0), K(3, kc1), K(6, kc0)], muscles=("lowerBack", "glutes"), yaw=-28, pitch=24,
+       props=(BED_LYING, PILLOW), support=BED_TOP)
 
 # ─── Assis sur une chaise ───
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
@@ -559,33 +702,47 @@ def rounded(x):
     if isinstance(x, float): return round(x, 4 if abs(x) < 2 else 1)
     return x
 
-if __name__ == "__main__":
-    bones = [j["name"] for j in META["bodies"]["male"]["joints"]]
-    regions = REGIONS
-    # Contrôles : os et régions connus
-    def check_pose(p, where):
+def strip_private(x):
+    """Retire les annotations internes (« _pinned »…) avant l'écriture du JSON."""
+    if isinstance(x, dict): return {k: strip_private(v) for k, v in x.items() if not k.startswith("_")}
+    if isinstance(x, list): return [strip_private(v) for v in x]
+    return x
+
+def check(poses, motions, bones, where):
+    def check_pose(p, ctx):
         if isinstance(p, str):
-            assert p in POSES, f"{where} : pose inconnue {p}"
+            assert p in poses, f"{where}/{ctx} : pose inconnue {p}"
             return
         for b in p.get("bones", {}):
-            assert b in bones or (b + ".L") in bones, f"{where} : os inconnu {b}"
-        if "base" in p: check_pose(p["base"], where)
-    for name, pose in POSES.items(): check_pose(pose, name)
-    for mid, m in MOTIONS.items():
+            assert b in bones or (b + ".L") in bones, f"{where}/{ctx} : os inconnu {b}"
+        if "base" in p: check_pose(p["base"], ctx)
+    for name, pose in poses.items(): check_pose(pose, name)
+    for mid, m in motions.items():
         for k in m["keys"]: check_pose(k["pose"], mid)
-        for r in m["muscles"]: assert r in regions, f"{mid} : région inconnue {r}"
+        for r in m["muscles"]: assert r in REGIONS, f"{where}/{mid} : région inconnue {r}"
         ts = [k["t"] for k in m["keys"]]; assert ts == sorted(ts) and ts[0] == 0, mid
         for pr in m["props"]:
-            assert pr["anchor"] is None or pr["anchor"] in bones, f"{mid} : ancre inconnue {pr['anchor']}"
+            assert pr["anchor"] is None or pr["anchor"] in bones, f"{where}/{mid} : ancre inconnue {pr['anchor']}"
+
+if __name__ == "__main__":
+    import runpy
+    bones = [j["name"] for j in META["bodies"]["male"]["joints"]]
     bvh_root = os.environ.get("CMU_BVH", "/home/user/una-dinosauria/cmu-mocap/data")
-    if os.path.isdir(bvh_root):
-        MOTIONS.update(build_mocap(bvh_root, META["bodies"]["male"]["joints"]))
-    else:
-        print("Captures CMU introuvables : les mouvements captés ne sont pas régénérés.")
-        old = json.load(open(OUT))["motions"]
-        MOTIONS.update({k: v for k, v in old.items() if "clip" in v and k in {m[0] for m in MOCAP}})
-    reference = float(META["bodies"]["male"]["joints"][0]["head"][1])
-    json.dump({"version": 2, "referenceHeight": reference, "bones": bones, "regions": regions,
-               "poses": rounded(POSES), "motions": rounded(MOTIONS)},
+    previous = json.load(open(OUT)) if os.path.exists(OUT) else {}
+    bodies = {}
+    for body in ("male", "female"):
+        # Le script est rejoué pour chaque corps : objectifs et cinématique inverse sur son propre squelette.
+        ns = runpy.run_path(os.path.abspath(__file__), init_globals={"BODY": body}, run_name=f"motions_{body}")
+        poses, motions = ns["POSES"], ns["MOTIONS"]
+        check(poses, motions, bones, body)
+        if os.path.isdir(bvh_root):
+            motions.update(ns["build_mocap"](bvh_root, META["bodies"][body]["joints"]))
+        else:
+            print("Captures CMU introuvables : les mouvements captés du fichier précédent sont conservés.")
+            old = previous.get("bodies", {}).get(body, {}).get("motions", previous.get("motions", {}))
+            motions.update({k: v for k, v in old.items() if "clip" in v and k in {m[0] for m in MOCAP}})
+        bodies[body] = {"poses": rounded(strip_private(poses)), "motions": rounded(strip_private(motions))}
+        print(f"{body} : {len(motions)} mouvements")
+    json.dump({"version": 3, "bones": bones, "regions": REGIONS, "bodies": bodies},
               open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
-    print(len(MOTIONS), "mouvements →", OUT, os.path.getsize(OUT) // 1024, "Ko")
+    print("→", OUT, os.path.getsize(OUT) // 1024, "Ko")

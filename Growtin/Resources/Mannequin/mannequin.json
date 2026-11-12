@@ -18,7 +18,7 @@
      ],
      "tail": [
       -0.0,
-      0.93875,
+      0.93876,
       -0.07229
      ]
     },
@@ -27,7 +27,7 @@
      "parent": "root",
      "head": [
       -0.0,
-      0.93875,
+      0.93876,
       -0.07229
      ],
      "tail": [
@@ -46,7 +46,7 @@
      ],
      "tail": [
       0.0,
-      1.08228,
+      1.08229,
       -0.09522
      ]
     },
@@ -55,7 +55,7 @@
      "parent": "spine04",
      "head": [
       0.0,
-      1.08228,
+      1.08229,
       -0.09522
      ],
      "tail": [
@@ -88,7 +88,7 @@
      ],
      "tail": [
       0.0,
-      1.48404,
+      1.48405,
       -0.0638
      ]
     },
@@ -713,7 +713,7 @@
      "parent": "root",
      "head": [
       -0.0,
-      0.93875,
+      0.93876,
       -0.07229
      ],
      "tail": [
@@ -746,7 +746,7 @@
      ],
      "tail": [
       0.14476,
-      0.51482,
+      0.51483,
       -0.04846
      ]
     },
@@ -755,7 +755,7 @@
      "parent": "upperleg02.L",
      "head": [
       0.14476,
-      0.51482,
+      0.51483,
       -0.04846
      ],
      "tail": [
@@ -797,7 +797,7 @@
      "parent": "root",
      "head": [
       -0.0,
-      0.93875,
+      0.93876,
       -0.07229
      ],
      "tail": [
@@ -830,7 +830,7 @@
      ],
      "tail": [
       -0.14476,
-      0.51482,
+      0.51483,
       -0.04846
      ]
     },
@@ -839,7 +839,7 @@
      "parent": "upperleg02.R",
      "head": [
       -0.14476,
-      0.51482,
+      0.51483,
       -0.04846
      ],
      "tail": [
@@ -881,7 +881,7 @@
      "parent": "spine01",
      "head": [
       0.0,
-      1.48404,
+      1.48405,
       -0.0638
      ],
      "tail": [
@@ -964,18 +964,18 @@
    "meshes": [
     {
      "material": 0,
-     "vertexCount": 13380,
-     "indexCount": 80268
+     "vertexCount": 13117,
+     "indexCount": 78120
     },
     {
      "material": 1,
-     "vertexCount": 1462,
-     "indexCount": 5040
+     "vertexCount": 734,
+     "indexCount": 3687
     },
     {
      "material": 2,
-     "vertexCount": 999,
-     "indexCount": 2088
+     "vertexCount": 270,
+     "indexCount": 1017
     }
    ]
   },
@@ -1937,28 +1937,18 @@
    "meshes": [
     {
      "material": 0,
-     "vertexCount": 13380,
-     "indexCount": 80268
+     "vertexCount": 13198,
+     "indexCount": 77316
     },
     {
      "material": 1,
-     "vertexCount": 1303,
-     "indexCount": 3960
+     "vertexCount": 1653,
+     "indexCount": 7521
     },
     {
      "material": 2,
-     "vertexCount": 998,
-     "indexCount": 2040
-    },
-    {
-     "material": 1,
-     "vertexCount": 2616,
-     "indexCount": 7308
-    },
-    {
-     "material": 2,
-     "vertexCount": 886,
-     "indexCount": 1788
+     "vertexCount": 507,
+     "indexCount": 1833
     }
    ]
   }

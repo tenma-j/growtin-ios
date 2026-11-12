@@ -80,8 +80,10 @@ class Body:
 
     def lifts(self, motion, poses):
         out, prev = [], 0.0
+        support = motion.get("support") or 0.0
         for key in motion["keys"]:
-            prev = self.lift(resolve(key["pose"], poses), prev)
+            p = resolve(key["pose"], poses)
+            prev = self.lift(p, prev - support) + support if p["ground"] else prev
             out.append(prev)
         return out
 
@@ -108,6 +110,12 @@ def boxes_for(prop, anchor):
         out.append(((0.03, 1.1, 0), (0.03, 1.1, 1.2)))
     elif k == "mat":
         out.append(((0, 0.003, 0), (0.95, 0.003, 0.31)))
+    elif k == "bed":
+        top = 0.5 if prop.get("floor") else a[1]
+        out += [((0, (top - 0.09) / 2, 0), (1.0, (top - 0.09) / 2, 0.73)), ((0, top - 0.1, 0), (0.98, 0.1, 0.71)),
+                ((-1.03, (top + 0.45) / 2, 0), (0.035, (top + 0.45) / 2, 0.73))]
+    elif k == "pillow":
+        out.append(((0, a[1] - 0.05, 0), (0.17, 0.05, 0.28)))
     elif k == "door":
         for x in (-0.5, 0.5):
             out.append(((x, 1.025, 0), (0.035, 1.025, 0.06)))
@@ -118,7 +126,7 @@ def boxes_for(prop, anchor):
     for center, half in out:
         cc = np.array(center, float)
         cc = Ry @ cc if k in ("wall",) else cc
-        if k in ("chair", "table", "door"):
+        if k in ("chair", "table", "door", "bed", "pillow"):
             cc = Ry @ np.array([center[0], 0, center[2]]) + [0, center[1], 0]
             res.append((cc + [a[0], 0, a[2]], half, Ry))
         elif k == "wall":
@@ -137,6 +145,16 @@ def box_mesh(center, half, R):
     for k in range(3): np.add.at(n, tris[:, k], fn)
     n /= np.linalg.norm(n, axis=1, keepdims=True)
     return v, n, tris
+
+def library_for(lib, body_name):
+    """Bibliothèque d'un corps (format 3 : une version par corps ; format 2 : bibliothèque unique)."""
+    if "bodies" in lib:
+        sub = lib["bodies"][body_name]
+        return {"poses": sub["poses"], "motions": sub["motions"]}
+    return lib
+
+def body_name_of(npz_path):
+    return "female" if "female" in os.path.basename(npz_path) else "male"
 
 def sheet(body, motion_ids, lib, path, size=300, export_mod=None):
     from PIL import Image, ImageDraw
@@ -201,6 +219,6 @@ def sheet(body, motion_ids, lib, path, size=300, export_mod=None):
     out.save(path)
 
 if __name__ == "__main__":
-    lib = json.load(open(sys.argv[1])); body = Body(sys.argv[2])
+    lib = library_for(json.load(open(sys.argv[1])), body_name_of(sys.argv[2])); body = Body(sys.argv[2])
     ids = sys.argv[4].split(",") if len(sys.argv) > 4 else list(lib["motions"])
     sheet(body, ids, lib, sys.argv[3])

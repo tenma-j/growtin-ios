@@ -26,9 +26,11 @@ struct MotionTests {
         #expect(right == Quat(eulerXYZ: Vec3(-10, -20, -30)))
     }
 
-    @Test("La bibliothèque est cohérente : os, régions, temps")
-    func libraryIsConsistent() {
+    @Test("La bibliothèque est cohérente : os, régions, temps (pour chaque corps)", arguments: MotionLibrary.bodies)
+    func libraryIsConsistent(body: String) throws {
+        let library = try MotionLibrary.bundled(body: body)
         #expect(library.motions.count >= 40)
+        #expect(Set(library.motions.keys) == Set(self.library.motions.keys), "\(body) : mêmes mouvements pour chaque corps")
         let bones = Set(library.bones), regions = Set(library.regions)
         for (id, motion) in library.motions {
             if let clip = motion.clip {
@@ -44,7 +46,7 @@ struct MotionTests {
             for region in motion.muscles { #expect(regions.contains(region), "\(id) : \(region)") }
             for prop in motion.props {
                 if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
-                #expect(["chair", "table", "wall", "mat", "door"].contains(prop.kind), "\(id) : \(prop.kind)")
+                #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow"].contains(prop.kind), "\(id) : \(prop.kind)")
             }
             for key in motion.keys {
                 let pose = library.resolve(key.pose)
@@ -56,8 +58,9 @@ struct MotionTests {
         }
     }
 
-    @Test("Chaque étape d'exercice a une animation existante")
-    func everyStepHasMotion() {
+    @Test("Chaque étape d'exercice a une animation existante (pour chaque corps)", arguments: MotionLibrary.bodies)
+    func everyStepHasMotion(body: String) throws {
+        let library = try MotionLibrary.bundled(body: body)
         let regions = Set(library.regions)
         for exercise in ExerciseLibrary.all {
             for step in exercise.steps {
@@ -67,9 +70,10 @@ struct MotionTests {
         }
     }
 
-    @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit")
-    func plantedFeet() throws {
-        // Squelette masculin de l'app : celui sur lequel les décalages de la racine ont été calculés.
+    @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit", arguments: MotionLibrary.bodies)
+    func plantedFeet(body: String) throws {
+        // Chaque corps a sa propre version des mouvements, calculée sur son squelette.
+        let library = try MotionLibrary.bundled(body: body)
         struct Meta: Decodable {
             struct Body: Decodable { let joints: [SkeletonJoint] }
             let bodies: [String: Body]
@@ -78,7 +82,7 @@ struct MotionTests {
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let url = root.appendingPathComponent("Growtin/Resources/Mannequin/mannequin.json")
         let meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: url))
-        let skeleton = Skeleton(joints: try #require(meta.bodies["male"]).joints)
+        let skeleton = Skeleton(joints: try #require(meta.bodies[body]).joints)
         let feet = ["foot.L", "foot.R"].compactMap { skeleton.index[$0] }
         #expect(feet.count == 2)
         for id in ["chair-squat", "half-squat-arms", "hip-circles", "warrior-two", "gentle-lunge"] {
@@ -89,7 +93,7 @@ struct MotionTests {
                 let slides = feet.map { f in ((p[f].x - first[f].x) * (p[f].x - first[f].x) + (p[f].z - first[f].z) * (p[f].z - first[f].z)).squareRoot() }
                 // Fentes : un pied avance, l'autre reste posé. Ailleurs : les deux pieds restent posés.
                 let slide = id == "gentle-lunge" ? slides.min() ?? 0 : slides.max() ?? 0
-                #expect(slide < 0.015, "\(id) à \(key.t) s : un pied glisse de \(Int(slide * 1000)) mm")
+                #expect(slide < 0.015, "\(body) / \(id) à \(key.t) s : un pied glisse de \(Int(slide * 1000)) mm")
             }
         }
     }

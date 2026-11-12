@@ -160,8 +160,10 @@ public struct Motion: Decodable, Sendable {
     public let muscles: [String]
     public let camera: Camera
     public let props: [MotionProp]
+    /// Hauteur de la surface sur laquelle le corps repose (un lit, en mètres) ; 0 = le sol.
+    public let support: Double?
 
-    enum CodingKeys: String, CodingKey { case keys, clip, muscles, camera, props }
+    enum CodingKeys: String, CodingKey { case keys, clip, muscles, camera, props, support }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -170,6 +172,7 @@ public struct Motion: Decodable, Sendable {
         muscles = try c.decodeIfPresent([String].self, forKey: .muscles) ?? []
         camera = try c.decodeIfPresent(Camera.self, forKey: .camera) ?? Camera(yaw: 30, pitch: 8)
         props = try c.decodeIfPresent([MotionProp].self, forKey: .props) ?? []
+        support = try c.decodeIfPresent(Double.self, forKey: .support)
     }
 
     /// Durée d'un cycle complet.
@@ -184,10 +187,10 @@ public struct ResolvedPose: Sendable {
     public var ground: Bool
 }
 
-public struct MotionLibrary: Decodable, Sendable {
+public struct MotionLibrary: Sendable {
     public let version: Int
-    /// Hauteur du bassin du squelette sur lequel les décalages de la racine ont été calculés (mètres) :
-    /// l'app les met à l'échelle de chaque corps pour que les pieds restent posés au même endroit.
+    /// Hauteur du bassin du squelette sur lequel les décalages de la racine ont été calculés (mètres), si les
+    /// mouvements ne sont pas propres à chaque corps : l'app les met alors à l'échelle du corps affiché.
     public let referenceHeight: Double?
     /// Noms des articulations du mannequin et des régions musculaires (contrôle de cohérence).
     public let bones: [String]
@@ -195,11 +198,39 @@ public struct MotionLibrary: Decodable, Sendable {
     public let poses: [String: PoseSpec]
     public let motions: [String: Motion]
 
-    public static func bundled() throws -> MotionLibrary {
+    public init(version: Int, referenceHeight: Double? = nil, bones: [String], regions: [String],
+                poses: [String: PoseSpec], motions: [String: Motion]) {
+        self.version = version
+        self.referenceHeight = referenceHeight
+        self.bones = bones
+        self.regions = regions
+        self.poses = poses
+        self.motions = motions
+    }
+
+    /// Fichier embarqué : une version de chaque mouvement par corps (« male », « female »),
+    /// calculée sur le squelette de ce corps (mains jointes, pieds posés au bon endroit).
+    private struct File: Decodable {
+        struct Body: Decodable {
+            let poses: [String: PoseSpec]
+            let motions: [String: Motion]
+        }
+        let version: Int
+        let bones: [String]
+        let regions: [String]
+        let bodies: [String: Body]
+    }
+
+    /// Corps disponibles dans le fichier embarqué.
+    public static let bodies = ["male", "female"]
+
+    public static func bundled(body: String = "male") throws -> MotionLibrary {
         guard let url = Bundle.module.url(forResource: "motions", withExtension: "json") else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return try JSONDecoder().decode(MotionLibrary.self, from: Data(contentsOf: url))
+        let file = try JSONDecoder().decode(File.self, from: Data(contentsOf: url))
+        guard let set = file.bodies[body] ?? file.bodies["male"] else { throw CocoaError(.fileReadCorruptFile) }
+        return MotionLibrary(version: file.version, bones: file.bones, regions: file.regions, poses: set.poses, motions: set.motions)
     }
 
     public func motion(_ id: String) -> Motion? { motions[id] }

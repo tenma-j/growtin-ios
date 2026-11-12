@@ -226,16 +226,19 @@ public enum ExerciseLibrary {
 
         Exercise(
             id: "etirements-soir", title: "Étirements du soir", category: .stretching, level: .gentle,
-            summary: "Dix minutes d'étirements lents, au sol, pour signaler au corps que la journée est terminée.",
+            summary: "Dix minutes d'étirements lents, assis au bord du lit puis allongé, pour signaler au corps que la journée est terminée.",
             steps: [
-                ExerciseStep("Respiration d'arrivée", "Assis en tailleur, 5 respirations lentes, expiration plus longue que l'inspiration.", seconds: 60, symbol: "wind", motion: "seated-breathe"),
-                ExerciseStep("Nuque et épaules", "Incline la tête d'un côté, puis de l'autre, en laissant l'épaule opposée descendre.", seconds: 90, symbol: "figure.mind.and.body", motion: "seated-neck"),
-                ExerciseStep("Flexion assise", "Jambes tendues devant toi, penche-toi vers l'avant dos long, genoux pliés si besoin.", seconds: 90, symbol: "figure.flexibility",
-                             cues: ["Cherche à allonger le dos, pas à toucher les pieds."], motion: "seated-forward-fold"),
-                ExerciseStep("Papillon", "Plantes de pieds collées, laisse tomber les genoux sur les côtés.", seconds: 90, symbol: "figure.yoga", motion: "butterfly"),
-                ExerciseStep("Torsion allongée", "Sur le dos, genoux pliés, laisse-les tomber d'un côté, regard de l'autre. Change de côté.", seconds: 120, symbol: "figure.mind.and.body", motion: "supine-twist"),
-                ExerciseStep("Jambes contre le mur", "Allongé, fesses près du mur, jambes posées dessus. Respire calmement.", seconds: 150, symbol: "bed.double",
-                             cues: ["Ferme les yeux.", "Lâche le poids de la tête dans le sol."], motion: "legs-up-wall")
+                ExerciseStep("Respiration d'arrivée", "Assis au bord du lit, pieds à plat au sol, mains sur les cuisses. 5 respirations lentes, l'expiration plus longue que l'inspiration.", seconds: 60, symbol: "wind", motion: "bed-sit-breathe"),
+                ExerciseStep("Nuque et épaules", "Toujours assis, incline la tête d'un côté puis de l'autre, en laissant l'épaule opposée descendre.", seconds: 90, symbol: "figure.mind.and.body",
+                             cues: ["Pas de cercles complets avec la tête."], motion: "bed-neck"),
+                ExerciseStep("Arrière des cuisses", "Au bord du lit, tends une jambe devant toi, talon au sol, pointe vers le haut. Penche le buste en avant, dos long, jusqu'à sentir l'étirement derrière la cuisse. 30 secondes, puis change de jambe.", seconds: 90, symbol: "figure.flexibility",
+                             cues: ["Le mouvement part des hanches : le dos reste droit."], motion: "bed-hamstring"),
+                ExerciseStep("Hanches", "Assis au bord du lit, pose la cheville droite sur le genou gauche, genou droit vers l'extérieur. Dos long, penche-toi légèrement en avant. 30 secondes, puis change de côté.", seconds: 90, symbol: "figure.cooldown",
+                             cues: ["Tu dois sentir l'étirement dans la fesse, jamais dans le genou."], motion: "bed-figure4"),
+                ExerciseStep("Torsion allongée", "Allongé sur le lit, genoux pliés, laisse-les tomber d'un côté, regard de l'autre. Change de côté.", seconds: 120, symbol: "figure.mind.and.body",
+                             cues: ["Les épaules restent posées sur le matelas."], motion: "bed-twist"),
+                ExerciseStep("Genoux vers la poitrine", "Sur le dos, ramène les genoux vers la poitrine, mains posées sur les genoux. Respire calmement en relâchant le bas du dos.", seconds: 120, symbol: "bed.double",
+                             cues: ["Ferme les yeux.", "Laisse le poids de la tête dans l'oreiller."], motion: "bed-knees-chest")
             ],
             benefits: "Un moment calme et régulier avant le coucher fait partie des conseils d'hygiène du sommeil ; 7 heures ou plus par nuit sont recommandées chez l'adulte.",
             hairNote: "Mieux dormir est bénéfique pour ta santé générale et ton humeur ; aucun effet direct sur la repousse n'est démontré.",
@@ -247,14 +250,14 @@ public enum ExerciseLibrary {
             id: "scan-corporel", title: "Scan corporel pour s'endormir", category: .relaxation, level: .gentle,
             summary: "Dix minutes, allongé dans ton lit, pour poser ton attention sur chaque partie du corps et laisser venir le sommeil.",
             steps: [
-                ExerciseStep("Installation", "Allonge-toi sur le dos, lumière éteinte, bras le long du corps.", seconds: 60, symbol: "bed.double", cues: ["Baisse la luminosité de l'écran au minimum."], motion: "lying-breathe", focus: []),
-                ExerciseStep("Respiration", "Inspire par le nez 4 secondes, expire par la bouche 6 secondes.", seconds: 90, symbol: "wind", motion: "lying-breathe", focus: ["chest", "abs"]),
-                ExerciseStep("Pieds et jambes", "Porte ton attention sur tes pieds, puis tes mollets, tes genoux, tes cuisses. Remarque le poids, la chaleur, sans rien changer.", seconds: 120, symbol: "figure.cooldown", motion: "lying-breathe", focus: ["feet", "calves", "shins", "quads", "hamstrings"]),
-                ExerciseStep("Ventre et poitrine", "Sens le ventre se soulever et redescendre. Laisse la respiration se faire seule.", seconds: 90, symbol: "figure.mind.and.body", motion: "lying-breathe", focus: ["abs", "chest"]),
-                ExerciseStep("Mains, bras, épaules", "Desserre les mains, relâche les coudes, laisse les épaules s'enfoncer dans le matelas.", seconds: 90, symbol: "hand.raised", motion: "lying-breathe", focus: ["hands", "forearms", "biceps", "triceps", "shoulders"]),
+                ExerciseStep("Installation", "Allonge-toi sur le dos dans ton lit, tête sur l'oreiller, lumière éteinte, bras le long du corps.", seconds: 60, symbol: "bed.double", cues: ["Baisse la luminosité de l'écran au minimum."], motion: "bed-rest", focus: []),
+                ExerciseStep("Respiration", "Inspire par le nez 4 secondes, expire par la bouche 6 secondes.", seconds: 90, symbol: "wind", motion: "bed-rest", focus: ["chest", "abs"]),
+                ExerciseStep("Pieds et jambes", "Porte ton attention sur tes pieds, puis tes mollets, tes genoux, tes cuisses. Remarque le poids, la chaleur, sans rien changer.", seconds: 120, symbol: "figure.cooldown", motion: "bed-rest", focus: ["feet", "calves", "shins", "quads", "hamstrings"]),
+                ExerciseStep("Ventre et poitrine", "Sens le ventre se soulever et redescendre. Laisse la respiration se faire seule.", seconds: 90, symbol: "figure.mind.and.body", motion: "bed-rest", focus: ["abs", "chest"]),
+                ExerciseStep("Mains, bras, épaules", "Desserre les mains, relâche les coudes, laisse les épaules s'enfoncer dans le matelas.", seconds: 90, symbol: "hand.raised", motion: "bed-rest", focus: ["hands", "forearms", "biceps", "triceps", "shoulders"]),
                 ExerciseStep("Visage", "Relâche la mâchoire, la langue, le front, l'espace entre les sourcils.", seconds: 75, symbol: "face.smiling",
-                             cues: ["Les dents ne se touchent pas."], motion: "lying-breathe", focus: ["head", "neck"]),
-                ExerciseStep("Corps entier", "Sens le corps entier, lourd et posé. Si une pensée arrive, reviens simplement à la respiration.", seconds: 75, symbol: "moon.zzz", motion: "lying-breathe", focus: [])
+                             cues: ["Les dents ne se touchent pas."], motion: "bed-rest", focus: ["head", "neck"]),
+                ExerciseStep("Corps entier", "Sens le corps entier, lourd et posé. Si une pensée arrive, reviens simplement à la respiration.", seconds: 75, symbol: "moon.zzz", motion: "bed-rest", focus: [])
             ],
             benefits: "Les techniques de relaxation font partie des approches proposées pour mieux s'endormir ; viser au moins 7 heures de sommeil régulier est recommandé chez l'adulte.",
             hairNote: "Tu ne retrouves pas le sommeil en surveillant tes cheveux le soir : laisse le suivi photo au matin, et garde le soir pour décrocher.",

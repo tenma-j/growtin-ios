@@ -81,7 +81,7 @@ final class MannequinAsset {
 
         var meshes: [Mesh] = []
         var samples: [SkinSample] = []
-        for (meshIndex, _) in info.meshes.enumerated() {
+        for _ in info.meshes {
             let material = readUInt32(), n = readUInt32(), m = readUInt32()
             let positions = try slice(n * 12), normals = try slice(n * 12)
             let boneIndexData = try slice(n * 8), weights = try slice(n * 16), indices = try slice(m * 4)
@@ -98,8 +98,8 @@ final class MannequinAsset {
                                                 componentsPerVector: 4, bytesPerComponent: 4, dataOffset: 0, dataStride: 16)
             meshes.append(Mesh(material: material, geometry: geometry, boneIndices: boneIndices, boneWeights: boneWeights))
 
-            // Mise au sol : sommets du corps uniquement (1 sur 7).
-            if meshIndex == 0 {
+            // Mise au sol : un sommet sur 7, sur toute la surface (peau et tissu font partie du même corps).
+            do {
                 positions.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
                     boneIndexData.withUnsafeBytes { (b: UnsafeRawBufferPointer) in
                         weights.withUnsafeBytes { (w: UnsafeRawBufferPointer) in
