@@ -1,6 +1,7 @@
 name: TestFlight
 
-# Lancement manuel : onglet Actions > TestFlight > Run workflow.
+# Lancement manuel : onglet Actions > TestFlight > Run workflow (une nouvelle exécution, pas « Re-run »).
+# Numéro de build : numéro d'exécution, puis numéro de tentative (7.1, 7.2…), toujours croissant.
 on:
   workflow_dispatch:
 
@@ -19,6 +20,16 @@ jobs:
       TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v5
+
+      # « Re-run » sur une ancienne exécution reconstruirait l'ancien code : on refuse et on explique.
+      - name: Vérifier que c'est la dernière version
+        run: |
+          git fetch --quiet --depth=1 origin "$GITHUB_REF_NAME"
+          latest=$(git rev-parse FETCH_HEAD)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Cette exécution construit une ancienne version ($GITHUB_SHA). Lance plutôt une nouvelle exécution : Actions > TestFlight > Run workflow (pas « Re-run »)."
+            exit 1
+          fi
 
       - name: Choisir Xcode 26
         uses: maxim-lobanov/setup-xcode@v1
@@ -59,7 +70,7 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}.${{ github.run_attempt }}" \
             2>&1 | tee archive.log | grep -E "error:|warning: .*(sign|provision)|ARCHIVE (SUCCEEDED|FAILED)" || true
           grep -q "ARCHIVE SUCCEEDED" archive.log
 
