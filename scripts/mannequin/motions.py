@@ -204,9 +204,9 @@ def knee_lift(side, hip, knee, arm, elbow, back_arm=18, twist=5):
                          S("foot", side): sided(side, [hip * 0.35, 0, 3]),
                          S("upperarm01", o): sided(o, [-arm, 0, 6]), S("lowerarm01", o): [-elbow, 0, 0],
                          S("upperarm01", side): sided(side, [back_arm, 0, 6]), S("lowerarm01", side): [-elbow * 0.8, 0, 0]},
-             spine03=[0, twist if side == "L" else -twist, 0])
+             spine03=[0, twist if side == "L" else -twist, 0], **open_hand(0.4))
 def step_mid(elbow):
-    return P("stand", lowerleg01=[4, 0, 0], upperarm01=[-4, 0, 6], lowerarm01=[-elbow, 0, 0])
+    return P("stand", lowerleg01=[4, 0, 0], upperarm01=[-4, 0, 6], lowerarm01=[-elbow, 0, 0], **open_hand(0.4))
 def stepping(mid, hip, knee, arm, elbow, period, muscles, yaw=30):
     h = period / 4
     motion(mid, [K(0, knee_lift("L", hip, knee, arm, elbow)), K(h, step_mid(elbow * 0.85)),
@@ -232,7 +232,7 @@ motion("warmup-march", circle_keys(16, 3.2, warmup), muscles=("shoulders", "quad
 def side_steps():
     step, lift, soft = 0.30, 0.07, -0.035
     def pose(fl, fr, cx, lifted=None):
-        p = P("stand", root={"offset": [cx, soft, 0]}, upperarm01=[-10, 0, 9], lowerarm01=[-40, 0, 0])
+        p = P("stand", root={"offset": [cx, soft, 0]}, upperarm01=[-10, 0, 9], lowerarm01=[-40, 0, 0], **open_hand(0.6))
         tl = ankle("L", x=fl, lift=lift if lifted == "L" else 0)
         tr = ankle("R", x=fr, lift=lift if lifted == "R" else 0)
         return legs(p, L=tl, R=tr, pole_L=(0.2, 0, 1), pole_R=(-0.2, 0, 1))
