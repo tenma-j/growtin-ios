@@ -22,7 +22,9 @@ def resolve(pose, poses):
     if "base" in pose:
         b = resolve(pose["base"] if isinstance(pose["base"], dict) else poses[pose["base"]], poses)
         out["bones"].update(b["bones"]); out["root"] = json.loads(json.dumps(b["root"])); out["ground"] = b["ground"]
-    for k, val in pose.get("bones", {}).items():
+    # clés sans côté d'abord, puis clés latéralisées (même ordre que l'app)
+    items = sorted(pose.get("bones", {}).items(), key=lambda kv: kv[0].endswith((".L", ".R")))
+    for k, val in items:
         if k.endswith((".L", ".R")):
             out["bones"][k] = val
         else:

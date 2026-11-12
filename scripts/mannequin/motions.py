@@ -409,17 +409,19 @@ motion("forward-fold", [K(0, mountain), K(3, fold), K(6, fold), K(7.6, half_up),
 # Guerrier II : pieds très écartés, genou avant plié au-dessus de la cheville, bras à l'horizontale, regard sur la main avant.
 def warrior(bend):
     """bend = 0 : jambes tendues, pieds écartés ; 1 : guerrier II (côté gauche devant)."""
-    root = P("stand", root={"offset": [0.03 + 0.098 * bend, -0.134 - 0.074 * bend, 0]},
+    root = P("stand", root={"offset": [0.1 * bend, -0.14 - 0.09 * bend, 0]},
              upperarm01=[0, 0, 86 * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
              neck01=[0, 26 * bend, 0], neck02=[0, 16 * bend, 0], head=[0, 26 * bend, 0])
-    front = np.array([0.60, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-0.54, FLOOR_ANKLE, ANK["R"][2]])
+    # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
+    front = np.array([0.57, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-0.57, FLOOR_ANKLE, ANK["R"][2]])
     p = legs(root, L=front, R=back, pole_L=(1, 0, 0.25), pole_R=(0, 0, 1),
              foot_yaw_L=90 * min(1, bend * 1.6), foot_yaw_R=12)
     return p
 wl = warrior(1.0); wt = warrior(0.45); w0 = warrior(0.0)
 wr, wrt, w0r = mirror_pose(wl), mirror_pose(wt), mirror_pose(w0)
-motion("warrior-two", [K(0, w0), K(1.6, wt), K(3.2, wl), K(5.2, P(wl, **BREATH_IN)), K(7.2, wl), K(8.6, wt), K(10.0, w0),
-                       K(11.6, wrt), K(13.2, wr), K(15.2, P(wr, **BREATH_IN)), K(17.2, wr), K(18.6, wrt), K(20.0, w0r)],
+CHEST_IN = dict(spine01=[-3, 0, 0], spine02=[-2, 0, 0])      # inspiration sans bouger le regard
+motion("warrior-two", [K(0, w0), K(1.6, wt), K(3.2, wl), K(5.2, P(wl, **CHEST_IN)), K(7.2, wl), K(8.6, wt), K(10.0, w0),
+                       K(11.6, wrt), K(13.2, wr), K(15.2, P(wr, **CHEST_IN)), K(17.2, wr), K(18.6, wrt), K(20.0, w0r)],
        muscles=("quads", "glutes", "shoulders"), yaw=6, props=(MAT,))
 
 # Arbre : en équilibre sur la jambe gauche, plante du pied droit contre l'intérieur du mollet puis de la cuisse,

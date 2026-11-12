@@ -221,7 +221,12 @@ public struct MotionLibrary: Decodable, Sendable {
                 spec = inline
             }
             if let base = spec.base { apply(base, depth: depth + 1) }
-            for (bone, value) in spec.bones ?? [:] where value.count == 3 {
+            // Clés sans côté d'abord, puis clés latéralisées : une valeur propre à un côté l'emporte toujours.
+            let ordered = (spec.bones ?? [:]).sorted { lhs, rhs in
+                let l = lhs.key.hasSuffix(".L") || lhs.key.hasSuffix(".R"), r = rhs.key.hasSuffix(".L") || rhs.key.hasSuffix(".R")
+                return l == r ? lhs.key < rhs.key : !l
+            }
+            for (bone, value) in ordered where value.count == 3 {
                 let v = Vec3(value[0], value[1], value[2])
                 if bone.hasSuffix(".L") || bone.hasSuffix(".R") {
                     angles[bone] = v

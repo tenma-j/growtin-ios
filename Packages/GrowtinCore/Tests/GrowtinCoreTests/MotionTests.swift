@@ -67,6 +67,33 @@ struct MotionTests {
         }
     }
 
+    @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit")
+    func plantedFeet() throws {
+        // Squelette masculin de l'app : celui sur lequel les décalages de la racine ont été calculés.
+        struct Meta: Decodable {
+            struct Body: Decodable { let joints: [SkeletonJoint] }
+            let bodies: [String: Body]
+        }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("Growtin/Resources/Mannequin/mannequin.json")
+        let meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: url))
+        let skeleton = Skeleton(joints: try #require(meta.bodies["male"]).joints)
+        let feet = ["foot.L", "foot.R"].compactMap { skeleton.index[$0] }
+        #expect(feet.count == 2)
+        for id in ["chair-squat", "half-squat-arms", "hip-circles", "warrior-two", "gentle-lunge"] {
+            let motion = try #require(library.motion(id))
+            let first = skeleton.worldTransforms(library.resolve(motion.keys[0].pose)).positions
+            for key in motion.keys {
+                let p = skeleton.worldTransforms(library.resolve(key.pose)).positions
+                let slides = feet.map { f in ((p[f].x - first[f].x) * (p[f].x - first[f].x) + (p[f].z - first[f].z) * (p[f].z - first[f].z)).squareRoot() }
+                // Fentes : un pied avance, l'autre reste posé. Ailleurs : les deux pieds restent posés.
+                let slide = id == "gentle-lunge" ? slides.min() ?? 0 : slides.max() ?? 0
+                #expect(slide < 0.015, "\(id) à \(key.t) s : un pied glisse de \(Int(slide * 1000)) mm")
+            }
+        }
+    }
+
     @Test("Cinématique et mise au sol sur un squelette simple")
     func kinematicsAndGrounding() {
         let skeleton = Skeleton(joints: [
