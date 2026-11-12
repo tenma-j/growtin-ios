@@ -150,6 +150,7 @@ struct ExploreView: View {
         switch DemoLaunch.screen {
         case "exercise", "exerciseSession": path = [.exercise("renforcement-poids-du-corps")]
         case "exerciseFloor": path = [.exercise("yoga-doux")]
+        case "exerciseStep": path = [.exercise(DemoLaunch.exerciseID ?? "yoga-doux")]
         case "article": path = [.article("alopecie-androgenetique")]
         default: break
         }

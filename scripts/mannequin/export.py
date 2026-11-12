@@ -128,6 +128,32 @@ def build(data, sex):
         a = np.degrees(np.arctan2(np.cross(across, want) @ axis, across @ want)) if np.linalg.norm(across) > 1e-6 else 0
         rig.world_rotate(local, "lowerarm02" + side, axis, a * 0.6)
         rig.world_rotate(local, "wrist" + side, axis, a * 0.4)
+        # Mains détendues : doigts rapprochés et légèrement fléchis, pouce tourné vers la paume.
+        palm = np.array([-sgn, 0.0, 0.0])                 # côté paume (vers la cuisse)
+        def bone_dir(name):
+            R_, P_ = rig.fk(local)
+            i = index[name]
+            d = R_[i] @ (tails[name] - heads[name])
+            return d / (np.linalg.norm(d) + 1e-12)
+        middle = bone_dir("finger3-1" + side)
+        for f in (2, 4, 5):
+            d = bone_dir(f"finger{f}-1" + side)
+            dp = d - palm * (d @ palm); mp = middle - palm * (middle @ palm)
+            ang = np.degrees(np.arctan2(np.cross(dp, mp) @ palm, dp @ mp))
+            rig.world_rotate(local, f"finger{f}-1" + side, palm, 0.7 * ang)
+        for f in (2, 3, 4, 5):
+            for p_, curl in ((1, 10), (2, 22), (3, 16)):
+                name = f"finger{f}-{p_}" + side
+                d = bone_dir(name)
+                ax = np.cross(d, palm)
+                if np.linalg.norm(ax) > 1e-6:
+                    rig.world_rotate(local, name, ax / np.linalg.norm(ax), curl)
+        for p_, curl in ((1, 14), (2, 12), (3, 10)):
+            name = f"finger1-{p_}" + side
+            d = bone_dir(name)
+            ax = np.cross(d, palm)
+            if np.linalg.norm(ax) > 1e-6:
+                rig.world_rotate(local, name, ax / np.linalg.norm(ax), curl)
     R, P = rig.fk(local)
     n0 = normals_of(v, tris)
     v, _ = rig.skin(v, n0, bone_idx, bone_w, R, P)
@@ -141,154 +167,137 @@ def build(data, sex):
     newtails = {n: p + shift for n, p in newtails.items()}
     nrm = normals_of(v, tris)
 
-    # 3. Régions musculaires.
-    R_ = {r: i for i, r in enumerate(REGIONS)}
-    hipy = newheads["upperleg01.L"][1]
-    def limb(c, a, b2):
-        """Position le long du membre (0 → 1) et angle autour de lui (0° = devant, ±180° = derrière)."""
-        ax = b2 - a; L2 = ax @ ax; t = (c - a) @ ax / L2
-        r = c - (a + t * ax); fwd = np.array([0, 0, 1.0]) - ax * (ax[2] / L2)
-        side = np.cross(ax / np.sqrt(L2), fwd / np.linalg.norm(fwd))
-        return t, np.degrees(np.arctan2(r @ side, r @ fwd))
-    def label(b, n, c):
-        nz, ny = n[2], n[1]
-        sd = b[-2:] if b[-2:] in (".L", ".R") else ""
-        if b.startswith("upperleg"):
-            t, phi = limb(c, newheads["upperleg01" + sd], newheads["lowerleg01" + sd])
-            if abs(phi) > 125 and t < 0.22:
-                return R_["glutes"]
-            return R_["hamstrings"] if abs(phi) > 105 else R_["quads"]
-        if b.startswith("lowerleg"):
-            t, phi = limb(c, newheads["lowerleg01" + sd], newheads["foot" + sd])
-            return R_["calves"] if abs(phi) > 70 else R_["shins"]
-        if b.startswith("upperarm02"):
-            t, phi = limb(c, newheads["upperarm02" + sd], newheads["lowerarm01" + sd])
-            return R_["biceps"] if abs(phi) < 90 else R_["triceps"]
-        if b == "head":
-            return R_["head"]
-        if b.startswith("neck"):
-            return R_["neck"]
-        if b.startswith("clavicle") or b.startswith("shoulder01"):
-            return R_["upperBack"] if nz < -0.15 or ny > 0.6 else R_["shoulders"]
-        if b.startswith("upperarm01"):
-            return R_["shoulders"]
-        if b.startswith("upperarm02"):
-            return R_["biceps"] if nz > -0.05 else R_["triceps"]
-        if b.startswith("lowerarm"):
-            return R_["forearms"]
-        if b.startswith(("wrist", "finger", "metacarpal")):
-            return R_["hands"]
-        if b in ("spine01", "spine02"):
-            if nz < -0.1:
-                return R_["upperBack"]
-            return R_["chest"] if (nz > 0.25 or c[1] > newheads["spine02"][1] + 0.06) else R_["abs"]
-        if b in ("spine03", "spine04", "spine05"):
-            return R_["lowerBack"] if nz < -0.25 else R_["abs"]
-        if b == "root" or b.startswith("pelvis"):
-            return R_["glutes"] if nz < -0.05 else R_["abs"]
-        if b.startswith("upperleg"):
-            if nz < -0.3 and c[1] > hipy - 0.17:
-                return R_["glutes"]
-            return R_["hamstrings"] if nz < -0.2 else R_["quads"]
-        if b.startswith("lowerleg"):
-            return R_["calves"] if nz < 0.25 else R_["shins"]
-        if b.startswith(("foot", "toes")):
-            return R_["feet"]
-        return R_["skin"]
-    # Étiquette par face d'origine (quad) : bords alignés sur les lignes du maillage.
-    nq = quad_of.max() + 1
-    fn = np.cross(v[tris[:, 1]] - v[tris[:, 0]], v[tris[:, 2]] - v[tris[:, 0]])
-    qn = np.zeros((nq, 3)); np.add.at(qn, quad_of, fn); qn /= np.linalg.norm(qn, axis=1, keepdims=True) + 1e-12
-    qc = np.zeros((nq, 3)); cnt = np.zeros(nq); np.add.at(qc, quad_of, v[tris].mean(1)); np.add.at(cnt, quad_of, 1); qc /= np.maximum(cnt, 1)[:, None]
-    qW = np.zeros((nq, W.shape[1])); np.add.at(qW, quad_of, W[tris].mean(1))
-    qdom = np.array(order)[np.argmax(qW, axis=1)]
-    qlab = np.zeros(nq, int)
-    for q in range(nq):
-        qlab[q] = label(qdom[q], qn[q], qc[q])
-    # Voisinage des quads (arêtes partagées) pour lisser les étiquettes.
-    edge_quads = {}
-    for t, q in zip(tris, quad_of):
-        for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
-            edge_quads.setdefault((min(e), max(e)), set()).add(q)
-    neigh = [set() for _ in range(nq)]
-    for qs in edge_quads.values():
-        for q in qs:
-            neigh[q] |= qs
-    def majority(lab, passes=2, protect=()):
-        lab = lab.copy()
-        for _ in range(passes):
-            new = lab.copy()
-            for q in range(nq):
-                if lab[q] in protect:
-                    continue
-                vals = [lab[x] for x in neigh[q]]
-                best = max(set(vals), key=vals.count)
-                if vals.count(best) > vals.count(lab[q]):
-                    new[q] = best
-            lab = new
-        return lab
-    qlab = majority(qlab, protect={R_["head"], R_["hands"], R_["feet"]})
-    tri_lab = qlab[quad_of]
-    # 4. Tenue : short (et brassière pour la version femme), par face d'origine.
-    knee_y = newheads["lowerleg01.L"][1]
-    waist_y = newheads["spine04"][1] + (0.0 if sex == "male" else -0.01)
-    hem_y = knee_y + 0.62 * (hipy - knee_y)
-    arm_bones = ("upperarm", "lowerarm", "wrist", "finger", "metacarpal")
-    qarm = np.array([b.startswith(arm_bones) for b in qdom])
-    qcloth = np.zeros(nq, int)
-    for q in range(nq):
-        b = qdom[q]
-        if qarm[q]:
-            continue
-        sd = b[-2:] if b[-2:] in (".L", ".R") else ""
-        if b.startswith("upperleg"):
-            t, _ = limb(qc[q], newheads["upperleg01" + sd], newheads["lowerleg01" + sd])
-            qcloth[q] = 1 if t < 0.42 else 0
-        elif b in ("root", "pelvis.L", "pelvis.R", "spine05") or (b == "spine04" and qc[q][1] < waist_y):
-            qcloth[q] = 1 if qc[q][1] < waist_y else 0
+    nrm = normals_of(v, tris)
+
+    # 3. Vêtements : coques séparées, découpées le long de lignes lisses, portées par les mêmes os.
+    names_arr = np.array(order)
+    def wsum(prefixes):
+        cols = [i for i, nme in enumerate(order) if nme.startswith(prefixes)]
+        return W[:, cols].sum(1)
+    w_arm = wsum(("upperarm", "lowerarm", "wrist", "finger", "metacarpal"))
+    w_shoulder = wsum(("clavicle", "shoulder01"))
+    w_leg_low = wsum(("lowerleg", "foot", "toes"))
+    def thigh_t(side):
+        a_, b2 = newheads["upperleg01" + side], newheads["lowerleg01" + side]
+        ax = b2 - a_
+        return (v - a_) @ ax / (ax @ ax), np.linalg.norm(ax)
+    tL, lenL = thigh_t(".L"); tR, lenR = thigh_t(".R")
+    t_side = np.where(v[:, 0] >= 0, tL, tR); thigh_len = (lenL + lenR) / 2
+    waist_y = newheads["spine04"][1] + (0.005 if sex == "male" else -0.005)
+    leg_cut = 0.40 if sex == "male" else 0.30
+    f_shorts = np.minimum.reduce([(leg_cut - t_side) * thigh_len, waist_y - v[:, 1], (0.5 - w_arm) * 0.1, (0.5 - w_leg_low) * 0.1])
+    f_band = np.minimum(f_shorts, v[:, 1] - (waist_y - 0.036))
+    garments = [(f_shorts, 0.0045, 1), (f_band, 0.0075, 2)]
     if sex == "female":
         chest = (np.abs(v[:, 0]) > 0.04) & (np.abs(v[:, 0]) < 0.13) & (v[:, 1] > newheads["spine02"][1]) & (v[:, 1] < newheads["neck01"][1])
         apex = v[chest][np.argmax(v[chest][:, 2])]
-        top = (qc[:, 1] > apex[1] - 0.085) & (qc[:, 1] < apex[1] + 0.07) & ~qarm & (qlab != R_["shoulders"]) \
-              & np.isin(qdom, ["spine01", "spine02", "spine03"])
-        qcloth[top] = 2
-    qcloth = majority(qcloth, passes=3)
-    tri_cloth = qcloth[quad_of]
-    # Attributs par sommet : deux régions dominantes parmi les faces voisines, mélange et part de tissu.
+        lo, hi = apex[1] - 0.09, apex[1] + 0.07
+        f_band_top = np.minimum.reduce([v[:, 1] - lo, hi - v[:, 1], (0.3 - w_arm - w_shoulder) * 0.1])
+        # Bretelles : deux bandes qui passent sur les épaules, de l'avant vers le dos.
+        sx = 0.5 * (abs(newheads["clavicle.L"][0]) + abs(newheads["upperarm01.L"][0])) - 0.012
+        w_head = wsum(("head", "neck"))
+        f_straps = np.minimum.reduce([0.016 - np.abs(np.abs(v[:, 0]) - sx), v[:, 1] - (hi - 0.02), (0.4 - w_arm) * 0.1,
+                                      (0.65 - w_head) * 0.1, newheads["neck01"][1] + 0.14 - v[:, 1]])
+        f_top = np.maximum(f_band_top, f_straps)
+        f_top_band = np.minimum(f_top, (lo + 0.026) - v[:, 1])
+        garments += [(f_top, 0.004, 1), (f_top_band, 0.0065, 2)]
+    shells = []
+    for f, off, mat in garments:
+        cv, cn, ct, cbi, cbw = clip_mesh(v, nrm, tris, bone_idx, bone_w, f)
+        if len(ct):
+            shells.append(make_shell(cv, cn, ct, cbi, cbw, off, mat))
+    return dict(order=order, parents={n: bones[n]["parent"] for n in order}, heads=newheads, tails=newtails,
+                v=v.astype(np.float32), n=nrm.astype(np.float32), tris=tris, bone_idx=bone_idx, bone_w=bone_w, shells=shells)
+
+def clip_mesh(v, n, tris, bi, bw, f):
+    """Garde la partie du maillage où f ≥ 0, en coupant les triangles le long de la ligne f = 0."""
+    keep_v = {}
+    P, N, BI, BW, T = [], [], [], [], []
+    def vert(i):
+        if i not in keep_v:
+            keep_v[i] = len(P); P.append(v[i]); N.append(n[i]); BI.append(bi[i]); BW.append(bw[i])
+        return keep_v[i]
+    cut = {}
+    def edge(i, j):
+        key = (min(i, j), max(i, j))
+        if key not in cut:
+            t = f[i] / (f[i] - f[j])
+            p = v[i] + t * (v[j] - v[i]); nn = n[i] + t * (n[j] - n[i]); nn /= np.linalg.norm(nn) + 1e-12
+            w = {}
+            for b_, x in zip(bi[i], bw[i] * (1 - t)): w[b_] = w.get(b_, 0) + x
+            for b_, x in zip(bi[j], bw[j] * t): w[b_] = w.get(b_, 0) + x
+            top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
+            tot = sum(x for _, x in top) or 1
+            bix = np.zeros(4, np.uint16); bwx = np.zeros(4, np.float32)
+            for k, (b_, x) in enumerate(top): bix[k] = b_; bwx[k] = x / tot
+            cut[key] = len(P); P.append(p); N.append(nn); BI.append(bix); BW.append(bwx)
+        return cut[key]
+    for t in tris:
+        s_ = f[t] >= 0
+        if s_.all():
+            T.append([vert(t[0]), vert(t[1]), vert(t[2])])
+        elif s_.any():
+            # rotation pour que le cas soit (in, out, out) ou (in, in, out)
+            for r in range(3):
+                a_, b_, c_ = t[r], t[(r + 1) % 3], t[(r + 2) % 3]
+                ia, ib, ic = f[a_] >= 0, f[b_] >= 0, f[c_] >= 0
+                if ia and not ib and not ic:
+                    T.append([vert(a_), edge(a_, b_), edge(a_, c_)]); break
+                if ia and ib and not ic:
+                    e1, e2 = edge(b_, c_), edge(a_, c_)
+                    T.append([vert(a_), vert(b_), e1]); T.append([vert(a_), e1, e2]); break
+    return (np.array(P), np.array(N), np.array(T, int).reshape(-1, 3), np.array(BI, np.uint16).reshape(-1, 4),
+            np.array(BW, np.float32).reshape(-1, 4))
+
+def make_shell(v, n, tris, bi, bw, offset, material):
+    """Coque de vêtement : surface décalée le long des normales, plus un ourlet qui rejoint la peau."""
+    outer = v + n * offset
+    edges = {}
+    for t in tris:
+        for a, b in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+            key = (min(a, b), max(a, b))
+            edges.setdefault(key, []).append((a, b))
+    boundary = [e[0] for e in edges.values() if len(e) == 1]
     nv = len(v)
-    counts = np.zeros((nv, len(REGIONS)))
-    fab = np.zeros(nv); inc = np.zeros(nv)
-    for t, q in zip(tris, quad_of):
-        for k in t:
-            counts[k, qlab[q]] += 1
-            fab[k] += qcloth[q] > 0; inc[k] += 1
-    order2 = np.argsort(-counts, axis=1)
-    ra, rb = order2[:, 0], order2[:, 1]
-    ca = np.take_along_axis(counts, ra[:, None], 1)[:, 0]; cb = np.take_along_axis(counts, rb[:, None], 1)[:, 0]
-    rb = np.where(cb > 0, rb, ra)
-    blend = np.where(cb > 0, cb / np.maximum(ca + cb, 1), 0)
-    attr = np.stack([ra, rb, np.round(blend * 255), np.round(fab / np.maximum(inc, 1) * 255)], 1).astype(np.uint8)
-    return dict(order=order, parents={n: bones[n]["parent"] for n in order}, heads=newheads, tails=newtails, attr=attr,
-                v=v.astype(np.float32), n=nrm.astype(np.float32), tris=tris, bone_idx=bone_idx, bone_w=bone_w,
-                tri_lab=tri_lab, tri_cloth=tri_cloth)
+    P = [outer]; NN = [normals_of(outer, tris)]; BI = [bi]; BW = [bw]; F = [tris]
+    hp, hn, hbi, hbw, hf = [], [], [], [], []
+    for a, b in boundary:
+        k = nv + len(hp)
+        pts = [outer[a], outer[b], v[b] - n[b] * 0.0008, v[a] - n[a] * 0.0008]
+        e = pts[1] - pts[0]; inward = pts[3] - pts[0]
+        nrm_ = np.cross(e, inward); nrm_ /= np.linalg.norm(nrm_) + 1e-12
+        # même sens de parcours que le triangle d'origine : l'extérieur de la coque est à droite de a→b
+        tri_n = n[a] + n[b]
+        out_dir = np.cross(e, tri_n)
+        if nrm_ @ out_dir < 0:
+            nrm_ = -nrm_; hf += [[k, k + 1, k + 2], [k, k + 2, k + 3]]
+        else:
+            hf += [[k, k + 2, k + 1], [k, k + 3, k + 2]]
+        hp += pts; hn += [nrm_] * 4; hbi += [bi[a], bi[b], bi[b], bi[a]]; hbw += [bw[a], bw[b], bw[b], bw[a]]
+    if hp:
+        P.append(np.array(hp)); NN.append(np.array(hn)); BI.append(np.array(hbi)); BW.append(np.array(hbw)); F.append(np.array(hf))
+    return dict(v=np.vstack(P).astype(np.float32), n=np.vstack(NN).astype(np.float32), tris=np.vstack(F),
+                bi=np.vstack(BI).astype(np.uint16), bw=np.vstack(BW).astype(np.float32), material=material)
 
 def export(sex, b):
+    """Format GTM4 : plusieurs maillages (corps puis vêtements), chacun avec son matériau et ses poids."""
     os.makedirs(OUT, exist_ok=True)
-    idx = b["tris"].astype("<u4").ravel()
-    n = len(b["v"])
+    meshes = [dict(v=b["v"], n=b["n"], tris=b["tris"], bi=b["bone_idx"], bw=b["bone_w"], material=0)]
+    for sh in b["shells"]:
+        meshes.append(dict(v=sh["v"], n=sh["n"], tris=sh["tris"], bi=sh["bi"], bw=sh["bw"], material=sh["material"]))
     with open(os.path.join(OUT, f"mannequin-{sex}.bin"), "wb") as fh:
-        fh.write(struct.pack("<4sII", b"GTM3", n, len(idx)))
-        fh.write(b["v"].astype("<f4").tobytes())
-        fh.write(b["n"].astype("<f4").tobytes())
-        fh.write(b["bone_idx"].astype("<u2").tobytes())
-        fh.write(b["bone_w"].astype("<f4").tobytes())
-        fh.write(b["attr"].astype(np.uint8).tobytes())
-        fh.write(idx.tobytes())
+        fh.write(struct.pack("<4sI", b"GTM4", len(meshes)))
+        for m in meshes:
+            idx = m["tris"].astype("<u4").ravel()
+            fh.write(struct.pack("<III", m["material"], len(m["v"]), len(idx)))
+            fh.write(m["v"].astype("<f4").tobytes()); fh.write(m["n"].astype("<f4").tobytes())
+            fh.write(m["bi"].astype("<u2").tobytes()); fh.write(m["bw"].astype("<f4").tobytes())
+            fh.write(idx.tobytes())
     return {
         "joints": [{"name": k, "parent": b["parents"][k], "head": [round(float(x), 5) for x in b["heads"][k]],
                     "tail": [round(float(x), 5) for x in b["tails"][k]]} for k in b["order"]],
-        "vertexCount": n, "indexCount": int(len(idx)),
-    }
+        "meshes": [{"material": m["material"], "vertexCount": len(m["v"]), "indexCount": int(m["tris"].size)} for m in meshes],
+    }, meshes
 
 def render(v, n, tris, colors, path, size=640, yaw=20, pitch=0, center=None, zoom=1.0):
     """Aperçu logiciel : z-buffer, lumière principale, d'appoint et liseré bleuté."""
@@ -332,6 +341,8 @@ def render(v, n, tris, colors, path, size=640, yaw=20, pitch=0, center=None, zoo
         img[y0:y1, x0:x1][upd] = np.clip(cc[upd], 0, 1)
     Image.fromarray((img * 255).astype(np.uint8)).save(path)
 
+MATERIAL_COLORS = {0: np.array([0.80, 0.80, 0.79]), 1: np.array([0.17, 0.18, 0.20]), 2: np.array([0.10, 0.55, 0.33])}
+
 def colors_for(b, highlight=()):
     skin = np.array([0.80, 0.81, 0.83]); fabric = np.array([0.13, 0.13, 0.15]); hi = np.array([0.98, 0.45, 0.12])
     out = []
@@ -346,16 +357,24 @@ if __name__ == "__main__":
     data = sys.argv[1]
     preview = sys.argv[sys.argv.index("--preview") + 1] if "--preview" in sys.argv else None
     meta = {"source": "MakeHuman (https://github.com/makehumancommunity/makehuman), ressources CC0 1.0",
-            "regions": REGIONS, "clothing": CLOTHING, "bodies": {}}
+            "materials": ["skin", "fabric", "accent"], "bodies": {}}
     for sex in ("male", "female"):
         b = build(data, sex)
-        meta["bodies"][sex] = export(sex, b)
-        print(sex, len(b["v"]), "sommets", len(b["tris"]), "triangles", "hauteur", round(float(b["v"][:, 1].max()), 3))
+        info, meshes = export(sex, b)
+        meta["bodies"][sex] = info
+        print(sex, [(m["material"], len(m["v"]), len(m["tris"])) for m in meshes], "hauteur", round(float(b["v"][:, 1].max()), 3))
         if preview:
-            np.savez(f"{preview}/{sex}.npz", **{k: b[k] for k in ("v", "n", "tris", "bone_idx", "bone_w", "tri_lab", "tri_cloth", "attr")},
+            V, Nn, T, BI, BW, M = [], [], [], [], [], []
+            off = 0
+            for m in meshes:
+                V.append(m["v"]); Nn.append(m["n"]); T.append(m["tris"] + off); BI.append(m["bi"]); BW.append(m["bw"])
+                M.append(np.full(len(m["tris"]), m["material"])); off += len(m["v"])
+            V, Nn, T, BI, BW, M = map(np.concatenate, (V, Nn, T, BI, BW, M))
+            np.savez(f"{preview}/{sex}.npz", v=V, n=Nn, tris=T, bone_idx=BI, bone_w=BW, tri_mat=M, body_count=len(meshes[0]["v"]),
                      order=np.array(b["order"]), heads=np.array([b["heads"][k] for k in b["order"]]),
                      parents=np.array([b["parents"][k] or "" for k in b["order"]]))
-            render(b["v"], b["n"], b["tris"], colors_for(b, {"quads", "calves"}), f"{preview}/{sex}-front.png", yaw=25)
-            render(b["v"], b["n"], b["tris"], colors_for(b), f"{preview}/{sex}-back.png", yaw=160)
-            render(b["v"], b["n"], b["tris"], colors_for(b), f"{preview}/{sex}-head.png", yaw=35, center=b["heads"]["head"] + [0, 0.08, 0], zoom=5)
+            cols = [MATERIAL_COLORS[int(x)] for x in M]
+            render(V, Nn, T, cols, f"{preview}/{sex}-front.png", yaw=25)
+            render(V, Nn, T, cols, f"{preview}/{sex}-back.png", yaw=160)
+            render(V, Nn, T, cols, f"{preview}/{sex}-hand.png", yaw=60, center=b["heads"]["wrist.L"] + [0, -0.08, 0], zoom=8)
     json.dump(meta, open(os.path.join(OUT, "mannequin.json"), "w"), indent=1)

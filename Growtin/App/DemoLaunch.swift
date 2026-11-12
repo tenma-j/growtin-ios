@@ -7,9 +7,14 @@ enum DemoLaunch {
     #if DEBUG
     static let screen: String? = value(for: "-demoScreen")
     static let onboardingStep: Int? = value(for: "-demoStep").flatMap(Int.init)
+    /// Écran « exerciseStep » : exercice et personnage à afficher (l'étape est donnée par -demoStep).
+    static let exerciseID: String? = value(for: "-demoExercise")
+    static let figure: String? = value(for: "-demoFigure")
     #else
     static let screen: String? = nil
     static let onboardingStep: Int? = nil
+    static let exerciseID: String? = nil
+    static let figure: String? = nil
     #endif
 
     static var isActive: Bool { screen != nil }
@@ -19,7 +24,7 @@ enum DemoLaunch {
         case "progress", "photoSession", "photoCapture", "photoTimeline", "photoCompare", "photoReading", "photoReadingConsent": .progress
         case "coach", "coachConsent": .coach
         case "nutrition", "recipe", "mealPlan", "shopping": .nutrition
-        case "explore", "exercise", "article", "exerciseSession", "exerciseFloor": .explore
+        case "explore", "exercise", "article", "exerciseSession", "exerciseFloor", "exerciseStep": .explore
         default: .today
         }
     }

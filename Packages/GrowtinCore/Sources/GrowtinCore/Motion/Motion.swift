@@ -123,29 +123,57 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     public let floor: Bool?
 }
 
+/// Mouvement issu d'une capture réelle : rotations locales des os, image par image (quaternions x, y, z, w).
+public struct MotionClip: Decodable, Sendable {
+    public let fps: Double
+    /// Os animés ; « root » porte l'orientation du bassin. Les autres os gardent la pose de référence.
+    public let bones: [String]
+    /// Une ligne par image : 4 valeurs par os, dans l'ordre de `bones`.
+    public let frames: [[Double]]
+    /// Source (fichier CMU et extrait), pour mémoire.
+    public let source: String?
+
+    public var duration: Double { Double(frames.count) / fps }
+
+    /// Pose d'une image : rotations locales et orientation de la racine.
+    public func pose(at index: Int) -> ResolvedPose {
+        let row = frames[min(max(index, 0), frames.count - 1)]
+        var rotations: [String: Quat] = [:]
+        var root = Quat.identity
+        for (i, bone) in bones.enumerated() where row.count >= i * 4 + 4 {
+            let q = Quat(x: row[i * 4], y: row[i * 4 + 1], z: row[i * 4 + 2], w: row[i * 4 + 3]).normalized
+            if bone == "root" { root = q } else { rotations[bone] = q }
+        }
+        return ResolvedPose(rotations: rotations, rootRotation: root, rootOffset: .zero, ground: true)
+    }
+}
+
 public struct Motion: Decodable, Sendable {
     public struct Camera: Decodable, Sendable {
         public let yaw: Double
         public let pitch: Double?
     }
 
+    /// Poses clés (mouvements construits) ; vide quand le mouvement vient d'une capture.
     public let keys: [Keyframe]
+    public let clip: MotionClip?
     public let muscles: [String]
     public let camera: Camera
     public let props: [MotionProp]
 
-    enum CodingKeys: String, CodingKey { case keys, muscles, camera, props }
+    enum CodingKeys: String, CodingKey { case keys, clip, muscles, camera, props }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        keys = try c.decode([Keyframe].self, forKey: .keys)
+        keys = try c.decodeIfPresent([Keyframe].self, forKey: .keys) ?? []
+        clip = try c.decodeIfPresent(MotionClip.self, forKey: .clip)
         muscles = try c.decodeIfPresent([String].self, forKey: .muscles) ?? []
         camera = try c.decodeIfPresent(Camera.self, forKey: .camera) ?? Camera(yaw: 30, pitch: 8)
         props = try c.decodeIfPresent([MotionProp].self, forKey: .props) ?? []
     }
 
     /// Durée d'un cycle complet.
-    public var duration: Double { keys.last?.t ?? 0 }
+    public var duration: Double { clip?.duration ?? keys.last?.t ?? 0 }
 }
 
 /// Pose résolue : rotation locale de chaque os (repère du parent), orientation et décalage de la racine.
@@ -158,6 +186,9 @@ public struct ResolvedPose: Sendable {
 
 public struct MotionLibrary: Decodable, Sendable {
     public let version: Int
+    /// Hauteur du bassin du squelette sur lequel les décalages de la racine ont été calculés (mètres) :
+    /// l'app les met à l'échelle de chaque corps pour que les pieds restent posés au même endroit.
+    public let referenceHeight: Double?
     /// Noms des articulations du mannequin et des régions musculaires (contrôle de cohérence).
     public let bones: [String]
     public let regions: [String]
@@ -274,11 +305,11 @@ public struct SkinSample: Sendable {
 
 public enum Grounding {
     /// Hauteur dont il faut remonter la racine pour que le point le plus bas de la peau touche le sol (y = 0).
-    public static func lift(for pose: ResolvedPose, skeleton: Skeleton, samples: [SkinSample]) -> Double {
+    public static func lift(for pose: ResolvedPose, skeleton: Skeleton, samples: [SkinSample], stride: Int = 1) -> Double {
         guard pose.ground, !samples.isEmpty else { return 0 }
         let (R, P) = skeleton.worldTransforms(pose)
         var lowest = Double.infinity
-        for s in samples {
+        for s in Swift.stride(from: 0, to: samples.count, by: max(stride, 1)).map({ samples[$0] }) {
             var y = 0.0
             for (b, w) in zip(s.bones, s.weights) where w > 0 {
                 let rel = s.position - skeleton.joints[b].position

@@ -4,18 +4,18 @@ import SceneKit
 import simd
 import UIKit
 
-/// Scène 3D du personnage : corps articulé, lumières, ombre au sol, accessoires et caméra.
-/// L'animation est calculée image par image (interpolation sphérique entre les poses de motions.json).
+/// Studio 3D du personnage : corps et vêtements articulés, sol et fond lumineux, ombres douces, accessoires, caméra.
+/// L'animation est calculée image par image : poses clés interpolées, ou captures réelles rejouées.
 final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     let scene = SCNScene()
     let cameraNode = SCNNode()
 
-    private let container = SCNNode()          // tourne selon l'angle de vue du mouvement
+    private let turntable = SCNNode()          // rotation libre au doigt
+    private let container = SCNNode()          // angle de vue propre au mouvement
     private let propsNode = SCNNode()
-    private var bodyNode: SCNNode?
+    private var meshNodes: [SCNNode] = []
     private var boneNodes: [SCNNode] = []
     private var asset: MannequinAsset?
-    private var material: SCNMaterial?
     private let library: MotionLibrary?
 
     // État d'animation, partagé avec le fil de rendu.
@@ -34,30 +34,56 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private var transitionStart: TimeInterval?
     private var lastRotations: [simd_quatf] = []
     private var lastRoot: SIMD3<Float> = .zero
-    private var paused = false
-    private let transitionDuration = 0.45
+    private let transitionDuration = 0.5
 
     private(set) var currentBody: MannequinBody?
     private(set) var currentMotion: String?
-    /// Rapport largeur / hauteur de la vue, pour cadrer le mouvement sans le couper.
     private var aspect: Float = 1
     private var framing: (motion: Motion, keyPositions: [[Vec3]])?
+    private var requestedMotion: String?
+    private var appliedMotion: String?
+
+    /// Studio lumineux : fond uni, sol mat éclairé qui se fond dans le fond au loin (brouillard de la même couleur).
+    /// Un peu plus tamisé quand l'app est en apparence sombre.
+    static func backdrop(dark: Bool) -> UIColor {
+        dark ? UIColor(red: 0.80, green: 0.812, blue: 0.806, alpha: 1) : UIColor(red: 0.905, green: 0.918, blue: 0.91, alpha: 1)
+    }
+    /// Teinte du sol calculée pour qu'une fois éclairé il ait la couleur du fond : pas de ligne d'horizon visible.
+    private static func floorColor(dark: Bool) -> UIColor {
+        dark ? UIColor(red: 0.752, green: 0.764, blue: 0.758, alpha: 1) : UIColor(red: 0.85, green: 0.862, blue: 0.856, alpha: 1)
+    }
+    private let floorMaterial = MannequinStage.pbr(MannequinStage.floorColor(dark: false), roughness: 1)
+    private var isDark: Bool?
 
     override init() {
         library = MotionCatalog.library
         super.init()
-        scene.background.contents = UIColor.clear
-        scene.rootNode.addChildNode(container)
+        scene.fogStartDistance = 5
+        scene.fogEndDistance = 14
+        scene.rootNode.addChildNode(turntable)
+        turntable.addChildNode(container)
         container.addChildNode(propsNode)
         setUpLights()
         setUpFloor()
         let camera = SCNCamera()
         camera.fieldOfView = 30
         camera.zNear = 0.05
-        camera.zFar = 30
-        camera.wantsHDR = false
+        camera.zFar = 40
+        camera.screenSpaceAmbientOcclusionIntensity = 1.1
+        camera.screenSpaceAmbientOcclusionRadius = 0.12
         cameraNode.camera = camera
         scene.rootNode.addChildNode(cameraNode)
+        setDark(false)
+    }
+
+    /// Studio clair (mode clair) ou sombre (mode sombre).
+    func setDark(_ dark: Bool) {
+        guard dark != isDark else { return }
+        isDark = dark
+        let backdrop = Self.backdrop(dark: dark)
+        scene.background.contents = backdrop
+        scene.fogColor = backdrop
+        floorMaterial.diffuse.contents = Self.floorColor(dark: dark)
     }
 
     // MARK: - Corps
@@ -65,8 +91,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     func setBody(_ body: MannequinBody) {
         guard body != currentBody, let asset = try? MannequinAsset.load(body) else { return }
         currentBody = body
-        bodyNode?.removeFromParentNode()
-        boneNodes.forEach { $0.removeFromParentNode() }
+        meshNodes.forEach { $0.removeFromParentNode() }
+        boneNodes.first?.removeFromParentNode()
 
         // Squelette : un nœud par articulation, orientations neutres dans la pose de référence.
         var nodes: [SCNNode] = []
@@ -88,68 +114,93 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             let h = joint.position
             return NSValue(scnMatrix4: SCNMatrix4MakeTranslation(Float(-h.x), Float(-h.y), Float(-h.z)))
         }
-
-        let geometry = asset.geometry.copy() as! SCNGeometry
-        let material = Self.makeMaterial()
-        geometry.materials = [material]
-        let mesh = SCNNode(geometry: geometry)
-        mesh.name = "mannequin"
-        mesh.castsShadow = true
-        let skinner = SCNSkinner(baseGeometry: geometry, bones: nodes, boneInverseBindTransforms: inverseBinds,
-                                 boneWeights: asset.boneWeights, boneIndices: asset.boneIndices)
-        skinner.skeleton = nodes.first
-        mesh.skinner = skinner
-        container.addChildNode(mesh)
+        let materials = [Self.skinMaterial(), Self.fabricMaterial(), Self.accentMaterial()]
+        var newMeshNodes: [SCNNode] = []
+        for mesh in asset.meshes {
+            let geometry = mesh.geometry.copy() as! SCNGeometry
+            geometry.materials = [materials[min(mesh.material, materials.count - 1)]]
+            let node = SCNNode(geometry: geometry)
+            node.castsShadow = true
+            let skinner = SCNSkinner(baseGeometry: geometry, bones: nodes, boneInverseBindTransforms: inverseBinds,
+                                     boneWeights: mesh.boneWeights, boneIndices: mesh.boneIndices)
+            skinner.skeleton = nodes.first
+            node.skinner = skinner
+            container.addChildNode(node)
+            newMeshNodes.append(node)
+        }
 
         lock.lock()
         self.asset = asset
-        self.material = material
+        meshNodes = newMeshNodes
         boneNodes = nodes
-        bodyNode = mesh
         lastRotations = Array(repeating: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), count: nodes.count)
         lastRoot = nodes.first?.simdPosition ?? .zero
         lock.unlock()
 
         if let motion = requestedMotion {
             appliedMotion = nil
-            play(motion, focus: requestedFocus)
+            play(motion)
         }
     }
 
     // MARK: - Mouvement
 
-    private var requestedMotion: String?
-    private var requestedFocus: [String]?
-    private var appliedMotion: String?
-    private var appliedFocus: [String]?
-
     /// Joue un mouvement en boucle, avec une transition douce depuis la pose actuelle.
-    func play(_ motionID: String, focus: [String]? = nil) {
+    func play(_ motionID: String) {
         requestedMotion = motionID
-        requestedFocus = focus
-        guard motionID != appliedMotion || focus != appliedFocus else { return }
+        guard motionID != appliedMotion else { return }
         guard let asset, let library, let motion = library.motion(motionID) ?? library.motion("breathe-stand") else { return }
         appliedMotion = motionID
-        appliedFocus = focus
         currentMotion = motionID
 
-        // Poses clés : rotations locales, racine posée au sol.
-        var lift = 0.0
-        var computed: [Key] = []
-        var jointPositions: [[Vec3]] = []
-        for key in motion.keys {
-            let pose = library.resolve(key.pose)
-            if pose.ground { lift = Grounding.lift(for: pose, skeleton: asset.skeleton, samples: asset.samples) }
-            let rotations = asset.skeleton.joints.enumerated().map { (i, joint) -> simd_quatf in
+        let skeleton = asset.skeleton
+        let rootBind = skeleton.joints[0].position
+        // Décalages de la racine calculés sur le squelette de référence : mis à l'échelle de ce corps.
+        let scale = library.referenceHeight.map { rootBind.y / max($0, 0.1) } ?? 1
+        func scaled(_ pose: ResolvedPose) -> ResolvedPose {
+            var pose = pose
+            pose.rootOffset = pose.rootOffset * scale
+            return pose
+        }
+        func key(_ pose: ResolvedPose, time: Double, lift: Double, ease: String?) -> Key {
+            let rotations = skeleton.joints.enumerated().map { (i, joint) -> simd_quatf in
                 var q = pose.rotations[joint.name] ?? .identity
-                if asset.skeleton.parentIndex[i] == nil { q = pose.rootRotation * q }
+                if skeleton.parentIndex[i] == nil { q = pose.rootRotation * q }
                 return simd_quatf(ix: Float(q.x), iy: Float(q.y), iz: Float(q.z), r: Float(q.w))
             }
-            let rootJoint = asset.skeleton.joints[0].position + pose.rootOffset
-            computed.append(Key(time: key.t, rotations: rotations,
-                                rootPosition: SIMD3(Float(rootJoint.x), Float(rootJoint.y + lift), Float(rootJoint.z)),
-                                ease: key.ease))
-            jointPositions.append(asset.skeleton.worldTransforms(pose, rootLift: lift).positions)
+            let root = rootBind + pose.rootOffset
+            return Key(time: time, rotations: rotations,
+                       rootPosition: SIMD3(Float(root.x), Float(root.y + lift), Float(root.z)), ease: ease)
+        }
+
+        var computed: [Key] = []
+        var jointPositions: [[Vec3]] = []
+        if let clip = motion.clip {
+            // Capture réelle : une image clé par image, posée au sol (calculée une image sur deux, puis interpolée).
+            let count = clip.frames.count
+            var lifts = [Double](repeating: 0, count: count)
+            for i in stride(from: 0, to: count, by: 2) {
+                lifts[i] = Grounding.lift(for: clip.pose(at: i), skeleton: skeleton, samples: asset.samples, stride: 2)
+            }
+            for i in stride(from: 1, to: count, by: 2) {
+                lifts[i] = i + 1 < count ? (lifts[i - 1] + lifts[i + 1]) / 2 : lifts[i - 1]
+            }
+            for i in 0..<count {
+                let pose = clip.pose(at: i)
+                computed.append(key(pose, time: Double(i) / clip.fps, lift: lifts[i], ease: "linear"))
+                if i % 6 == 0 { jointPositions.append(skeleton.worldTransforms(pose, rootLift: lifts[i]).positions) }
+            }
+            if count > 0 {
+                computed.append(key(clip.pose(at: 0), time: Double(count) / clip.fps, lift: lifts[0], ease: "linear"))
+            }
+        } else {
+            var lift = 0.0
+            for frame in motion.keys {
+                let pose = scaled(library.resolve(frame.pose))
+                if pose.ground { lift = Grounding.lift(for: pose, skeleton: skeleton, samples: asset.samples) }
+                computed.append(key(pose, time: frame.t, lift: lift, ease: frame.ease))
+                jointPositions.append(skeleton.worldTransforms(pose, rootLift: lift).positions)
+            }
         }
 
         lock.lock()
@@ -161,13 +212,23 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         duration = max(motion.duration, 0.1)
         lock.unlock()
 
-        // Mise en valeur des muscles travaillés.
-        let regions = focus ?? motion.muscles
-        material?.setValue(NSNumber(value: asset.mask(for: regions)), forKey: "highlightMask")
-
         buildProps(motion.props, keyPositions: jointPositions)
         framing = (motion, jointPositions)
         frameCamera(animated: true)
+    }
+
+    /// Rotation libre du personnage au doigt (en radians).
+    func spin(by angle: Float) {
+        turntable.simdOrientation = simd_quatf(angle: angle, axis: SIMD3(0, 1, 0)) * turntable.simdOrientation
+    }
+
+    /// Revient à l'angle de vue d'origine.
+    func resetSpin() {
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 0.5
+        SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        turntable.simdOrientation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
+        SCNTransaction.commit()
     }
 
     /// Appelé quand la vue change de taille.
@@ -177,20 +238,12 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         frameCamera(animated: false)
     }
 
-    func setPaused(_ value: Bool) {
-        lock.lock(); paused = value; lock.unlock()
-    }
-
     // MARK: - Rendu image par image
 
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
         lock.lock()
         defer { lock.unlock() }
-        guard !keys.isEmpty, boneNodes.count == keys[0].rotations.count else { return }
-        if paused {
-            startTime = nil
-            return
-        }
+        guard keys.count > 1, boneNodes.count == keys[0].rotations.count else { return }
         if startTime == nil {
             startTime = time
             transitionStart = time
@@ -223,53 +276,33 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         lastRoot = root
     }
 
-    // MARK: - Mise en scène
+    // MARK: - Matières
 
-    private static func makeMaterial() -> SCNMaterial {
+    private static func pbr(_ color: UIColor, roughness: CGFloat, metalness: CGFloat = 0) -> SCNMaterial {
         let m = SCNMaterial()
         m.lightingModel = .physicallyBased
-        // Deux images blanches neutres : elles obligent SceneKit à transmettre les deux jeux de coordonnées
-        // de texture (régions musculaires et part de tissu) au shader, sans changer la couleur.
-        let white = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1)).image { context in
-            UIColor.white.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
-        }
-        m.diffuse.contents = white
-        m.diffuse.mappingChannel = 0
-        m.multiply.contents = white
-        m.multiply.mappingChannel = 1
-        m.roughness.contents = 0.55
-        m.metalness.contents = 0.0
-        m.isDoubleSided = false
-        // Couleur calculée par sommet : peau gris clair, tenue sombre, muscles travaillés en orange (dégradé doux).
-        m.shaderModifiers = [
-            .geometry: """
-            #pragma arguments
-            float highlightMask;
-            #pragma body
-            float2 regions = _geometry.texcoords[0];
-            float2 mixes = _geometry.texcoords[1];
-            int mask = int(highlightMask + 0.5);
-            float selA = float((mask >> int(regions.x + 0.5)) & 1);
-            float selB = float((mask >> int(regions.y + 0.5)) & 1);
-            float hi = mix(selA, selB, mixes.x);
-            float fabric = smoothstep(0.3, 0.7, mixes.y);
-            float3 skin = float3(0.50, 0.515, 0.54);
-            float3 hot = float3(0.95, 0.20, 0.03);
-            float3 cloth = float3(0.016, 0.016, 0.02);
-            float3 clothHot = float3(0.10, 0.03, 0.01);
-            float3 color = mix(mix(skin, hot, hi), mix(cloth, clothHot, hi), fabric);
-            _geometry.color = float4(color, 1.0);
-            """,
-            .surface: """
-            #pragma body
-            float rim = pow(1.0 - saturate(dot(_surface.normal, _surface.view)), 3.0);
-            _surface.emission.rgb += float3(0.30, 0.45, 1.0) * rim * 0.55;
-            """
-        ]
-        m.setValue(NSNumber(value: 0), forKey: "highlightMask")
+        m.diffuse.contents = color
+        m.roughness.contents = roughness
+        m.metalness.contents = metalness
         return m
     }
+
+    /// Peau de mannequin : gris clair satiné.
+    static func skinMaterial() -> SCNMaterial {
+        pbr(UIColor(red: 0.75, green: 0.745, blue: 0.735, alpha: 1), roughness: 0.55)
+    }
+
+    /// Tissu technique sombre, mat.
+    static func fabricMaterial() -> SCNMaterial {
+        pbr(UIColor(red: 0.13, green: 0.14, blue: 0.16, alpha: 1), roughness: 0.82)
+    }
+
+    /// Liseré vert Growtin'.
+    static func accentMaterial() -> SCNMaterial {
+        pbr(UIColor(red: 0.08, green: 0.53, blue: 0.31, alpha: 1), roughness: 0.6)
+    }
+
+    // MARK: - Studio
 
     private func setUpLights() {
         func light(_ type: SCNLight.LightType, intensity: CGFloat, color: UIColor = .white, euler: SIMD3<Float>, shadow: Bool = false) {
@@ -280,8 +313,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             if shadow {
                 l.castsShadow = true
                 l.shadowMode = .deferred
-                l.shadowColor = UIColor.black.withAlphaComponent(0.45)
-                l.shadowRadius = 10
+                l.shadowColor = UIColor.black.withAlphaComponent(0.4)
+                l.shadowRadius = 12
                 l.shadowSampleCount = 16
                 l.shadowMapSize = CGSize(width: 2048, height: 2048)
                 l.orthographicScale = 3
@@ -292,38 +325,34 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             node.simdEulerAngles = euler
             scene.rootNode.addChildNode(node)
         }
-        light(.directional, intensity: 920, euler: SIMD3(-0.95, -0.55, 0), shadow: true)          // principale, en hauteur
-        light(.directional, intensity: 380, color: UIColor(red: 0.85, green: 0.9, blue: 1, alpha: 1), euler: SIMD3(-0.3, 1.1, 0))
-        light(.directional, intensity: 520, color: UIColor(red: 0.55, green: 0.7, blue: 1, alpha: 1), euler: SIMD3(-0.25, 2.9, 0)) // contre-jour
+        light(.directional, intensity: 920, color: UIColor(red: 1, green: 0.98, blue: 0.95, alpha: 1),
+              euler: SIMD3(-0.95, -0.55, 0), shadow: true)                                         // principale, en hauteur
+        light(.directional, intensity: 380, color: UIColor(red: 0.88, green: 0.92, blue: 1, alpha: 1), euler: SIMD3(-0.3, 1.1, 0))
+        light(.directional, intensity: 300, euler: SIMD3(-0.25, 2.9, 0))                          // contre-jour discret
         light(.ambient, intensity: 260, color: UIColor(white: 0.85, alpha: 1), euler: .zero)
     }
 
     private func setUpFloor() {
         let floor = SCNFloor()
         floor.reflectivity = 0
-        let m = SCNMaterial()
-        m.lightingModel = .shadowOnly
-        floor.materials = [m]
+        floor.materials = [floorMaterial]
         let node = SCNNode(geometry: floor)
+        node.castsShadow = false
         scene.rootNode.addChildNode(node)
     }
 
     private func buildProps(_ props: [MotionProp], keyPositions: [[Vec3]]) {
         propsNode.childNodes.forEach { $0.removeFromParentNode() }
         guard let asset else { return }
-        let matte = SCNMaterial()
-        matte.lightingModel = .physicallyBased
-        matte.diffuse.contents = UIColor(red: 0.20, green: 0.21, blue: 0.24, alpha: 1)
-        matte.roughness.contents = 0.7
-        let mat = SCNMaterial()
-        mat.lightingModel = .physicallyBased
-        mat.diffuse.contents = UIColor(red: 0.12, green: 0.27, blue: 0.21, alpha: 1)
-        mat.roughness.contents = 0.9
+        let wood = Self.pbr(UIColor(red: 0.62, green: 0.47, blue: 0.33, alpha: 1), roughness: 0.65)
+        let dark = Self.pbr(UIColor(red: 0.18, green: 0.18, blue: 0.2, alpha: 1), roughness: 0.5, metalness: 0.4)
+        let wall = Self.pbr(UIColor(red: 0.90, green: 0.90, blue: 0.88, alpha: 1), roughness: 0.95)
+        let mat = Self.pbr(UIColor(red: 0.35, green: 0.56, blue: 0.46, alpha: 1), roughness: 0.92)
 
         for prop in props {
-            let keyIndex = min(max(prop.key ?? 0, 0), keyPositions.count - 1)
+            let keyIndex = min(max(prop.key ?? 0, 0), max(keyPositions.count - 1, 0))
             var anchor = Vec3.zero
-            if let name = prop.anchor, let index = asset.skeleton.index[name], keyIndex >= 0 {
+            if let name = prop.anchor, let index = asset.skeleton.index[name], keyIndex < keyPositions.count {
                 anchor = keyPositions[keyIndex][index]
             }
             let o = prop.offset.count == 3 ? Vec3(prop.offset[0], prop.offset[1], prop.offset[2]) : .zero
@@ -333,7 +362,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             node.simdPosition = SIMD3(Float(a.x), 0, Float(a.z))
             node.simdEulerAngles = SIMD3(0, Float((prop.yaw ?? 0) * .pi / 180), 0)
             let top = Float(max(a.y, 0.05))
-            func box(_ w: Float, _ h: Float, _ l: Float, _ at: SIMD3<Float>, _ material: SCNMaterial, chamfer: Float = 0.006) {
+            func box(_ w: Float, _ h: Float, _ l: Float, _ at: SIMD3<Float>, _ material: SCNMaterial, chamfer: Float = 0.008) {
                 let g = SCNBox(width: CGFloat(w), height: CGFloat(h), length: CGFloat(l), chamferRadius: CGFloat(chamfer))
                 g.materials = [material]
                 let n = SCNNode(geometry: g)
@@ -343,20 +372,29 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             }
             switch prop.kind {
             case "chair":
-                box(0.44, 0.04, 0.42, SIMD3(0, top - 0.02, 0), matte)
-                box(0.44, 0.44, 0.03, SIMD3(0, top + 0.24, -0.2), matte)
+                box(0.44, 0.035, 0.42, SIMD3(0, top - 0.018, 0), wood, chamfer: 0.012)
+                box(0.44, 0.30, 0.025, SIMD3(0, top + 0.30, -0.2), wood, chamfer: 0.01)
                 for x: Float in [-0.19, 0.19] {
-                    for z: Float in [-0.18, 0.18] { box(0.035, top - 0.04, 0.035, SIMD3(x, (top - 0.04) / 2, z), matte, chamfer: 0.004) }
+                    for z: Float in [-0.18, 0.18] { box(0.026, top - 0.035, 0.026, SIMD3(x, (top - 0.035) / 2, z), dark, chamfer: 0.004) }
+                    box(0.026, 0.32, 0.026, SIMD3(x, top + 0.14, -0.2), dark, chamfer: 0.004)
                 }
             case "table":
-                box(1.0, 0.04, 0.64, SIMD3(0, top - 0.02, 0.1), matte)
+                box(1.0, 0.035, 0.64, SIMD3(0, top - 0.018, 0.1), wood, chamfer: 0.01)
                 for x: Float in [-0.45, 0.45] {
-                    for z: Float in [-0.18, 0.38] { box(0.05, top - 0.04, 0.05, SIMD3(x, (top - 0.04) / 2, z), matte, chamfer: 0.004) }
+                    for z: Float in [-0.18, 0.38] { box(0.04, top - 0.035, 0.04, SIMD3(x, (top - 0.035) / 2, z), dark, chamfer: 0.004) }
                 }
             case "wall":
-                box(0.06, 2.2, 2.4, SIMD3(0.03, 1.1, 0), matte, chamfer: 0)
+                box(0.08, 2.4, 3.0, SIMD3(0.04, 1.2, 0), wall, chamfer: 0)
             case "mat":
-                box(1.9, 0.008, 0.62, SIMD3(0, 0.004, 0), mat, chamfer: 0.003)
+                box(1.85, 0.012, 0.64, SIMD3(0, 0.006, 0), mat, chamfer: 0.005)
+            case "door":
+                // Montants juste à l'extérieur des avant-bras, quelle que soit la carrure du personnage.
+                var half: Float = 0.5
+                if let wrist = asset.skeleton.index["wrist.L"], keyIndex < keyPositions.count {
+                    half = Float(abs(keyPositions[keyIndex][wrist].x - a.x)) + 0.08
+                }
+                for x in [-half, half] { box(0.07, 2.05, 0.12, SIMD3(x, 1.025, 0), wall, chamfer: 0.006) }
+                box(2 * half + 0.07, 0.07, 0.12, SIMD3(0, 2.085, 0), wall, chamfer: 0.006)
             default:
                 continue
             }
@@ -371,7 +409,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         guard let framing else { return }
         let motion = framing.motion
         let yaw = Float(motion.camera.yaw * .pi / 180)
-        let pitch = Float((motion.camera.pitch ?? 8) * .pi / 180)
+        let pitch = Float(max(motion.camera.pitch ?? 8, 6) * .pi / 180)
         var lo = SIMD3<Float>(repeating: .greatestFiniteMagnitude), hi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
         let rot = simd_quatf(angle: yaw, axis: SIMD3(0, 1, 0))
         for positions in framing.keyPositions {
@@ -381,21 +419,22 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             }
         }
         guard lo.x.isFinite else { return }
-        let margin: Float = 0.18
+        let margin: Float = 0.2
         lo -= margin; hi += margin
         lo.y = 0
         let center = (lo + hi) / 2
         let width = hi.x - lo.x, height = hi.y - lo.y, depth = hi.z - lo.z
         let vfov = Float(30 * Double.pi / 180)
         let hfov = 2 * atan(tan(vfov / 2) * aspect)
-        let distance = max(height / 2 / tan(vfov / 2), width / 2 / tan(hfov / 2)) * 1.05 + depth / 2
-        let target = SIMD3(center.x, center.y, center.z)
+        let distance = max(height / 2 / tan(vfov / 2), width / 2 / tan(hfov / 2)) * 1.06 + depth / 2
+        let target = SIMD3(center.x, center.y * 0.95, center.z)
         let eye = target + SIMD3(0, sin(pitch), cos(pitch)) * distance
 
         SCNTransaction.begin()
         SCNTransaction.animationDuration = animated ? 0.6 : 0
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         container.simdOrientation = rot
+        turntable.simdOrientation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
         cameraNode.simdPosition = eye
         cameraNode.simdLook(at: target)
         SCNTransaction.commit()

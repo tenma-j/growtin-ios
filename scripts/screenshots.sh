@@ -44,6 +44,16 @@ capture() {
   echo "Capture : $name ($((size / 1024)) Ko)"
 }
 
+# Plusieurs captures espacées d'un même écran (animation en cours).
+capture_seq() {
+  local name="$1" count="$2" gap="$3"; shift 3
+  capture "$name-1" "$@"
+  for k in $(seq 2 "$count"); do
+    sleep "$gap"
+    xcrun simctl io "$DEVICE_ID" screenshot "$OUT_DIR/$name-$k.png" >/dev/null
+  done
+}
+
 for appearance in light dark; do
   xcrun simctl ui "$DEVICE_ID" appearance "$appearance"
   capture "$appearance-01-onboarding-bienvenue" -demoScreen onboarding -demoStep 0
@@ -52,6 +62,7 @@ for appearance in light dark; do
   capture "$appearance-53-photo-comparaison" -demoScreen photoCompare
   capture "$appearance-60-nutrition" -demoScreen nutrition
   capture "$appearance-30-coach" -demoScreen coach
+  capture "$appearance-41-exercice-guerrier" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 3 -demoFigure male
   if [ "$appearance" = "light" ]; then
     for step in 1 2 3 4 5 6 7 8 9 10 11; do
       capture "light-02-onboarding-etape-$(printf "%02d" $step)" -demoScreen onboarding -demoStep "$step"
@@ -75,6 +86,12 @@ for appearance in light dark; do
     capture "light-52-photo-frise" -demoScreen photoTimeline
     capture "light-54-photo-lecture-ia" -demoScreen photoReading
     capture "light-55-photo-lecture-consentement" -demoScreen photoReadingConsent
+    # Personnage 3D : quelques mouvements, dont des suites d'images pour vérifier l'animation.
+    capture "light-45-yoga-arbre" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 4 -demoFigure male
+    capture "light-46-mobilite-epaules" -demoScreen exerciseStep -demoExercise mobilite-matin -demoStep 0 -demoFigure male
+    capture_seq "light-47-pas-chasses" 3 0.7 -demoScreen exerciseStep -demoExercise cardio-leger -demoStep 1 -demoFigure male
+    capture_seq "light-48-squat-chaise" 3 0.9 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 1 -demoFigure female
+    capture "light-49-chat-vache" -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 5 -demoFigure female
     # En dernier : cette capture choisit le personnage féminin (préférence conservée par l'app).
     capture "light-44-exercice-3d-sol" -demoScreen exerciseFloor
   fi

@@ -31,12 +31,20 @@ struct MotionTests {
         #expect(library.motions.count >= 40)
         let bones = Set(library.bones), regions = Set(library.regions)
         for (id, motion) in library.motions {
-            #expect(motion.keys.first?.t == 0, "\(id)")
-            #expect(zip(motion.keys, motion.keys.dropFirst()).allSatisfy { $0.t < $1.t }, "\(id) : temps croissants")
+            if let clip = motion.clip {
+                #expect(clip.fps > 0 && clip.frames.count >= 10, "\(id) : capture trop courte")
+                #expect(clip.frames.allSatisfy { $0.count == clip.bones.count * 4 }, "\(id) : images incomplètes")
+                for bone in clip.bones where bone != "root" { #expect(bones.contains(bone), "\(id) : os \(bone)") }
+                let q = clip.pose(at: clip.frames.count / 2).rootRotation
+                #expect(abs(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w - 1) < 1e-6)
+            } else {
+                #expect(motion.keys.first?.t == 0, "\(id)")
+                #expect(zip(motion.keys, motion.keys.dropFirst()).allSatisfy { $0.t < $1.t }, "\(id) : temps croissants")
+            }
             for region in motion.muscles { #expect(regions.contains(region), "\(id) : \(region)") }
             for prop in motion.props {
                 if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
-                #expect(["chair", "table", "wall", "mat"].contains(prop.kind), "\(id) : \(prop.kind)")
+                #expect(["chair", "table", "wall", "mat", "door"].contains(prop.kind), "\(id) : \(prop.kind)")
             }
             for key in motion.keys {
                 let pose = library.resolve(key.pose)

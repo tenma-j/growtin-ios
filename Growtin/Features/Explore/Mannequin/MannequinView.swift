@@ -2,63 +2,99 @@ import GrowtinCore
 import SceneKit
 import SwiftUI
 
-/// SCNView qui signale ses changements de taille (cadrage adapté à la carte).
-final class MannequinSCNView: SCNView {
+/// SCNView qui signale ses changements de taille et fait tourner le personnage au doigt (glissement horizontal).
+final class MannequinSCNView: SCNView, UIGestureRecognizerDelegate {
     var onResize: ((CGSize) -> Void)?
+    var onSpin: ((Float) -> Void)?
+    var onReset: (() -> Void)?
+
+    func installGestures() {
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        pan.delegate = self
+        addGestureRecognizer(pan)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         onResize?(bounds.size)
+    }
+
+    @objc private func handlePan(_ pan: UIPanGestureRecognizer) {
+        let dx = pan.translation(in: self).x
+        pan.setTranslation(.zero, in: self)
+        onSpin?(Float(dx / max(bounds.width, 1)) * .pi * 1.5)
+    }
+
+    @objc private func handleDoubleTap() { onReset?() }
+
+    /// Seuls les glissements horizontaux font tourner le personnage : le défilement vertical de la page reste libre.
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let pan = gestureRecognizer as? UIPanGestureRecognizer, pan.view === self else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        let v = pan.velocity(in: self)
+        return abs(v.x) > abs(v.y) * 1.2
     }
 }
 
 /// Vue SceneKit qui affiche le personnage 3D et joue un mouvement en boucle.
 struct MannequinSceneView: UIViewRepresentable {
     let motion: String
-    var focus: [String]?
     let figure: MannequinBody
+    let dark: Bool
 
     func makeCoordinator() -> MannequinStage { MannequinStage() }
 
     func makeUIView(context: Context) -> MannequinSCNView {
+        let stage = context.coordinator
         let view = MannequinSCNView(frame: .zero, options: nil)
-        view.backgroundColor = .clear
-        view.isOpaque = false
+        view.backgroundColor = MannequinStage.backdrop(dark: dark)
         view.antialiasingMode = .multisampling4X
         view.preferredFramesPerSecond = 60
         view.rendersContinuously = true
         view.isJitteringEnabled = false
-        view.scene = context.coordinator.scene
-        view.pointOfView = context.coordinator.cameraNode
-        view.delegate = context.coordinator
+        view.scene = stage.scene
+        view.pointOfView = stage.cameraNode
+        view.delegate = stage
         view.isPlaying = true
         view.isAccessibilityElement = false
-        let stage = context.coordinator
+        view.installGestures()
         view.onResize = { [weak stage] size in
             guard size.height > 0 else { return }
             stage?.setAspect(Float(size.width / size.height))
         }
-        context.coordinator.setBody(figure)
-        context.coordinator.play(motion, focus: focus)
+        view.onSpin = { [weak stage] angle in stage?.spin(by: angle) }
+        view.onReset = { [weak stage] in stage?.resetSpin() }
+        stage.setDark(dark)
+        stage.setBody(figure)
+        stage.play(motion)
         return view
     }
 
     func updateUIView(_ view: MannequinSCNView, context: Context) {
+        view.backgroundColor = MannequinStage.backdrop(dark: dark)
+        context.coordinator.setDark(dark)
         context.coordinator.setBody(figure)
-        context.coordinator.play(motion, focus: focus)
+        context.coordinator.play(motion)
     }
 
     static func dismantleUIView(_ view: MannequinSCNView, coordinator: MannequinStage) {
         view.onResize = nil
+        view.onSpin = nil
+        view.onReset = nil
         view.isPlaying = false
         view.delegate = nil
     }
 }
 
-/// Carte du personnage 3D : fond sombre, choix femme / homme, rappel des muscles travaillés.
+/// Carte du personnage 3D : studio lumineux, choix femme / homme, rappel des zones travaillées.
 struct MannequinCard: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
     let motion: String
-    var focus: [String]?
     var caption: String?
     var height: CGFloat = 320
     @AppStorage("mannequin.figure") private var storedFigure = ""
@@ -68,10 +104,10 @@ struct MannequinCard: View {
     }
 
     var body: some View {
+        let dark = colorScheme == .dark
         ZStack(alignment: .topTrailing) {
-            RadialGradient(colors: [Color(red: 0.16, green: 0.17, blue: 0.19), Color(red: 0.04, green: 0.04, blue: 0.05)],
-                           center: UnitPoint(x: 0.5, y: 0.42), startRadius: 8, endRadius: 360)
-            MannequinSceneView(motion: motion, focus: focus, figure: figure)
+            Color(uiColor: MannequinStage.backdrop(dark: dark))
+            MannequinSceneView(motion: motion, figure: figure, dark: dark)
             Menu {
                 Picker("Personnage", selection: Binding(get: { figure.rawValue }, set: { storedFigure = $0 })) {
                     ForEach(MannequinBody.allCases) { Text($0.label).tag($0.rawValue) }
@@ -79,37 +115,46 @@ struct MannequinCard: View {
             } label: {
                 Image(systemName: "person.2.fill")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(9)
                     .glassEffect(.regular, in: .circle)
             }
             .padding(GT.Spacing.s)
+            .environment(\.colorScheme, .light)
             .accessibilityLabel("Choisir le personnage : femme ou homme")
-            if let caption {
-                VStack {
-                    Spacer()
-                    HStack(spacing: GT.Spacing.xs) {
-                        Circle().fill(Color(red: 0.98, green: 0.45, blue: 0.12)).frame(width: 8, height: 8)
-                        Text(caption).font(.caption.weight(.medium)).foregroundStyle(.white.opacity(0.85))
+            VStack {
+                Spacer()
+                HStack(alignment: .bottom, spacing: GT.Spacing.xs) {
+                    if let caption {
+                        HStack(spacing: GT.Spacing.xs) {
+                            Circle().fill(Color.gtGrowth).frame(width: 7, height: 7)
+                            Text(caption).font(.caption.weight(.medium)).foregroundStyle(.primary.opacity(0.85))
+                        }
+                        .padding(.horizontal, GT.Spacing.s)
+                        .padding(.vertical, 6)
+                        .glassEffect(.regular, in: .capsule)
                     }
-                    .padding(.horizontal, GT.Spacing.s)
-                    .padding(.vertical, 6)
-                    .glassEffect(.regular, in: .capsule)
-                    .padding(GT.Spacing.s)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 0)
+                    Image(systemName: "rotate.3d")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(7)
+                        .glassEffect(.regular, in: .circle)
+                        .accessibilityHidden(true)
                 }
+                .padding(GT.Spacing.s)
             }
+            .environment(\.colorScheme, .light)
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipShape(.rect(cornerRadius: GT.Radius.card))
-        .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Animation 3D du mouvement")
+        .accessibilityLabel("Animation 3D du mouvement. Fais glisser horizontalement pour tourner le personnage.")
     }
 }
 
-/// Libellés des zones du corps mises en valeur.
+/// Libellés des zones du corps sollicitées.
 enum BodyRegionLabel {
     static func text(_ regions: [String]) -> String? {
         let names: [String: String] = [

@@ -54,22 +54,24 @@ class Body:
         self.names = [str(x) for x in d["order"]]
         parents = {n: (str(p) or None) for n, p in zip(self.names, d["parents"])}
         self.rig = Rig(self.names, parents, {n: h for n, h in zip(self.names, d["heads"])})
-        self.tri_lab, self.tri_cloth = d["tri_lab"], d["tri_cloth"]
-        self.sample = np.arange(0, len(self.v), 7)
+        self.tri_mat = d["tri_mat"] if "tri_mat" in d.files else np.zeros(len(self.tris), int)
+        body_count = int(d["body_count"]) if "body_count" in d.files else len(self.v)
+        self.sample = np.arange(0, body_count, 7)
+        self.offset_scale = 1.0       # décalages de la racine mis à l'échelle du corps (comme dans l'app)
 
     def lift(self, p, previous=0.0):
         """Mise au sol : le point le plus bas touche y = 0 ; sans mise au sol, on garde la hauteur précédente."""
         if not p["ground"]:
             return previous
         loc = local_rotations(p, self.names)
-        R, P = self.rig.fk(loc, p["root"]["offset"])
+        R, P = self.rig.fk(loc, np.asarray(p["root"]["offset"], float) * self.offset_scale)
         s = self.sample
         vs, _ = self.rig.skin(self.v[s], self.n[s], self.bi[s], self.bw[s], R, P)
         return -vs[:, 1].min()
 
     def pose(self, p, joints=False, lift=None):
         loc = local_rotations(p, self.names)
-        R, P = self.rig.fk(loc, p["root"]["offset"])
+        R, P = self.rig.fk(loc, np.asarray(p["root"]["offset"], float) * self.offset_scale)
         P = P + [0, self.lift(p) if lift is None else lift, 0]
         v, n = self.rig.skin(self.v, self.n, self.bi, self.bw, R, P)
         return (v, n, P) if joints else (v, n)
@@ -104,13 +106,17 @@ def boxes_for(prop, anchor):
         out.append(((0.03, 1.1, 0), (0.03, 1.1, 1.2)))
     elif k == "mat":
         out.append(((0, 0.003, 0), (0.95, 0.003, 0.31)))
+    elif k == "door":
+        for x in (-0.5, 0.5):
+            out.append(((x, 1.025, 0), (0.035, 1.025, 0.06)))
+        out.append(((0, 2.085, 0), (0.535, 0.035, 0.06)))
     yaw = np.radians(prop.get("yaw", 0)); c, s_ = np.cos(yaw), np.sin(yaw)
     Ry = np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]])
     res = []
     for center, half in out:
         cc = np.array(center, float)
         cc = Ry @ cc if k in ("wall",) else cc
-        if k in ("chair", "table"):
+        if k in ("chair", "table", "door"):
             cc = Ry @ np.array([center[0], 0, center[2]]) + [0, center[1], 0]
             res.append((cc + [a[0], 0, a[2]], half, Ry))
         elif k == "wall":
@@ -132,15 +138,43 @@ def box_mesh(center, half, R):
 
 def sheet(body, motion_ids, lib, path, size=300, export_mod=None):
     from PIL import Image, ImageDraw
-    from export import render, colors_for, REGIONS
+    from export import render, MATERIAL_COLORS
     tiles = []
+    if lib.get("referenceHeight"):
+        body.offset_scale = body.rig.heads[0][1] / lib["referenceHeight"]
     for mid in motion_ids:
         m = lib["motions"][mid]
+        if "clip" in m:
+            from mocap import quat_to_matrix
+            from PIL import Image as _I, ImageDraw as _D
+            clip = m["clip"]; nb = len(clip["bones"]); F = clip["frames"]
+            for k in np.linspace(0, len(F) - 1, 6).astype(int):
+                loc = {}
+                for bi_, bname in enumerate(clip["bones"]):
+                    q = np.array(F[k][bi_ * 4: bi_ * 4 + 4])
+                    loc[bname] = quat_to_matrix(q / np.linalg.norm(q))
+                R, P = body.rig.fk(loc)
+                ss = body.sample
+                vs, _ = body.rig.skin(body.v[ss], body.n[ss], body.bi[ss], body.bw[ss], R, P)
+                P = P + [0, -vs[:, 1].min(), 0]
+                v, n = body.rig.skin(body.v, body.n, body.bi, body.bw, R, P)
+                cols = [MATERIAL_COLORS[int(x)] for x in body.tri_mat]
+                vb = v[: len(body.v)]
+                c = vb.mean(0); c[1] = 0.95
+                tmp = f"/tmp/_tile_{os.getpid()}.png"
+                render(v, n, body.tris, cols, tmp, size=size, yaw=m["camera"]["yaw"], pitch=8, center=c, zoom=1.0)
+                im = _I.open(tmp).convert("RGB"); _D.Draw(im).text((6, 6), f"{mid} {k / clip['fps']:.1f}s", fill=(255, 255, 255))
+                tiles.append(im)
+            continue
         lifts = body.lifts(m, lib["poses"])
+        limit = int(os.environ.get("MAXK", 99))
+        pick = set(np.linspace(0, len(m["keys"]) - 1, min(limit, len(m["keys"]))).round().astype(int))
         for i, key in enumerate(m["keys"]):
+            if i not in pick:
+                continue
             p = resolve(key["pose"], lib["poses"])
             v, n = body.pose(p, lift=lifts[i])
-            cols = colors_for({"tri_lab": body.tri_lab, "tri_cloth": body.tri_cloth}, set(m.get("muscles", [])))
+            cols = [MATERIAL_COLORS[int(x)] for x in body.tri_mat]
             tris = body.tris
             for pr in m.get("props", []):
                 ki = pr.get("key") or 0

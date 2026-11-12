@@ -15,28 +15,35 @@ enum MannequinBody: String, CaseIterable, Identifiable {
     }
 }
 
-/// Maillage, squelette et poids d'un corps, lus depuis Resources/Mannequin (générés par scripts/mannequin).
+/// Corps et vêtements d'un personnage, lus depuis Resources/Mannequin (générés par scripts/mannequin).
 /// Corps issus des ressources MakeHuman, dans le domaine public (CC0 1.0).
 final class MannequinAsset {
     struct Meta: Decodable {
-        struct Body: Decodable {
-            let joints: [SkeletonJoint]
+        struct Mesh: Decodable {
+            let material: Int
             let vertexCount: Int
             let indexCount: Int
         }
-        let regions: [String]
+        struct Body: Decodable {
+            let joints: [SkeletonJoint]
+            let meshes: [Mesh]
+        }
         let bodies: [String: Body]
+    }
+
+    /// Matériaux : 0 peau, 1 tissu, 2 liseré de couleur.
+    struct Mesh {
+        let material: Int
+        let geometry: SCNGeometry
+        let boneIndices: SCNGeometrySource
+        let boneWeights: SCNGeometrySource
     }
 
     enum LoadError: Error { case missing, corrupt }
 
     let skeleton: Skeleton
-    let regions: [String]
-    /// Géométrie de base (positions, normales, couleur, régions et tissu en coordonnées de texture).
-    let geometry: SCNGeometry
-    let boneIndices: SCNGeometrySource
-    let boneWeights: SCNGeometrySource
-    /// Sommets échantillonnés pour poser le personnage au sol.
+    let meshes: [Mesh]
+    /// Sommets du corps échantillonnés pour poser le personnage au sol.
     let samples: [SkinSample]
 
     private static var cache: [MannequinBody: MannequinAsset] = [:]
@@ -58,80 +65,56 @@ final class MannequinAsset {
         let meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: metaURL))
         guard let info = meta.bodies[body.rawValue] else { throw LoadError.corrupt }
         let data = try Data(contentsOf: binURL)
-        let n = info.vertexCount, m = info.indexCount
-        let header = 12
-        let sizes = [n * 12, n * 12, n * 8, n * 16, n * 4, m * 4]
-        guard data.count >= header + sizes.reduce(0, +), data.prefix(4) == Data("GTM3".utf8) else { throw LoadError.corrupt }
+        guard data.count >= 8, data.prefix(4) == Data("GTM4".utf8) else { throw LoadError.corrupt }
+        skeleton = Skeleton(joints: info.joints)
 
-        var offset = header
-        func slice(_ length: Int) -> Data {
+        var offset = 8
+        func readUInt32() -> Int {
+            defer { offset += 4 }
+            return Int(data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }.littleEndian)
+        }
+        func slice(_ length: Int) throws -> Data {
+            guard offset + length <= data.count else { throw LoadError.corrupt }
             defer { offset += length }
             return data.subdata(in: offset..<(offset + length))
         }
-        let positions = slice(sizes[0]), normals = slice(sizes[1]), indices16 = slice(sizes[2])
-        let weights = slice(sizes[3]), attributes = slice(sizes[4]), indices = slice(sizes[5])
 
-        skeleton = Skeleton(joints: info.joints)
-        regions = meta.regions
-
-        // Régions (deux dominantes) et part de tissu, transmises au shader comme coordonnées de texture.
-        var regionCoords = [Float](repeating: 0, count: n * 2)
-        var blendCoords = [Float](repeating: 0, count: n * 2)
-        attributes.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-            let bytes = raw.bindMemory(to: UInt8.self)
-            for i in 0..<n {
-                regionCoords[i * 2] = Float(bytes[i * 4])
-                regionCoords[i * 2 + 1] = Float(bytes[i * 4 + 1])
-                blendCoords[i * 2] = Float(bytes[i * 4 + 2]) / 255
-                blendCoords[i * 2 + 1] = Float(bytes[i * 4 + 3]) / 255
-            }
-        }
-        let white = Data(repeating: 255, count: n * 4)
-
-        let vertexSource = SCNGeometrySource(data: positions, semantic: .vertex, vectorCount: n, usesFloatComponents: true,
-                                             componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
-        let normalSource = SCNGeometrySource(data: normals, semantic: .normal, vectorCount: n, usesFloatComponents: true,
-                                             componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
-        let colorSource = SCNGeometrySource(data: white, semantic: .color, vectorCount: n, usesFloatComponents: false,
-                                            componentsPerVector: 4, bytesPerComponent: 1, dataOffset: 0, dataStride: 4)
-        let regionSource = SCNGeometrySource(data: regionCoords.withUnsafeBufferPointer { Data(buffer: $0) }, semantic: .texcoord,
-                                             vectorCount: n, usesFloatComponents: true, componentsPerVector: 2,
-                                             bytesPerComponent: 4, dataOffset: 0, dataStride: 8)
-        let blendSource = SCNGeometrySource(data: blendCoords.withUnsafeBufferPointer { Data(buffer: $0) }, semantic: .texcoord,
-                                            vectorCount: n, usesFloatComponents: true, componentsPerVector: 2,
-                                            bytesPerComponent: 4, dataOffset: 0, dataStride: 8)
-        let element = SCNGeometryElement(data: indices, primitiveType: .triangles, primitiveCount: m / 3, bytesPerIndex: 4)
-        geometry = SCNGeometry(sources: [vertexSource, normalSource, colorSource, regionSource, blendSource], elements: [element])
-
-        boneIndices = SCNGeometrySource(data: indices16, semantic: .boneIndices, vectorCount: n, usesFloatComponents: false,
-                                        componentsPerVector: 4, bytesPerComponent: 2, dataOffset: 0, dataStride: 8)
-        boneWeights = SCNGeometrySource(data: weights, semantic: .boneWeights, vectorCount: n, usesFloatComponents: true,
-                                        componentsPerVector: 4, bytesPerComponent: 4, dataOffset: 0, dataStride: 16)
-
-        // Échantillon de sommets pour la mise au sol (1 sur 7).
+        var meshes: [Mesh] = []
         var samples: [SkinSample] = []
-        positions.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-            indices16.withUnsafeBytes { (b: UnsafeRawBufferPointer) in
-                weights.withUnsafeBytes { (w: UnsafeRawBufferPointer) in
-                    let pf = p.bindMemory(to: Float.self), bi = b.bindMemory(to: UInt16.self), wf = w.bindMemory(to: Float.self)
-                    for i in stride(from: 0, to: n, by: 7) {
-                        let position = Vec3(Double(pf[i * 3]), Double(pf[i * 3 + 1]), Double(pf[i * 3 + 2]))
-                        samples.append(SkinSample(position: position,
-                                                  bones: (0..<4).map { Int(bi[i * 4 + $0]) },
-                                                  weights: (0..<4).map { Double(wf[i * 4 + $0]) }))
+        for (meshIndex, _) in info.meshes.enumerated() {
+            let material = readUInt32(), n = readUInt32(), m = readUInt32()
+            let positions = try slice(n * 12), normals = try slice(n * 12)
+            let boneIndexData = try slice(n * 8), weights = try slice(n * 16), indices = try slice(m * 4)
+
+            let vertexSource = SCNGeometrySource(data: positions, semantic: .vertex, vectorCount: n, usesFloatComponents: true,
+                                                 componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
+            let normalSource = SCNGeometrySource(data: normals, semantic: .normal, vectorCount: n, usesFloatComponents: true,
+                                                 componentsPerVector: 3, bytesPerComponent: 4, dataOffset: 0, dataStride: 12)
+            let element = SCNGeometryElement(data: indices, primitiveType: .triangles, primitiveCount: m / 3, bytesPerIndex: 4)
+            let geometry = SCNGeometry(sources: [vertexSource, normalSource], elements: [element])
+            let boneIndices = SCNGeometrySource(data: boneIndexData, semantic: .boneIndices, vectorCount: n, usesFloatComponents: false,
+                                                componentsPerVector: 4, bytesPerComponent: 2, dataOffset: 0, dataStride: 8)
+            let boneWeights = SCNGeometrySource(data: weights, semantic: .boneWeights, vectorCount: n, usesFloatComponents: true,
+                                                componentsPerVector: 4, bytesPerComponent: 4, dataOffset: 0, dataStride: 16)
+            meshes.append(Mesh(material: material, geometry: geometry, boneIndices: boneIndices, boneWeights: boneWeights))
+
+            // Mise au sol : sommets du corps uniquement (1 sur 7).
+            if meshIndex == 0 {
+                positions.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
+                    boneIndexData.withUnsafeBytes { (b: UnsafeRawBufferPointer) in
+                        weights.withUnsafeBytes { (w: UnsafeRawBufferPointer) in
+                            let pf = p.bindMemory(to: Float.self), bi = b.bindMemory(to: UInt16.self), wf = w.bindMemory(to: Float.self)
+                            for i in stride(from: 0, to: n, by: 7) {
+                                samples.append(SkinSample(position: Vec3(Double(pf[i * 3]), Double(pf[i * 3 + 1]), Double(pf[i * 3 + 2])),
+                                                          bones: (0..<4).map { Int(bi[i * 4 + $0]) },
+                                                          weights: (0..<4).map { Double(wf[i * 4 + $0]) }))
+                            }
+                        }
                     }
                 }
             }
         }
+        self.meshes = meshes
         self.samples = samples
-    }
-
-    /// Masque binaire des régions à mettre en valeur (bit i = région i).
-    func mask(for regionNames: [String]) -> Float {
-        var mask = 0
-        for name in regionNames {
-            if let index = regions.firstIndex(of: name) { mask |= 1 << index }
-        }
-        return Float(mask)
     }
 }

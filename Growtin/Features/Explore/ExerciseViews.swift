@@ -53,7 +53,7 @@ struct ExerciseDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: GT.Spacing.l) {
                 let preview = exercise.steps[min(selectedStep, exercise.steps.count - 1)]
-                MannequinCard(motion: preview.motion, focus: preview.focus,
+                MannequinCard(motion: preview.motion,
                               caption: "\(min(selectedStep, exercise.steps.count - 1) + 1). \(preview.title)", height: 360)
                     .padding(.top, GT.Spacing.s)
 
@@ -158,6 +158,9 @@ struct ExerciseDetailView: View {
             case "exerciseFloor":
                 UserDefaults.standard.set(MannequinBody.female.rawValue, forKey: "mannequin.figure")
                 selectedStep = 3
+            case "exerciseStep":
+                if let figure = DemoLaunch.figure { UserDefaults.standard.set(figure, forKey: "mannequin.figure") }
+                selectedStep = min(DemoLaunch.onboardingStep ?? 0, exercise.steps.count - 1)
             default: break
             }
         }
@@ -211,7 +214,7 @@ struct ExerciseSessionView: View {
             onClose: { dismiss() }
         ) {
             VStack(spacing: GT.Spacing.m) {
-                MannequinCard(motion: step.motion, focus: step.focus, caption: MotionCatalog.caption(for: step), height: 270)
+                MannequinCard(motion: step.motion, caption: MotionCatalog.caption(for: step), height: 270)
                 if !step.cues.isEmpty {
                     VStack(alignment: .leading, spacing: GT.Spacing.xxs) {
                         ForEach(step.cues, id: \.self) { cue in

@@ -14,8 +14,8 @@ OUT = os.path.join(ROOT, "Growtin/Resources/Mannequin")
 
 # Morphologies retenues (valeurs MakeHuman entre 0 et 1)
 PROFILES = {
-    "male":   dict(gender=1.0, age=0.5, muscle=0.72, weight=0.45, proportions=1.0),
-    "female": dict(gender=0.0, age=0.5, muscle=0.62, weight=0.45, proportions=1.0),
+    "male":   dict(gender=1.0, age=0.5, muscle=0.86, weight=0.5, proportions=1.0),
+    "female": dict(gender=0.0, age=0.5, muscle=0.7, weight=0.48, proportions=1.0),
 }
 
 def load_obj(path):
