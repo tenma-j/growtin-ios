@@ -114,8 +114,9 @@ def posed_skin(pose):
     R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
     return MESH.rig.skin(MESH.v, MESH.n, MESH.bi, MESH.bw, R, Pj)
 
-def hand_push(pose, side, reach=0.08, skin=None, gap=CONTACT_GAP):
-    """Déplacement qui sort la main du corps, à « gap » de la peau (None si elle ne s'y enfonce pas)."""
+def hand_push(pose, side, reach=0.08, skin=None, gap=CONTACT_GAP, depth_min=0.0015, count_min=3):
+    """Déplacement qui sort la main du corps, à « gap » de la peau (None si elle ne s'y enfonce pas : moins de
+    « count_min » sommets à plus de « depth_min » sous la peau)."""
     v, n = skin if skin is not None else posed_skin(pose)
     hv, bv, bn = v[HAND_VERTS[side]], v[BODY_VERTS[side]], n[BODY_VERTS[side]]
     near = np.all((bv > hv.min(0) - reach) & (bv < hv.max(0) + reach), axis=1)
@@ -125,8 +126,8 @@ def hand_push(pose, side, reach=0.08, skin=None, gap=CONTACT_GAP):
     dist, j = cKDTree(bv).query(hv, distance_upper_bound=reach)
     ok = np.isfinite(dist); j = np.where(ok, j, 0)
     depth = -np.einsum("ij,ij->i", hv - bv[j], bn[j])                 # > 0 : sous la peau
-    inside = ok & (depth > 0.0015)
-    if inside.sum() < 3:
+    inside = ok & (depth > depth_min)
+    if inside.sum() < count_min:
         return None
     out = bn[j[inside]].mean(0); out /= np.linalg.norm(out)
     return out * (depth[inside].max() + gap)
@@ -417,11 +418,19 @@ def blend(a, b, u):
         p["ground"] = False
     return p
 
+def hands_joined(pose):
+    """Mains jointes (paume contre paume) : elles bougent ensemble, on ne les écarte pas l'une de l'autre."""
+    _, Pos = ik.fk(pose)
+    return np.linalg.norm(Pos["wrist.L"] - Pos["wrist.R"]) < 0.07
+
 def crosses_body(a, b):
-    """Entre deux images clés, une main passe-t-elle dans le corps ?"""
+    """Entre deux images clés, une main traverse-t-elle le corps (au moins 20 sommets à plus de 5 mm sous la peau) ?
+    Un simple frôlement ne compte pas."""
+    if hands_joined(a) or hands_joined(b):
+        return False
     for u in (0.25, 0.5, 0.75):
         m = blend(a, b, u); skin = posed_skin(m)
-        if any(hand_push(m, side, skin=skin) is not None for side in "LR"):
+        if any(hand_push(m, side, skin=skin, depth_min=0.005, count_min=20) is not None for side in "LR"):
             return True
     return False
 
