@@ -54,7 +54,12 @@ struct ExerciseDetailView: View {
     @Environment(AppModel.self) private var model
     let exercise: Exercise
     @State private var showingSession = false
-    @State private var selectedStep = 0
+    @State private var selectedStep: Int
+
+    init(exercise: Exercise) {
+        self.exercise = exercise
+        _selectedStep = State(initialValue: exercise.featuredStepIndex)
+    }
 
     var body: some View {
         ScrollView {

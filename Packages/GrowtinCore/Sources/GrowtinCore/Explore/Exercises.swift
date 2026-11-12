@@ -90,6 +90,11 @@ public struct Exercise: Codable, Hashable, Sendable, Identifiable {
 
     public var totalSeconds: Int { steps.reduce(0) { $0 + $1.seconds } }
     public var durationMinutes: Int { max(1, Int((Double(totalSeconds) / 60).rounded())) }
+
+    /// Étape montrée en premier dans la fiche : le premier vrai mouvement, pas l'échauffement ni l'installation.
+    public var featuredStepIndex: Int {
+        steps.firstIndex { !["Échauffement", "Installation"].contains($0.title) } ?? 0
+    }
 }
 
 public enum ExerciseLibrary {

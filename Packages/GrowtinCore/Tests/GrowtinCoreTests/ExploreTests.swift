@@ -20,6 +20,14 @@ struct ExploreTests {
         }
     }
 
+    @Test("La fiche s'ouvre sur un vrai mouvement, pas sur l'échauffement")
+    func featuredStep() throws {
+        let strength = try #require(ExerciseLibrary.all.first { $0.id == "renforcement-poids-du-corps" })
+        #expect(strength.steps[strength.featuredStepIndex].motion == "chair-squat")
+        let yoga = try #require(ExerciseLibrary.all.first { $0.id == "yoga-doux" })
+        #expect(yoga.featuredStepIndex == 0)
+    }
+
     @Test("Aucun exercice ne revendique d'effet sur les cheveux")
     func exercisesMakeNoHairClaims() {
         for exercise in ExerciseLibrary.all {
