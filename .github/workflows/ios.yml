@@ -75,9 +75,11 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publier les captures sur la branche « captures »
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        # Aussi en cas d'échec ou de dépassement de temps : les captures déjà prises restent consultables.
+        if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           set -e
+          test -d screenshots || exit 0
           mkdir -p /tmp/captures && cp -R screenshots/. /tmp/captures/
           cp xcodebuild.log core-tests.log /tmp/captures/ 2>/dev/null || true
           {
