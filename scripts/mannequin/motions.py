@@ -90,6 +90,71 @@ ik = IK(META["bodies"][BODY]["joints"], POSES)
 PALM = 0.018 if BODY == "male" else 0.016          # demi-épaisseur de la main : paumes jointes sans se traverser
 SIDES = {n[:-2] for n in ik.names if n.endswith(".L")}
 
+# ─── Contacts : une main posée sur le corps reste à sa surface ───
+# Les objectifs des poignets sont donnés par rapport aux os ; la peau, elle, dépend du corps (cuisses, hanches, côtes
+# plus ou moins larges). Une main placée par objectif qui s'enfonce dans le corps en est sortie le long de la normale
+# de la peau, juste assez pour la toucher (maillage et skinning de l'app : Resources/Mannequin).
+from motion_eval import Body, resolve, local_rotations  # noqa: E402
+from scipy.spatial import cKDTree  # noqa: E402
+MESH = Body.from_resources(BODY, os.path.join(ROOT, "Growtin/Resources/Mannequin"))
+CONTACT_GAP = 0.002                                     # jeu laissé entre la main et la peau (m)
+
+def _bone_weight(prefixes, side):
+    ids = [i for i, n in enumerate(MESH.names) if n.startswith(prefixes) and n.endswith("." + side)]
+    return (MESH.bw * np.isin(MESH.bi, ids)).sum(1)
+HAND_VERTS = {s: np.where(_bone_weight(("finger", "wrist"), s) > 0.5)[0] for s in "LR"}
+# Le reste du corps, sans le bras de cette main ni l'autre main (mains jointes : réglées à part).
+BODY_VERTS = {s: np.where((_bone_weight(("finger", "wrist", "lowerarm", "upperarm"), s) < 0.05)
+                          & (_bone_weight(("finger", "wrist"), "R" if s == "L" else "L") < 0.05))[0] for s in "LR"}
+
+def hand_push(pose, side, reach=0.08):
+    """Déplacement qui sort la main du corps (None si elle ne s'y enfonce pas)."""
+    r = resolve(pose, POSES)
+    R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
+    h, b = HAND_VERTS[side], BODY_VERTS[side]
+    hv, _ = MESH.rig.skin(MESH.v[h], MESH.n[h], MESH.bi[h], MESH.bw[h], R, Pj)
+    bv, bn = MESH.rig.skin(MESH.v[b], MESH.n[b], MESH.bi[b], MESH.bw[b], R, Pj)
+    near = np.all((bv > hv.min(0) - reach) & (bv < hv.max(0) + reach), axis=1)
+    if not near.any():
+        return None
+    bv, bn = bv[near], bn[near]
+    dist, j = cKDTree(bv).query(hv, distance_upper_bound=reach)
+    ok = np.isfinite(dist); j = np.where(ok, j, 0)
+    depth = -np.einsum("ij,ij->i", hv - bv[j], bn[j])                 # > 0 : sous la peau
+    inside = ok & (depth > 0.0015)
+    if inside.sum() < 3:
+        return None
+    out = bn[j[inside]].mean(0); out /= np.linalg.norm(out)
+    return out * (depth[inside].max() + CONTACT_GAP)
+
+_settled = {}
+def settle_hands(pose):
+    """Image clé d'un mouvement : chaque main qui s'enfonce dans le corps (buste penché après coup, main sur la tête,
+    bras le long de cuisses larges…) est ramenée à sa surface, avec la même orientation et le coude du même côté."""
+    key = json.dumps(pose, sort_keys=True, default=lambda o: o.tolist() if hasattr(o, "tolist") else float(o))
+    if key in _settled:
+        return _settled[key]
+    p = pose
+    for side in "LR":
+        push = hand_push(p, side)
+        sgn = 1 if side == "L" else -1
+        for _ in range(8):
+            if push is None:
+                break
+            _, Pos = ik.fk(p)
+            w = Pos[f"wrist.{side}"]
+            fingers = Pos[f"finger3-1.{side}"] - w
+            palm = sgn * np.cross(fingers, Pos[f"finger2-1.{side}"] - Pos[f"finger5-1.{side}"])
+            s, e = Pos[f"upperarm01.{side}"], Pos[f"lowerarm01.{side}"]
+            d = (w - s) / np.linalg.norm(w - s)
+            pole = (e - s) - d * ((e - s) @ d)
+            if np.linalg.norm(pole) < 1e-3:
+                pole = np.array([sgn * 1.0, -1.0, -0.3])
+            p = ik.place_hand(p, side, w + push, fingers, palm, pole)
+            push = hand_push(p, side)
+    _settled[key] = p
+    return p
+
 def pinned_sides(pose):
     """Côtés dont la main a été placée par objectif (cherche aussi dans les poses de base)."""
     out = set()
@@ -176,7 +241,8 @@ def legs(pose, L=None, R=None, pole_L=(0, 0, 1), pole_R=(0, 0, 1), **kw):
 
 def hands(pose, L=None, R=None, fingers_L=None, fingers_R=None, palm_L=None, palm_R=None, pole_L=(1, -1, -0.3), pole_R=(-1, -1, -0.3)):
     """Place les poignets (et oriente les mains si « fingers » et « palm » sont donnés).
-    Si la main est au-dessus de l'épaule, la ceinture scapulaire monte d'abord (rythme scapulo-huméral)."""
+    Si la main est au-dessus de l'épaule, la ceinture scapulaire monte d'abord (rythme scapulo-huméral).
+    Une main qui s'enfoncerait dans le corps est ramenée à sa surface (voir hand_push)."""
     p = pose if isinstance(pose, dict) else P(pose)
     for side, target, fingers, palm, pole in (("L", L, fingers_L, palm_L, pole_L), ("R", R, fingers_R, palm_R, pole_R)):
         if target is None:
@@ -184,17 +250,36 @@ def hands(pose, L=None, R=None, fingers_L=None, fingers_R=None, palm_L=None, pal
         amt = rhythm_amount(arm_elevation(p, side, target))
         if amt > 0.02:
             p = add_rhythm(p, side, amt)
-        if fingers is not None:
-            p = ik.place_hand(p, side, target, fingers, palm, pole)
-        else:
-            p = with_bones(p, ik.arm(p, side, target, pole))
+        base, target = p, np.asarray(target, float)
+        for _ in range(8):
+            if fingers is not None:
+                p = ik.place_hand(base, side, target, fingers, palm, pole)
+            else:
+                p = with_bones(base, ik.arm(base, side, target, pole))
+            push = hand_push(p, side)
+            if push is None:
+                break
+            target = target + push
         p["_pinned"] = sorted(set(p.get("_pinned", [])) | {side})
     return p
 
-def joined_thumbs(pose, sides=("L", "R")):
-    """Mains jointes : pouces le long des index, dans le plan de la paume (sinon chaque pouce traverse l'autre main)."""
+def joined_hands(pose, sides=("L", "R")):
+    """Mains jointes, paume contre paume : doigts tendus dans le plan de la paume et pouces le long des index.
+    Doigts légèrement pliés ou pouces tournés vers l'autre main la traverseraient (doigts croisés en X)."""
     from ik import to_euler
     from rig import axis_angle
+
+    def aim(p, side, bone, child, want):
+        """Tourne « bone » pour que le segment vers « child » suive la direction « want »."""
+        R, Pos = ik.fk(p)
+        u = Pos[f"{child}.{side}"] - Pos[f"{bone}.{side}"]; u /= np.linalg.norm(u)
+        axis = np.cross(u, want); sn = np.linalg.norm(axis)
+        if sn < 1e-6:
+            return p
+        delta = axis_angle(axis / sn, np.degrees(np.arctan2(sn, u @ want)))
+        parent = ik.rig.parents[ik.rig.index[f"{bone}.{side}"]]
+        return with_bones(p, {f"{bone}_{side}": to_euler(R[parent].T @ delta @ R[f"{bone}.{side}"])})
+
     p = pose
     for side in sides:
         R, Pos = ik.fk(p)
@@ -203,17 +288,15 @@ def joined_thumbs(pose, sides=("L", "R")):
         across = Pos[f"finger2-1.{side}"] - Pos[f"finger5-1.{side}"]               # de l'auriculaire vers l'index
         across -= fingers * (across @ fingers); across /= np.linalg.norm(across)
         palm = np.cross(fingers, across) * (1 if side == "L" else -1)               # côté paume
+        # Doigts : chaque phalange ramenée dans le plan de la paume (l'écart naturel entre les doigts est gardé).
+        for f in range(2, 6):
+            for bone, child in ((f"finger{f}-1", f"finger{f}-2"), (f"finger{f}-2", f"finger{f}-3")):
+                R, Pos = ik.fk(p)
+                u = Pos[f"{child}.{side}"] - Pos[f"{bone}.{side}"]
+                p = aim(p, side, bone, child, (u - palm * (u @ palm)) / np.linalg.norm(u - palm * (u @ palm)))
         want = 0.72 * fingers + 0.68 * across - 0.12 * palm; want /= np.linalg.norm(want)
         for bone, child in (("finger1-1", "finger1-2"), ("finger1-2", "finger1-3")):
-            R, Pos = ik.fk(p)
-            u = Pos[f"{child}.{side}"] - Pos[f"{bone}.{side}"]; u /= np.linalg.norm(u)
-            axis = np.cross(u, want); sn = np.linalg.norm(axis)
-            if sn < 1e-6:
-                continue
-            delta = axis_angle(axis / sn, np.degrees(np.arctan2(sn, u @ want)))
-            parent = ik.rig.parents[ik.rig.index[f"{bone}.{side}"]]
-            local = R[parent].T @ delta @ R[f"{bone}.{side}"]
-            p = with_bones(p, {f"{bone}_{side}": to_euler(local)})
+            p = aim(p, side, bone, child, want)
         p = with_bones(p, {f"finger1-3_{side}": [0.0, 0.0, 0.0]})
     return p
 
@@ -254,15 +337,16 @@ def mirror_pose(pose):
     if pins: p["_pinned"] = sorted({"L": "R", "R": "L"}[x] for x in pins)
     return p
 
-_hip = [float(STAND["upperleg01.L"][0] + 0.067), float(STAND["spine04"][1] - 0.03), float(STAND["spine04"][2] + 0.03)]
+_hip = [float(STAND["upperleg01.L"][0] + 0.05), float(STAND["spine04"][1] - 0.03), float(STAND["spine04"][2] + 0.03)]
 POSES["handsHips"] = hands(P("stand"), L=_hip, R=[-_hip[0], _hip[1], _hip[2]],
                            fingers_L=[-0.2, -0.45, 1], palm_L=[-1, 0, 0], fingers_R=[0.2, -0.45, 1], palm_R=[1, 0, 0],
                            pole_L=(1, 0.1, -0.6), pole_R=(-1, 0.1, -0.6))
 
+# Mains posées sur le corps : objectifs pris un peu sous la peau, la mise en contact (hand_push) les ramène à sa surface.
 # Assis en tailleur, mains posées sur les genoux, paumes vers le ciel.
 _cl = joints(P("crossLeggedLegs"))
 POSES["crossLegged"] = hands(P("crossLeggedLegs"),
-                             L=_cl["lowerleg01.L"] + [-0.06, 0.08, 0.0], R=_cl["lowerleg01.R"] + [0.06, 0.08, 0.0],
+                             L=_cl["lowerleg01.L"] + [-0.06, 0.0, 0.0], R=_cl["lowerleg01.R"] + [0.06, 0.0, 0.0],
                              fingers_L=[0.35, -0.1, 1], palm_L=[0, 1, 0], fingers_R=[-0.35, -0.1, 1], palm_R=[0, 1, 0],
                              pole_L=(1, -0.6, -0.4), pole_R=(-1, -0.6, -0.4))
 # Assis sur une chaise, mains posées à plat sur les cuisses.
@@ -277,7 +361,7 @@ POSES["chairSit"] = hands(P("chairLegs"),
 MOTIONS = {}
 def motion(mid, keys, muscles=(), yaw=30, props=(), pitch=8, support=None):
     for k in keys:
-        k["pose"] = shoulder_rhythm(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"]))
+        k["pose"] = settle_hands(shoulder_rhythm(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"])))
     MOTIONS[mid] = {"keys": keys, "muscles": list(muscles), "camera": {"yaw": yaw, "pitch": pitch}, "props": list(props)}
     if support: MOTIONS[mid]["support"] = support
 
@@ -297,9 +381,9 @@ def circle_keys(n, period, build, ease="linear"):
 
 # ─── Respiration ───
 motion("breathe-stand", breathe("stand"), yaw=20)
-_rib = [float(SH[0] * 0.71), float(STAND["spine02"][1] - 0.01), float(STAND["spine02"][2] + 0.10)]
+_rib = [float(SH[0] * 0.64), float(STAND["spine02"][1] - 0.01), float(STAND["spine02"][2] + 0.10)]
 ribs = hands(P("stand"), L=_rib, R=[-_rib[0], _rib[1], _rib[2]],
-             fingers_L=[-0.6, -0.1, 0.8], palm_L=[-1, 0, -0.2], fingers_R=[0.6, -0.1, 0.8], palm_R=[1, 0, -0.2],
+             fingers_L=[-0.35, -0.15, 0.92], palm_L=[-1, 0, -0.2], fingers_R=[0.35, -0.15, 0.92], palm_R=[1, 0, -0.2],
              pole_L=(1, -0.4, -0.5), pole_R=(-1, -0.4, -0.5))
 motion("rib-breathing", breathe(ribs), muscles=("chest", "abs"), yaw=20)
 motion("look-far", [K(0, P("stand", head=[-5, 0, 0])), K(3, P("stand", head=[-6, 12, 0], **BREATH_IN)),
@@ -423,9 +507,13 @@ def quad_stretch():
     p = P("stand", upperleg01_L=[10, 0, -2], lowerleg01_L=[145, 0, 0], foot_L=[30, 0, 0], upperarm01_R=[0, 0, 40], **open_hand(0.4, "R"))
     heel = joints(p)["foot.L"]
     return hands(p, L=heel + [0.02, 0.06, -0.06], pole_L=(0.6, -0.2, -1))
+# Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
+# (rapprochées, elles se traversaient derrière le dos).
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
-                   L=[0.05, float(STAND["root"][1] + 0.02), float(STAND["root"][2] - 0.14)],
-                   R=[-0.05, float(STAND["root"][1] + 0.02), float(STAND["root"][2] - 0.14)], pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
+                   L=[0.1, float(STAND["root"][1] - 0.02), float(STAND["root"][2] - 0.16)],
+                   R=[-0.1, float(STAND["root"][1] - 0.02), float(STAND["root"][2] - 0.16)],
+                   fingers_L=[0, -1, -0.35], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.35], palm_R=[1, 0, 0],
+                   pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
 motion("cooldown-stretch", [K(0, "stand"), K(1.5, quad_stretch()), K(4.5, quad_stretch()), K(6, "stand"),
                             K(7.5, chest_open), K(10.5, chest_open), K(12, "stand")], muscles=("quads", "chest"), yaw=60)
 
@@ -472,13 +560,28 @@ squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
 
 # Cercles de hanches : le bassin dessine un cercle, les pieds restent posés, le buste reste au-dessus.
+def hands_on_pelvis(pose, rest):
+    """Mains posées sur le bassin dans « rest » : replacées pour suivre le bassin (racine) de « pose »."""
+    R0, P0 = ik.fk(rest); R1, P1 = ik.fk(pose)
+    move = R1["root"] @ R0["root"].T
+    place = lambda x: P1["root"] + move @ (np.asarray(x) - P0["root"])
+    kw = {}
+    for side in "LR":
+        sgn = 1 if side == "L" else -1
+        w = P0[f"wrist.{side}"]; f = P0[f"finger3-1.{side}"] - w
+        n = sgn * np.cross(f, P0[f"finger2-1.{side}"] - P0[f"finger5-1.{side}"])
+        e = P0[f"lowerarm01.{side}"] - P0[f"upperarm01.{side}"]
+        kw.update({side: place(w), f"fingers_{side}": move @ f, f"palm_{side}": move @ n, f"pole_{side}": tuple(e)})
+    return hands(pose, **kw)
+
 def hip_circle(theta):
     r = 0.08 * S_LEG
     ox, oz = r * np.cos(theta), r * np.sin(theta)
     tilt_z, tilt_x = 8 * np.cos(theta), -7 * np.sin(theta)
     p = P("handsHips", root={"rot": [["z", -tilt_z], ["x", tilt_x]], "offset": [ox, -0.025, oz]},
           spine05=[-tilt_x * 0.6, 0, tilt_z * 0.6], spine03=[-tilt_x * 0.7, 0, tilt_z * 0.7], spine01=[-tilt_x * 0.4, 0, tilt_z * 0.4])
-    return legs(p, L=ankle("L"), R=ankle("R"))
+    # Les mains restent posées sur les hanches pendant que le bassin tourne.
+    return hands_on_pelvis(legs(p, L=ankle("L"), R=ankle("R")), "handsHips")
 motion("hip-circles", circle_keys(12, 4.8, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
 
 # Cercles de cheville : main gauche à plat contre le mur, genou droit levé, la cheville dessine des cercles.
@@ -505,7 +608,7 @@ motion("mountain", breathe(mountain, cycle=6), yaw=15, props=(MAT,))
 # Salutation des bras : les bras montent devant soi jusqu'au-dessus de la tête, paumes jointes, puis redescendent.
 arms_front_up = P(mountain, upperarm01=[-90, 0, 5], lowerarm01=[-4, 0, 0])
 _up = P(mountain, clavicle=[0, 0, 10], spine01=[-4, 0, 0], neck01=[-6, 0, 0], head=[-8, 0, 0])
-salute = joined_thumbs(hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
+salute = joined_hands(hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
                              fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3)))
 motion("arm-raise", [K(0, mountain), K(2.4, arms_front_up), K(4.2, salute), K(5.6, salute), K(7.4, arms_front_up), K(9.4, mountain), K(10.4, mountain)],
        muscles=("shoulders",), yaw=40, props=(MAT,))
@@ -555,12 +658,12 @@ def tree(stage, arms):
         p = P(p, **open_hand(1.0))
         p = hands(p, L=[PALM, CHEST[0], CHEST[1]], R=[-PALM, CHEST[0], CHEST[1]], fingers_L=[0, 1, 0.25], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0.25], palm_R=[1, 0, 0], pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
-        p = joined_thumbs(p)
+        p = joined_hands(p)
     elif arms == "up":
         p = P(p, clavicle=[0, 0, 10], **open_hand(1.0))
         p = hands(p, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
                   fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3))
-        p = joined_thumbs(p)
+        p = joined_hands(p)
     return p
 _tree = [tree(0, "down"), tree(1, "prayer"), tree(2, "prayer"), tree(2, "up")]
 _treeR = [mirror_pose(x) for x in _tree]
@@ -620,8 +723,8 @@ def hamstring(side, hinge):
     p = legs(p, **{o: _seat[f"foot.{o}"]})
     J = joints(p)
     knee = J[f"lowerleg01.{side}"]; thigh = (J[f"upperleg01.{side}"] + knee) / 2
-    hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.075, 0]
-    return hands(p, L=hand_on + [0.03, 0, 0], R=hand_on + [-0.03, 0, 0],
+    hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.055, 0]
+    return hands(p, L=hand_on + [0.06, 0, 0], R=hand_on + [-0.06, 0, 0],             # côte à côte sans se chevaucher
                  fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0, -0.3, 1], palm_R=[0, -1, 0],
                  pole_L=(1, -0.6, -0.3), pole_R=(-1, -0.6, -0.3))
 hL0, hL1 = hamstring("L", 0), hamstring("L", 24)

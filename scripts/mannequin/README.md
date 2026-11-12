@@ -28,7 +28,13 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    `Packages/GrowtinCore/Sources/GrowtinCore/Resources/motions.json` après contrôle des os et des régions.
    - poses clés en angles par articulation, ou par objectifs résolus par cinématique inverse (`ik.py`) : pieds qui
      restent posés (pas chassés, fentes, squats, cercles de hanches), mains posées sur les genoux, les cuisses,
-     un mur, le crâne, mains jointes (arbre, salutation) ;
+     un mur, le crâne, mains jointes (arbre, salutation : doigts tendus dans le plan de la paume, pouces le long
+     des index) ;
+   - contacts : le script lit les corps de l'app (`Growtin/Resources/Mannequin`, même skinning). Une main placée
+     par objectif, puis chaque main de chaque image clé, qui s'enfonce dans le corps est ramenée à sa surface le
+     long de la normale de la peau (2 mm de jeu), avec la même orientation et le coude du même côté. Les objectifs
+     des mains posées sont donc pris un peu sous la peau : la mise en contact les pose exactement dessus, quelle que
+     soit la morphologie. Environ une minute pour les deux corps ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
 3. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :

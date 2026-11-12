@@ -48,19 +48,57 @@ def local_rotations(p, names):
     loc["root"] = R @ loc.get("root", np.eye(3))
     return loc
 
+def read_bin(path):
+    """Corps tel que l'app le lit (Resources/Mannequin/mannequin-*.bin, format GTM5 ou GTM4) : maillages bout à bout."""
+    import struct
+    data = open(path, "rb").read()
+    magic, count = struct.unpack_from("<4sI", data, 0)
+    off = 8
+    if magic == b"GTM5":
+        k = struct.unpack_from("<I", data, off)[0]; off += 4
+    elif magic == b"GTM4":
+        k = 4
+    else:
+        raise ValueError(f"{path} : en-tête inconnu")
+    v, n, bi, bw, tris, mat = [], [], [], [], [], []
+    base = 0
+    for _ in range(count):
+        material, nv, ni = struct.unpack_from("<III", data, off); off += 12
+        def take(dtype, size):
+            nonlocal off
+            a = np.frombuffer(data, dtype, size, off); off += a.nbytes
+            return a
+        v.append(take("<f4", nv * 3).reshape(nv, 3)); n.append(take("<f4", nv * 3).reshape(nv, 3))
+        bi.append(take("<u2", nv * k).reshape(nv, k).astype(int)); bw.append(take("<f4", nv * k).reshape(nv, k))
+        t = take("<u4", ni).reshape(-1, 3).astype(int) + base
+        tris.append(t); mat.append(np.full(len(t), material)); base += nv
+    return {"v": np.concatenate(v).astype(float), "n": np.concatenate(n).astype(float), "tris": np.concatenate(tris),
+            "bone_idx": np.concatenate(bi), "bone_w": np.concatenate(bw).astype(float), "tri_mat": np.concatenate(mat)}
+
 class Body:
     def __init__(self, npz):
-        d = np.load(npz)
+        d = np.load(npz) if isinstance(npz, str) else npz
+        has = (lambda key: key in d.files) if hasattr(d, "files") else (lambda key: key in d)
         self.v, self.n, self.tris = d["v"], d["n"], d["tris"]
         self.bi, self.bw = d["bone_idx"], d["bone_w"]
         self.names = [str(x) for x in d["order"]]
         parents = {n: (str(p) or None) for n, p in zip(self.names, d["parents"])}
-        halves = {self.names[int(h)]: self.names[int(b)] for h, b in d["halves"]} if "halves" in d.files else {}
+        halves = {self.names[int(h)]: self.names[int(b)] for h, b in d["halves"]} if has("halves") else {}
         self.rig = Rig(self.names, parents, {n: h for n, h in zip(self.names, d["heads"])}, halves)
-        self.tri_mat = d["tri_mat"] if "tri_mat" in d.files else np.zeros(len(self.tris), int)
-        body_count = int(d["body_count"]) if "body_count" in d.files else len(self.v)
+        self.tri_mat = d["tri_mat"] if has("tri_mat") else np.zeros(len(self.tris), int)
+        body_count = int(d["body_count"]) if has("body_count") else len(self.v)
         self.sample = np.arange(0, body_count, 7)
         self.offset_scale = 1.0       # décalages de la racine mis à l'échelle du corps (comme dans l'app)
+
+    @classmethod
+    def from_resources(cls, body_name, resources):
+        """Corps de l'app : Resources/Mannequin/mannequin.json (squelette) et mannequin-<corps>.bin (maillages)."""
+        meta = json.load(open(os.path.join(resources, "mannequin.json")))["bodies"][body_name]
+        names = [j["name"] for j in meta["joints"]]
+        d = read_bin(os.path.join(resources, f"mannequin-{body_name}.bin"))
+        d.update(order=names, parents=[j["parent"] or "" for j in meta["joints"]], heads=[j["head"] for j in meta["joints"]],
+                 halves=[(names.index(j["name"]), names.index(j["half"])) for j in meta["joints"] if j.get("half")])
+        return cls(d)
 
     def lift(self, p, previous=0.0):
         """Mise au sol : le point le plus bas touche y = 0 ; sans mise au sol, on garde la hauteur précédente."""
