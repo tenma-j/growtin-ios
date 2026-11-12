@@ -129,12 +129,14 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             newMeshNodes.append(node)
         }
 
+        // Aucun appel à SceneKit sous le verrou (le fil de rendu le prend en tenant déjà la scène).
+        let rootPosition = nodes.first?.simdPosition ?? .zero
         lock.lock()
         self.asset = asset
         meshNodes = newMeshNodes
         boneNodes = nodes
         lastRotations = Array(repeating: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1), count: nodes.count)
-        lastRoot = nodes.first?.simdPosition ?? .zero
+        lastRoot = rootPosition
         lock.unlock()
 
         if let motion = requestedMotion {
@@ -398,9 +400,13 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             default:
                 continue
             }
+            // Apparition en fondu ; l'opacité finale est fixée tout de suite, même si le rendu prend du retard.
             node.opacity = 0
             propsNode.addChildNode(node)
-            node.runAction(.fadeIn(duration: 0.4))
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.4
+            node.opacity = 1
+            SCNTransaction.commit()
         }
     }
 
