@@ -1007,7 +1007,7 @@ def foot_gap(pose):
     depth = -np.einsum("ij,ij->i", fv - v[_legL][j], n[_legL][j])
     near = dist < 0.04
     return float(-depth[near].max()) if near.any() else float(dist.min())
-def tree_legs(lifted):
+def tree_legs(lifted, away=0.0):
     p = P(mountain, root={"offset": [TREE_SHIFT if lifted else 0.0, 0, 0]})
     p = legs(p, L=ankle("L"), R=None if lifted else ankle("R"))
     if not lifted:
@@ -1020,7 +1020,7 @@ def tree_legs(lifted):
         m = (lo + hi) / 2
         if foot_gap(place(m)) > -0.004: lo = m
         else: hi = m
-    return place(lo)
+    return place(lo - away)
 _tree0, _tree1 = tree_legs(False), tree_legs(True)
 def tree_arms(p, u):
     """u : 0 mains jointes devant la poitrine, 1 au-dessus de la tête ; les mains montent jointes devant le visage."""
@@ -1042,10 +1042,14 @@ def tree_arms(p, u):
 def tree_keys(flip, t0):
     f = (lambda p: placed(mirror_pose(p)) if is_placed(p) else mirror_pose(p)) if flip else (lambda p: p)
     prayer, up = f(tree_arms(_tree1, 0)), f(tree_arms(_tree1, 1))
+    # Le pied arrive contre le mollet par le côté (et le quitte de même) : en ligne droite, il traverserait la jambe d'appui.
+    near = blend(_tree0, tree_arms(_tree1, 0), 0.75)
+    near = f(legs(near, L=ankle("L"), R=joints(tree_legs(True, away=0.07))["foot.R"], pole_R=(-1, -0.15, 0.4), foot_rot_R=TREE_FOOT))
     rise = planted(t0 + 2.6, t0 + 4.2, lambda s: f(tree_arms(_tree1, s)), n=6)
     fall = planted(t0 + 7.8, t0 + 9.2, lambda s: f(tree_arms(_tree1, 1 - s)), n=6)
-    return ([K(t0, f(_tree0)), K(t0 + 1.6, prayer), K(t0 + 2.6, prayer)] + rise + [K(t0 + 6.0, P(up, **BREATH_IN)), K(t0 + 7.8, up)]
-            + fall + [K(t0 + 10.2, prayer), K(t0 + 11.6, f(_tree0))])
+    return ([K(t0, f(_tree0)), K(t0 + 1.1, near), K(t0 + 1.6, prayer), K(t0 + 2.6, prayer)] + rise
+            + [K(t0 + 6.0, P(up, **BREATH_IN)), K(t0 + 7.8, up)] + fall
+            + [K(t0 + 10.2, prayer), K(t0 + 10.7, near), K(t0 + 11.6, f(_tree0))])
 motion("tree-pose", tree_keys(False, 0) + tree_keys(True, 11.6)[1:], muscles=("calves", "glutes", "abs"), yaw=12, props=(MAT,))
 
 # ─── Au sol ───
