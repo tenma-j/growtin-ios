@@ -51,6 +51,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     /// Articulations d'appoint (indice, os doublé) : recalculées à chaque image, la moitié de la rotation de l'os.
     private var halfPairs: [(joint: Int, source: Int)] = []
     private let transitionDuration = 0.5
+    /// Serviette tenue à deux mains et coincée sous un pied : deux brins roulés, recalculés à chaque image
+    /// entre trois sommets de la peau déformée (main gauche, dessous du pied, main droite).
+    private var towel: (strands: [SCNNode], vertices: [Int])?
 
     private(set) var currentBody: MannequinBody?
     private(set) var currentMotion: String?
@@ -346,6 +349,20 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             for mesh in deformedMeshes {
                 deformer.copy(vertices: mesh.range, positions: mesh.positions.contents(), normals: mesh.normals.contents())
             }
+            if let towel {
+                let p = deformer.positions
+                func point(_ i: Int) -> SIMD3<Float> { SIMD3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]) }
+                let foot = point(towel.vertices[1])
+                for (node, hand) in zip(towel.strands, [point(towel.vertices[0]), point(towel.vertices[2])]) {
+                    let d = hand - foot
+                    let length = simd_length(d)
+                    guard length > 0.01 else { node.isHidden = true; continue }
+                    node.isHidden = false
+                    node.simdPosition = (hand + foot) / 2
+                    node.simdOrientation = simd_quatf(from: SIMD3(0, 1, 0), to: d / length)
+                    node.simdScale = SIMD3(1, length, 1)
+                }
+            }
         } else {
             for (node, q) in zip(boneNodes, rotations) { node.simdOrientation = q }
             boneNodes.first?.simdPosition = root
@@ -421,6 +438,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
 
     private func buildProps(_ props: [MotionProp], keyPositions: [[Vec3]]) {
         propsNode.childNodes.forEach { $0.removeFromParentNode() }
+        lock.lock(); let oldTowel = towel; towel = nil; let canDeform = deformer != nil; lock.unlock()
+        oldTowel?.strands.forEach { $0.removeFromParentNode() }
         guard let asset else { return }
         let wood = Self.pbr(UIColor(red: 0.62, green: 0.47, blue: 0.33, alpha: 1), roughness: 0.65)
         let dark = Self.pbr(UIColor(red: 0.18, green: 0.18, blue: 0.2, alpha: 1), roughness: 0.5, metalness: 0.4)
@@ -490,6 +509,22 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 }
                 for x in [-half, half] { box(0.07, 2.05, 0.12, SIMD3(x, 1.025, 0), wall, chamfer: 0.006) }
                 box(2 * half + 0.07, 0.07, 0.12, SIMD3(0, 2.085, 0), wall, chamfer: 0.006)
+            case "towel":
+                guard let ids = prop.vertices, ids.count == 3, canDeform,
+                      ids.allSatisfy({ $0 >= 0 && $0 < asset.file.surface.rest.count / 3 }) else { continue }
+                let cloth = Self.pbr(UIColor(red: 0.42, green: 0.63, blue: 0.78, alpha: 1), roughness: 0.95)
+                let strands = (0..<2).map { _ -> SCNNode in
+                    let g = SCNCylinder(radius: 0.022, height: 1)
+                    g.radialSegmentCount = 16
+                    g.materials = [cloth]
+                    let n = SCNNode(geometry: g)
+                    n.castsShadow = true
+                    n.isHidden = true
+                    container.addChildNode(n)
+                    return n
+                }
+                lock.lock(); towel = (strands, ids); lock.unlock()
+                continue
             default:
                 continue
             }

@@ -121,6 +121,8 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     public let yaw: Double?
     /// Posé au sol (y = 0) quelle que soit la hauteur de l'ancre.
     public let floor: Bool?
+    /// Accessoire tenu (serviette) : sommets de la peau qu'il relie à chaque image (main gauche, pied, main droite).
+    public let vertices: [Int]?
 }
 
 /// Mouvement issu d'une capture réelle : rotations locales des os, image par image (quaternions x, y, z, w).

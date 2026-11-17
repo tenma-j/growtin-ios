@@ -395,6 +395,23 @@ POSES["chairSit"] = hands(P("chairLegs"),
                           pole_L=(0.5, -0.3, -1), pole_R=(-0.5, -0.3, -1))
 
 MOTIONS = {}
+def root_rotations(M):
+    """Rotation de la racine en rotations successives autour des axes du monde, dans l'ordre d'axes le plus éloigné
+    du blocage de cardan (axe du milieu loin de ±90°) : le corps à quatre pattes ou allongé est tourné de 90°."""
+    from scipy.spatial.transform import Rotation
+    best = None
+    for order in ("xyz", "xzy", "yxz", "yzx", "zxy", "zyx"):
+        ang = Rotation.from_matrix(M).as_euler(order, degrees=True)      # extrinsèque : axe 1, puis 2, puis 3
+        if best is None or abs(ang[1]) < abs(best[1][1]):
+            best = (order, ang)
+    rot = [[a, float(v)] for a, v in zip(best[0], best[1])]
+    from motion_eval import AX
+    from rig import axis_angle
+    R = np.eye(3)
+    for axis, deg in rot: R = axis_angle(AX[axis], deg) @ R
+    assert np.abs(R - M).max() < 1e-6
+    return rot
+
 def blend(a, b, u):
     """Pose intermédiaire telle que l'app l'interpole : rotations locales sphériques, décalage de la racine linéaire."""
     from scipy.spatial.transform import Rotation, Slerp
@@ -412,9 +429,8 @@ def blend(a, b, u):
             e = to_euler(m)
             if max(abs(x) for x in e) >= 0.05:
                 bones[name] = e
-    x, y, z = to_euler(root)
     off = (1 - u) * np.asarray(ra["root"]["offset"], float) + u * np.asarray(rb["root"]["offset"], float)
-    p = {"bones": bones, "root": {"rot": [["x", x], ["y", y], ["z", z]], "offset": [float(c) for c in off]}}
+    p = {"bones": bones, "root": {"rot": root_rotations(root), "offset": [float(c) for c in off]}}
     if not (ra["ground"] and rb["ground"]):
         p["ground"] = False
     return p
@@ -454,10 +470,80 @@ def contact_transitions(keys):
         out.append(b)
     return out
 
+def _ease(u, name):
+    if name == "linear": return u
+    if name == "in": return u * u
+    if name == "out": return 1 - (1 - u) ** 2
+    return u * u * (3 - 2 * u)
+
+def _low(pose):
+    """Point le plus bas de la peau (échantillon de l'app, avant mise au sol)."""
+    r = resolve(pose, POSES)
+    R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
+    s = MESH.sample
+    v, _ = MESH.rig.skin(MESH.v[s], MESH.n[s], MESH.bi[s], MESH.bw[s], R, Pj)
+    return float(v[:, 1].min())
+
+def pin_feet(pose, a, b):
+    """Pied posé au même endroit aux deux bouts d'une transition : il y reste aussi entre les deux (la cheville est
+    replacée par cinématique inverse, même orientation du pied, genou du même côté)."""
+    _, Pa = ik.fk(a); _, Pb = ik.fk(b); Rw, Pw = ik.fk(pose)
+    for s in "LR":
+        fa, fb = Pa[f"foot.{s}"], Pb[f"foot.{s}"]
+        if np.hypot(*(fa - fb)[[0, 2]]) > 0.015:
+            continue
+        cur = Pw[f"foot.{s}"]
+        target = np.array([(fa[0] + fb[0]) / 2, cur[1], (fa[2] + fb[2]) / 2])
+        hip, knee = Pw[f"upperleg01.{s}"], Pw[f"lowerleg01.{s}"]
+        axis = cur - hip; axis /= np.linalg.norm(axis) + 1e-9
+        pole = (knee - hip) - axis * np.dot(knee - hip, axis)
+        if np.linalg.norm(pole) < 1e-4: pole = np.array([0, 0, 1.0])
+        pose = legs(pose, **{s: target, f"pole_{s}": tuple(pole / np.linalg.norm(pole)), f"foot_rot_{s}": Rw[f"foot.{s}"]})
+    return pose
+
+GROUND_TOL = 0.004                                      # écart toléré au sol entre deux images clés (m)
+
+def ground_transitions(keys):
+    """L'app pose le corps au sol à chaque image clé et interpole entre deux clés : une transition où le point le
+    plus bas ne suit pas cette interpolation (pieds qui s'enfoncent en descendant sur la chaise, corps qui flotte)
+    reçoit des clés intermédiaires, chacune posée au sol, jusqu'à ce que l'écart reste sous GROUND_TOL."""
+    out = [keys[0]]
+    for a, b in zip(keys, keys[1:]):
+        ra, rb = resolve(a["pose"], POSES), resolve(b["pose"], POSES)
+        span = b["t"] - a["t"]
+        if not (ra["ground"] and rb["ground"]) or span <= 0.05 or a["pose"] is b["pose"]:
+            out.append(b); continue
+        ease = b.get("ease", "inOut")
+        la, lb = _low(a["pose"]), _low(b["pose"])
+        def err(n):
+            worst = 0.0
+            for i in range(n):
+                for f in (0.25, 0.5, 0.75):
+                    u = (i + f) / n
+                    e = _ease(u, ease)
+                    # hauteur que l'app donnerait (clés voisines posées au sol, interpolation linéaire) contre la vraie
+                    e0, e1 = _ease(i / n, ease), _ease((i + 1) / n, ease)
+                    l0 = _low(blend(a["pose"], b["pose"], e0)) if 0 < i else la
+                    l1 = _low(blend(a["pose"], b["pose"], e1)) if i + 1 < n else lb
+                    w = (e - e0) / max(e1 - e0, 1e-9)
+                    worst = max(worst, abs((l0 * (1 - w) + l1 * w) - _low(blend(a["pose"], b["pose"], e))))
+            return worst
+        n = 1
+        while n < 12 and span / n > 0.08 and err(n) > GROUND_TOL:
+            n = n + 1 if n < 4 else n * 2
+        if n == 1:
+            out.append(b); continue
+        for i in range(1, n):
+            # même courbe de vitesse : départ « in », milieu linéaire, arrivée « out » (pour une courbe « inOut »)
+            sub = "in" if i == 1 and ease in ("inOut", "in") else "linear"
+            out.append(K(a["t"] + span * i / n, pin_feet(blend(a["pose"], b["pose"], _ease(i / n, ease)), a["pose"], b["pose"]), sub))
+        out.append(dict(b, ease="out" if ease in ("inOut", "out") else "linear"))
+    return out
+
 def motion(mid, keys, muscles=(), yaw=30, props=(), pitch=8, support=None):
     for k in keys:
         k["pose"] = settle_hands(shoulder_rhythm(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"])))
-    keys = contact_transitions(keys)
+    keys = ground_transitions(contact_transitions(keys))
     MOTIONS[mid] = {"keys": keys, "muscles": list(muscles), "camera": {"yaw": yaw, "pitch": pitch}, "props": list(props)}
     if support: MOTIONS[mid]["support"] = support
 
@@ -922,7 +1008,7 @@ def build_mocap(bvh_root, joints_):
 
 def rounded(x):
     """Arrondit les angles au dixième de degré (fichier plus léger)."""
-    if isinstance(x, dict): return {k: rounded(v) for k, v in x.items()}
+    if isinstance(x, dict): return {k: (round(v, 3) if k == "t" else rounded(v)) for k, v in x.items()}
     if isinstance(x, list): return [rounded(v) for v in x]
     if isinstance(x, float): return round(x, 4 if abs(x) < 2 else 1)
     return x
