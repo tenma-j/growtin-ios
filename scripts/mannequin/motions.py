@@ -692,7 +692,7 @@ motion("march-slow", [K(0, slow_step("L", 0))] + slow_steps(0, 2), muscles=("qua
 # Retour au calme : quelques pas lents sur place, puis une respiration profonde (la poitrine s'ouvre, les bras s'écartent un peu).
 _deep = P("stand", spine01=[-6, 0, 0], spine02=[-4, 0, 0], spine03=[-2, 0, 0], neck01=[-3, 0, 0], clavicle=[0, 6, 4],
           upperarm01=[2, 28, 16], lowerarm01=[-8, 0, 0], **open_hand(0.6))
-motion("march-breathe", [K(0, slow_step("L", 0))] + slow_steps(0, 4) + [K(5.8, "stand"), K(9.8, _deep), K(15.4, "stand"), K(16.0, "stand")],
+motion("march-breathe", [K(0, slow_step("L", 0))] + slow_steps(0, 4) + [K(5.8, "stand"), K(9.8, _deep), K(15.4, "stand"), K(16.0, slow_step("L", 0))],
        muscles=("quads", "calves", "chest"), yaw=40)
 
 # Pause : une gorgée d'eau (la main droite porte un verre aux lèvres, la tête bascule un peu en arrière), puis quelques pas
@@ -997,7 +997,7 @@ def quad_stretch(knee=150.0, hip=6.0, foot=38.0, u=1.0, grab=True):
           foot_L=[foot, 0, 0], upperarm01_R=[0, 0, -14 * u], lowerarm01_R=[-10 * u, 0, 0], **open_hand(0.4, "R"))
     p = legs(p, R=ankle("R"))
     if not grab:
-        return p
+        return P(p, upperarm01_L=[10 * u, 0, 20 * u], lowerarm01_L=[-12 * u, 0, 0])      # bras prêt, écarté du pied qui monte
     R, J = ik.fk(p); Rf = R["foot.L"]
     axis, top, inward = Rf @ [0, 0, 1.0], Rf @ [0, 1.0, 0], Rf @ [-1.0, 0, 0]
     mid = J["foot.L"] + 0.5 * (J["toes.L"] - J["foot.L"])             # cou-de-pied
@@ -1023,8 +1023,10 @@ chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-
                    R=[-0.1, float(STAND["root"][1] - 0.02), float(STAND["root"][2] - 0.16)],
                    fingers_L=[0, -1, -0.35], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.35], palm_R=[1, 0, 0],
                    pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
+_chest_way = P("stand", clavicle=[0, 8, 0], upperarm01=[12, 0, 32], lowerarm01=[-10, 0, 0], spine01=[-3, 0, 0])
 motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(6.8, True)
-       + [K(15.1, chest_open), K(17.6, P(chest_open, **CHEST_IN)), K(19.6, chest_open), K(21.1, "stand")], muscles=("quads", "chest"), yaw=140)
+       + [K(14.5, _chest_way), K(15.3, chest_open), K(17.8, P(chest_open, **CHEST_IN)), K(19.8, chest_open), K(20.6, _chest_way),
+          K(21.4, "stand")], muscles=("quads", "chest"), yaw=140)
 
 # ─── Mobilité, épaules, nuque ───
 # Grands cercles d'épaules vers l'arrière : avant → haut → arrière → bas. Les bras restent pendants.
@@ -1062,15 +1064,17 @@ trap = hands(_trap, R=_tp["head"] + _hup * (_crown - 0.012) - _tf * 0.075, finge
 # Le bras monte par le côté, coude plié, avant de poser la main (et redescend de même).
 _trap_way = hands(P("stand", **open_hand(0.9, "R")), R=[-float(SH[0] + 0.17), float(SH[1] + 0.12), float(SH[2] + 0.06)],
                   fingers_R=[0.5, 0.85, 0], palm_R=[0.85, -0.5, 0.1], pole_R=(-1, -0.4, 0.1))
+_trap_off = hands(_trap, R=_tp["head"] + _hup * (_crown + 0.05) - _tf * 0.085, fingers_R=_tf, palm_R=_hr @ [0.3, -1, 0], pole_R=(-1, 0.3, 0.2))
 def trap_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
-    return [K(t0 + 1.0, f(_trap_way)), K(t0 + 2.0, f(trap)), K(t0 + 6.0, f(trap)), K(t0 + 7.0, f(_trap_way)), K(t0 + 8.0, "stand")]
+    return [K(t0 + 0.9, f(_trap_way)), K(t0 + 1.6, f(_trap_off)), K(t0 + 2.0, f(trap)), K(t0 + 6.0, f(trap)), K(t0 + 6.4, f(_trap_off)),
+            K(t0 + 7.1, f(_trap_way)), K(t0 + 8.0, "stand")]
 motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True), muscles=("neck", "upperBack"), yaw=15)
 
 # Ouverture de poitrine dans l'encadrement d'une porte : avant-bras sur les montants, le buste avance.
 # Les montants (7 cm de large, intérieur à 46,5 cm de l'axe) sont juste devant les épaules : paumes et avant-bras à plat
 # sur leur face, coudes à hauteur d'épaule, mains au-dessus. Les mains ne bougent plus ; le corps avance d'un bloc depuis
-# les chevilles, la poitrine passe entre les montants et s'ouvre. Vue de trois quarts arrière : on voit les appuis.
+# les chevilles, la poitrine passe entre les montants et s'ouvre. Vue de trois quarts arrière : on voit les appuis et l'avancée du buste.
 DOOR_Z = float(STAND["upperarm01.L"][2] + 0.085)             # face des montants côté personnage
 UPPER_ARM = float(np.linalg.norm(STAND["lowerarm01.L"] - SH))
 def doorway(lean):
@@ -1093,7 +1097,7 @@ def doorway(lean):
 _door_in = 0.11 * S_LEG
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, lambda s: doorway(_door_in * s), n=4) + [K(5, doorway(_door_in))]
        + planted(5, 7, lambda s: doorway(_door_in * (1 - s)), n=4) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=150, pitch=10, props=(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True),))
+       muscles=("chest", "shoulders"), yaw=130, pitch=10, props=(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True),))
 
 squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-20, 0, 0], spine01=[-5, 0, 0])
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
