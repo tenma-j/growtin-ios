@@ -76,7 +76,10 @@ jobs:
 
       - name: Publier les captures sur la branche « captures »
         # Aussi en cas d'échec ou de dépassement de temps : les captures déjà prises restent consultables.
-        if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        # main → « captures » ; branche de travail refonte-exercices → « captures-refonte-exercices »
+        if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/refonte-exercices')
+        env:
+          CAPTURES_BRANCH: ${{ github.ref == 'refs/heads/main' && 'captures' || 'captures-refonte-exercices' }}
         run: |
           set -e
           test -d screenshots || exit 0
@@ -95,9 +98,9 @@ jobs:
             done
           } > /tmp/captures/README.md
           cd /tmp/captures
-          git init -q -b captures
+          git init -q -b "$CAPTURES_BRANCH"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -q -m "Captures pour ${GITHUB_SHA}"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" captures
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "$CAPTURES_BRANCH"

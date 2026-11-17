@@ -8,11 +8,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
   [MakeHuman](https://github.com/makehumancommunity/makehuman) (dossier `makehuman/data`), dont les ressources sont
   publiées dans le domaine public (**CC0 1.0**). Seule la morphologie (silhouette athlétique) est reprise ; tête de
   mannequin lisse, tenue de sport modélisée ici (short, brassière, liseré vert).
-- **Marche, marche rapide et boxe dans le vide** : captures de mouvement du
+- **Marche et marche rapide** : captures de mouvement du
   [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) (conversion BVH de B. Hahne), base créée avec le
   financement de la NSF (EIA-0196217). Conditions : utilisation libre, y compris dans un produit commercial ;
   revente des données interdite, même converties.
-- **Tous les autres mouvements** : poses clés écrites dans `motions.py`.
+- **Tous les autres mouvements** (boxe dans le vide comprise) : poses clés écrites dans `motions.py`.
 
 ## Pipeline
 
@@ -40,7 +40,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      soit la morphologie. Quand le buste, les épaules ou le bassin bougent (respiration, haussements d'épaules,
      abdos, extension du dos, cercles de hanches), `keep_hands` garde les mains au même endroit de la partie du corps
      qui les porte. Une transition où une main traverserait le corps reçoit trois points de passage, mains écartées
-     de 3 cm de la peau, sur la même courbe de vitesse. Environ deux minutes et demie pour les deux corps ;
+     de 3 cm de la peau, sur la même courbe de vitesse. Environ dix minutes pour les deux corps ;
    - appuis fixes (pompes inclinées, pont fessier, chat-vache, posture de l'enfant, rowing) : l'app interpole des angles,
      un appui dériverait entre deux clés éloignées. `planted` découpe la transition en clés rapprochées où mains,
      pieds et genoux sont résolus à chaque fois ; les hauteurs sont réglées sur la peau (paumes, genoux, front, dos
@@ -65,7 +65,15 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
      y sont posées) : seuls le geste et le cadrage changent ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
-     boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
+     boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`. Chaque capture a sa
+     vitesse de lecture et un redressement du buste (le reciblage le penche trop en avant) : la marche est la capture
+     « marche lente » ralentie (un cycle en 1,7 s), la marche rapide une marche normale accélérée (un cycle en
+     0,85 s, toujours un pied au sol) ;
+   - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
+     cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
+   - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
+     posé pointe en l'air au bord du lit, paume sur le sommet du crâne, mur au ras de la paume. Un pied qui quitte
+     le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
 3. `review.py <dossier> [N] [exercices…]` : planches de contrôle de chaque étape d'exercice pour les deux corps, N
    images réparties sur la boucle, interpolées comme dans l'app, avec le sol, les accessoires (serviette comprise),
    la consigne et le cadrage resserré des mouvements qui en ont un. `SIZE` : taille d'une image ; `MOTIONS_JSON` :
