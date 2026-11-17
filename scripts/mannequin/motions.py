@@ -713,7 +713,7 @@ def drink(u, tip=0.0):
     glass = J["head"] + R["head"] @ (MOUTH + [0.0, -0.05, 0.045])
     w1 = glass + [-0.05, -0.075 + 0.02 * tip, 0.025]
     w = _w0 + (w1 - _w0) * u + [0.0, 0.0, 0.14 * np.sin(np.pi * u)]                # la main monte par l'avant du corps
-    pole = (-0.45, -1, 0.1)                                                        # coude bas, avant-bras presque vertical
+    pole = (-0.62, -1, 0.1)                                                        # coude bas, avant-bras presque vertical
     q = with_bones(p, ik.arm(p, "R", w, pole)); Jq = joints(q)
     f1 = Jq["wrist.R"] - Jq["lowerarm01.R"]; f1 = f1 / np.linalg.norm(f1) + np.array([0.1, 0.0, -0.25 * tip])   # main dans l'axe de l'avant-bras
     n1 = np.array([0.75, 0.0, -0.65])                                              # paume vers le verre, tenu devant les lèvres
@@ -1003,7 +1003,7 @@ def quad_stretch(knee=150.0, hip=6.0, foot=38.0, u=1.0, grab=True):
     mid = J["foot.L"] + 0.5 * (J["toes.L"] - J["foot.L"])             # cou-de-pied
     f = inward + 0.25 * axis; f /= np.linalg.norm(f)
     p = P(p, **{S(k, "L"): [x * 0.45 for x in v] for k, v in fist(1.0).items()})
-    return hands(p, L=mid + top * 0.02 - f * 0.075, fingers_L=f, palm_L=-top, pole_L=(0.5, 0.2, -1))
+    return hands(p, L=mid + top * 0.04 - f * 0.12 + axis * 0.03, fingers_L=f, palm_L=-top, pole_L=(1, 0.1, -0.45))
 _quad = quad_stretch()
 _quad_r = mirror_pose(_quad)
 def quad_keys(t0, flip):
@@ -1083,10 +1083,12 @@ def doorway(lean):
         elbow = sh + [sg * np.sqrt(UPPER_ARM ** 2 - (dz - back) ** 2 - dy ** 2), dy, dz - back]
         out = float(np.clip((0.5 - abs(elbow[0])) / FOREARM, 0.0, 0.75))                    # avant-bras incliné jusqu'au montant
         fore = np.array([sg * out, np.sqrt(1 - out ** 2 - (back / FOREARM) ** 2), back / FOREARM])
-        p = fixed_hand(p, side, elbow + FOREARM * fore, fore, [0, 0, 1], tuple(elbow - joints(p)[f"upperarm01.{side}"]))
+        # la main se redresse le long du montant (poignet incliné de 20° au plus), au lieu de dépasser sur le côté
+        tilt = np.radians(max(0.0, np.degrees(np.arcsin(out)) - 20)); up = np.array([sg * np.sin(tilt), np.cos(tilt), 0.0])
+        p = fixed_hand(p, side, elbow + FOREARM * fore, up, [0, 0, 1], tuple(elbow - joints(p)[f"upperarm01.{side}"]))
         amt = rhythm_amount(arm_elevation(p, side))
         if amt > 0.02:
-            p = fixed_hand(add_rhythm(p, side, amt), side, elbow + FOREARM * fore, fore, [0, 0, 1], tuple(elbow - joints(p)[f"upperarm01.{side}"]))
+            p = fixed_hand(add_rhythm(p, side, amt), side, elbow + FOREARM * fore, up, [0, 0, 1], tuple(elbow - joints(p)[f"upperarm01.{side}"]))
     return p
 _door_in = 0.11 * S_LEG
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, lambda s: doorway(_door_in * s), n=4) + [K(5, doorway(_door_in))]
