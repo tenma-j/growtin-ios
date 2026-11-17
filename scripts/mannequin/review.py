@@ -151,6 +151,16 @@ def strip(job):
         C += pcs
         off += sum(len(x) for x in pvs)
         V.append(fv); N.append(fn); T.append(ft + off); C += [np.array([0.62, 0.62, 0.64])] * len(ft)
+        off += len(fv)
+        for pr in m.get("props", []):
+            if pr["kind"] != "towel" or len(pr.get("vertices") or []) != 3: continue
+            a, foot, b = (v[i] for i in pr["vertices"])
+            for hand in (a, b):
+                d = hand - foot; L = np.linalg.norm(d)
+                if L < 0.01: continue
+                y = d / L; x = np.cross(y, [0, 0, 1.0]); x = x / (np.linalg.norm(x) + 1e-9); z = np.cross(x, y)
+                bv, bn, bt = box_mesh((hand + foot) / 2, np.array([0.022, L / 2, 0.022]), np.stack([x, y, z], 1))
+                V.append(bv); N.append(bn); T.append(bt + off); off += len(bv); C += [np.array([0.42, 0.63, 0.78])] * len(bt)
         tmp = f"/tmp/_rv_{os.getpid()}.png"
         render(np.vstack(V), np.vstack(N), np.vstack(T), C, tmp, size=size, yaw=cam["yaw"], pitch=cam.get("pitch", 8),
                center=c, zoom=2.1 / ext)
