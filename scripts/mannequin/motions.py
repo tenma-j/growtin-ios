@@ -1603,7 +1603,7 @@ motion("bed-figure4", [K(0, "chairSit")] + figure4_keys(0, False) + figure4_keys
 # Le squelette n'a pas de cage thoracique qui se gonfle : la respiration soulève le milieu du buste (le dos se creuse
 # à peine), bassin et épaules restent posés ; la tête, les bras et les jambes ne bougent donc pas avec elle.
 SCAN_GAP = 0.0005                                                 # jeu au-dessus du matelas : le buste reste le point le plus bas
-SCAN_BREATH = 8.5                                                 # inspiration ample : le ventre se soulève de 2 à 3 cm
+SCAN_BREATH = 8.5                                                 # inspiration ample : le ventre se soulève d'environ 2 cm
 SCAN_BASE = P("supine", **HEAD_ON_PILLOW)
 SCAN_Y = low_of(SCAN_BASE, region(("spine", "root", "pelvis", "clavicle", "shoulder", "upperleg")))   # matelas, avant mise au sol
 SCAN_LEGS = region(("lowerleg", "foot", "toes"))
@@ -1683,7 +1683,7 @@ scan_motion("bed-scan-breath", [K(0, scan_rest), K(4, scan_pose(breath=SCAN_BREA
 scan_motion("bed-scan-legs", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, turn=0.0, point=-8.0, toes=-16.0)),
                               K(7.5, scan_pose(turn=34.0, point=26.0)), K(10, scan_rest)],
             frame=("upperleg01", "foot", "toes"), margin=0.2, muscles=("feet", "calves", "shins", "quads", "hamstrings"))
-# Ventre et poitrine : le ventre se soulève (2 à 3 cm) et redescend.
+# Ventre et poitrine : le ventre se soulève (environ 2 cm) et redescend.
 scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BREATH)), K(8, scan_rest)],
             frame=("neck01", "upperarm01", "upperleg01"), margin=0.12, muscles=("abs", "chest"))
 # Mains, bras, épaules : à l'inspiration les mains se referment et les épaules se décollent, remontées vers les oreilles ;

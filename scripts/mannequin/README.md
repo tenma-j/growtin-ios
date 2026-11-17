@@ -69,7 +69,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      La respiration soulève le milieu du buste par des rotations qui se compensent : bassin, épaules et tête ne bougent
      pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
      y sont posées) : seuls le geste et le cadrage changent. Gestes lents mais francs, lisibles sur un téléphone :
-     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève de 2 à 3 cm, les mains se
+     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève d'environ 2 cm, les mains se
      referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller ;
    - torsion allongée, genoux vers la poitrine (`laid`, `bed_head`, `bed_pillow`) : même principe, mais chaque clé
      est placée exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui
@@ -79,7 +79,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
      montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le buste avance ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
-     appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (24 clés par
+     appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`. Chaque capture a sa
