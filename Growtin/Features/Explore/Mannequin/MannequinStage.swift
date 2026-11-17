@@ -51,9 +51,20 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     /// Articulations d'appoint (indice, os doublé) : recalculées à chaque image, la moitié de la rotation de l'os.
     private var halfPairs: [(joint: Int, source: Int)] = []
     private let transitionDuration = 0.5
-    /// Serviette tenue à deux mains et coincée sous un pied : deux brins roulés, recalculés à chaque image
-    /// entre trois sommets de la peau déformée (main gauche, dessous du pied, main droite).
-    private var towel: (strands: [SCNNode], vertices: [Int])?
+    /// Serviette tenue à deux mains et coincée sous un pied : trois tronçons de bande (brin gauche, passage à plat
+    /// sous la voûte du pied, brin droit), recalculés à chaque image d'après trois sommets de la peau déformée
+    /// (main gauche, dessous du pied, main droite) ; voir `TowelPath`.
+    private struct Towel {
+        let bands: [SCNNode]
+        let vertices: [Int]
+        let under: [[Double]]
+        let thickness: Double
+    }
+    private var towel: Towel?
+    /// Décor en place (accessoires et points d'ancrage) : gardé tel quel si le mouvement suivant demande le même.
+    private var builtProps: (props: [MotionProp], anchors: [Vec3])?
+    /// Le dernier cadrage était resserré sur une zone du corps : la caméra en revient aussi doucement qu'elle y va.
+    private var wasTight = false
 
     private(set) var currentBody: MannequinBody?
     private(set) var currentMotion: String?
@@ -351,16 +362,22 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             }
             if let towel {
                 let p = deformer.positions
-                func point(_ i: Int) -> SIMD3<Float> { SIMD3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]) }
-                let foot = point(towel.vertices[1])
-                for (node, hand) in zip(towel.strands, [point(towel.vertices[0]), point(towel.vertices[2])]) {
-                    let d = hand - foot
-                    let length = simd_length(d)
-                    guard length > 0.01 else { node.isHidden = true; continue }
+                func point(_ i: Int) -> Vec3 { Vec3(Double(p[i * 3]), Double(p[i * 3 + 1]), Double(p[i * 3 + 2])) }
+                func float(_ v: Vec3) -> SIMD3<Float> { SIMD3<Float>(Float(v.x), Float(v.y), Float(v.z)) }
+                // Cachée pendant la transition depuis le mouvement précédent : les mains n'en tiennent pas encore les bouts.
+                let segments: [TowelPath.Segment]? = fromRotations == nil
+                    ? TowelPath.segments(leftHand: point(towel.vertices[0]), foot: point(towel.vertices[1]),
+                                         rightHand: point(towel.vertices[2]), under: towel.under, thickness: towel.thickness)
+                    : nil
+                for (i, node) in towel.bands.enumerated() {
+                    guard let segments, i < segments.count else { node.isHidden = true; continue }
+                    let segment = segments[i]
+                    let from = float(segment.from), to = float(segment.to)
+                    // Bande de longueur 1 le long de Y : étirée du point de départ au point d'arrivée, largeur selon X.
+                    node.simdTransform = simd_float4x4(columns: (
+                        SIMD4<Float>(float(segment.side), 0), SIMD4<Float>(to - from, 0),
+                        SIMD4<Float>(float(segment.normal), 0), SIMD4<Float>((from + to) / 2, 1)))
                     node.isHidden = false
-                    node.simdPosition = (hand + foot) / 2
-                    node.simdOrientation = simd_quatf(from: SIMD3(0, 1, 0), to: d / length)
-                    node.simdScale = SIMD3(1, length, 1)
                 }
             }
         } else {
@@ -436,11 +453,65 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         scene.rootNode.addChildNode(node)
     }
 
+    /// Bande de longueur 1 le long de Y (de y = −0,5 à y = 0,5), largeur selon X, épaisseur selon Z ;
+    /// la section peut changer d'un bout à l'autre (serviette resserrée dans le poing).
+    private static func band(from start: (width: Float, thickness: Float), to end: (width: Float, thickness: Float),
+                             material: SCNMaterial) -> SCNGeometry {
+        let b = SIMD2<Float>(start.width / 2, start.thickness / 2), t = SIMD2<Float>(end.width / 2, end.thickness / 2)
+        let corners: [SIMD3<Float>] = [
+            SIMD3<Float>(-b.x, -0.5, -b.y), SIMD3<Float>(b.x, -0.5, -b.y), SIMD3<Float>(b.x, -0.5, b.y), SIMD3<Float>(-b.x, -0.5, b.y),
+            SIMD3<Float>(-t.x, 0.5, -t.y), SIMD3<Float>(t.x, 0.5, -t.y), SIMD3<Float>(t.x, 0.5, t.y), SIMD3<Float>(-t.x, 0.5, t.y),
+        ]
+        // Six faces, sommets dans le sens direct vus de l'extérieur ; normales à plat (sommets non partagés).
+        let faces: [[Int]] = [[0, 1, 2, 3], [7, 6, 5, 4], [0, 4, 5, 1], [1, 5, 6, 2], [2, 6, 7, 3], [3, 7, 4, 0]]
+        var positions: [SCNVector3] = []
+        var normals: [SCNVector3] = []
+        var indices: [Int32] = []
+        for face in faces {
+            let p = face.map { corners[$0] }
+            let n = simd_normalize(simd_cross(p[1] - p[0], p[2] - p[0]))
+            let base = Int32(positions.count)
+            for v in p {
+                positions.append(SCNVector3(x: v.x, y: v.y, z: v.z))
+                normals.append(SCNVector3(x: n.x, y: n.y, z: n.z))
+            }
+            indices.append(contentsOf: [base, base + 1, base + 2, base, base + 2, base + 3])
+        }
+        let geometry = SCNGeometry(sources: [SCNGeometrySource(vertices: positions), SCNGeometrySource(normals: normals)],
+                                   elements: [SCNGeometryElement(indices: indices, primitiveType: .triangles)])
+        geometry.materials = [material]
+        return geometry
+    }
+
+    /// Point d'ancrage d'un accessoire : articulation d'une image clé, plus son décalage.
+    private static func anchorPoint(of prop: MotionProp, skeleton: Skeleton, keyPositions: [[Vec3]]) -> Vec3 {
+        let keyIndex = min(max(prop.key ?? 0, 0), max(keyPositions.count - 1, 0))
+        var anchor = Vec3.zero
+        if let name = prop.anchor, let index = skeleton.index[name], keyIndex < keyPositions.count, index < keyPositions[keyIndex].count {
+            anchor = keyPositions[keyIndex][index]
+        }
+        var a = anchor + (prop.offset.count == 3 ? Vec3(prop.offset[0], prop.offset[1], prop.offset[2]) : Vec3.zero)
+        if prop.floor == true { a.y = 0 }
+        return a
+    }
+
     private func buildProps(_ props: [MotionProp], keyPositions: [[Vec3]]) {
+        // Même décor au même endroit (étapes du scan corporel, toutes dans le même lit) : il reste en place,
+        // sans disparaître ni réapparaître en fondu.
+        var anchors: [Vec3] = []
+        if let skeleton = asset?.skeleton {
+            anchors = props.map { Self.anchorPoint(of: $0, skeleton: skeleton, keyPositions: keyPositions) }
+            if let built = builtProps, built.props == props, built.anchors.count == anchors.count,
+               zip(built.anchors, anchors).allSatisfy({ ($0 - $1).length < 0.004 }) {
+                return
+            }
+        }
+        builtProps = nil
         propsNode.childNodes.forEach { $0.removeFromParentNode() }
         lock.lock(); let oldTowel = towel; towel = nil; let canDeform = deformer != nil; lock.unlock()
-        oldTowel?.strands.forEach { $0.removeFromParentNode() }
+        oldTowel?.bands.forEach { $0.removeFromParentNode() }
         guard let asset else { return }
+        builtProps = (props: props, anchors: anchors)
         let wood = Self.pbr(UIColor(red: 0.62, green: 0.47, blue: 0.33, alpha: 1), roughness: 0.65)
         let dark = Self.pbr(UIColor(red: 0.18, green: 0.18, blue: 0.2, alpha: 1), roughness: 0.5, metalness: 0.4)
         let wall = Self.pbr(UIColor(red: 0.90, green: 0.90, blue: 0.88, alpha: 1), roughness: 0.95)
@@ -511,19 +582,23 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 box(2 * half + 0.07, 0.07, 0.12, SIMD3(0, 2.085, 0), wall, chamfer: 0.006)
             case "towel":
                 guard let ids = prop.vertices, ids.count == 3, canDeform,
-                      ids.allSatisfy({ $0 >= 0 && $0 < asset.file.surface.rest.count / 3 }) else { continue }
+                      ids.allSatisfy({ $0 >= 0 && $0 < asset.file.surface.rest.count / 3 }),
+                      let under = prop.under, under.count == 2, under.allSatisfy({ $0.count == 2 }) else { continue }
                 let cloth = Self.pbr(UIColor(red: 0.42, green: 0.63, blue: 0.78, alpha: 1), roughness: 0.95)
-                let strands = (0..<2).map { _ -> SCNNode in
-                    let g = SCNCylinder(radius: 0.022, height: 1)
-                    g.radialSegmentCount = 16
-                    g.materials = [cloth]
-                    let n = SCNNode(geometry: g)
+                let flat = (width: Float(prop.width ?? TowelPath.defaultWidth), thickness: Float(prop.thickness ?? TowelPath.defaultThickness))
+                let grip = (width: Float(TowelPath.gripWidth), thickness: Float(TowelPath.gripThickness))
+                // Brin gauche (du sol au poing), passage à plat sous le pied, brin droit (du sol au poing).
+                let geometries = [Self.band(from: flat, to: grip, material: cloth), Self.band(from: flat, to: flat, material: cloth),
+                                  Self.band(from: flat, to: grip, material: cloth)]
+                let bands = geometries.map { geometry -> SCNNode in
+                    let n = SCNNode(geometry: geometry)
                     n.castsShadow = true
                     n.isHidden = true
                     container.addChildNode(n)
                     return n
                 }
-                lock.lock(); towel = (strands, ids); lock.unlock()
+                let held = Towel(bands: bands, vertices: ids, under: under, thickness: Double(flat.thickness))
+                lock.lock(); towel = held; lock.unlock()
                 continue
             default:
                 continue
@@ -538,34 +613,27 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         }
     }
 
-    /// Cadre la caméra sur l'ensemble des poses du mouvement, sous l'angle choisi pour ce mouvement.
+    /// Cadre la caméra sur l'ensemble des poses du mouvement, sous l'angle choisi pour ce mouvement ; ou, si le
+    /// mouvement le demande (`camera.frame`), sur une zone du corps dont elle se rapproche doucement.
     private func frameCamera(animated: Bool) {
         guard let framing else { return }
-        let motion = framing.motion
-        let yaw = Float(motion.camera.yaw * .pi / 180)
-        let pitch = Float(max(motion.camera.pitch ?? 8, 6) * .pi / 180)
-        var lo = SIMD3<Float>(repeating: .greatestFiniteMagnitude), hi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
-        let rot = simd_quatf(angle: yaw, axis: SIMD3(0, 1, 0))
-        for positions in framing.keyPositions {
-            for p in positions {
-                let v = rot.act(SIMD3(Float(p.x), Float(p.y), Float(p.z)))
-                lo = simd_min(lo, v); hi = simd_max(hi, v)
-            }
+        let camera = framing.motion.camera
+        var joints: [Int]?
+        if let names = camera.frame, let skeleton = asset?.skeleton {
+            let found = names.compactMap { skeleton.index[$0] }
+            if !found.isEmpty { joints = found }
         }
-        guard lo.x.isFinite else { return }
-        let margin: Float = 0.2
-        lo -= margin; hi += margin
-        lo.y = 0
-        let center = (lo + hi) / 2
-        let width = hi.x - lo.x, height = hi.y - lo.y, depth = hi.z - lo.z
-        let vfov = Float(30 * Double.pi / 180)
-        let hfov = 2 * atan(tan(vfov / 2) * aspect)
-        let distance = max(height / 2 / tan(vfov / 2), width / 2 / tan(hfov / 2)) * 1.06 + depth / 2
-        let target = SIMD3(center.x, center.y * 0.95, center.z)
-        let eye = target + SIMD3(0, sin(pitch), cos(pitch)) * distance
+        guard let shot = CameraFraming.shot(keyPositions: framing.keyPositions, joints: joints, yaw: camera.yaw, pitch: camera.pitch,
+                                            margin: camera.margin, aspect: Double(aspect)) else { return }
+        let rot = simd_quatf(angle: Float(camera.yaw * .pi / 180), axis: SIMD3<Float>(0, 1, 0))
+        let target = SIMD3<Float>(Float(shot.target.x), Float(shot.target.y), Float(shot.target.z))
+        let eye = SIMD3<Float>(Float(shot.eye.x), Float(shot.eye.y), Float(shot.eye.z))
+        let tight = joints != nil
+        let gentle = tight || wasTight
+        wasTight = tight
 
         SCNTransaction.begin()
-        SCNTransaction.animationDuration = animated ? 0.6 : 0
+        SCNTransaction.animationDuration = animated ? (gentle ? 1.2 : 0.6) : 0
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         container.simdOrientation = rot
         turntable.simdOrientation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)

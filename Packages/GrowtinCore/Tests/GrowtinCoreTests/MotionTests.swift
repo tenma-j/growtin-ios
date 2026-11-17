@@ -156,4 +156,56 @@ struct MotionTests {
         #expect(abs(Grounding.lift(for: flexed, skeleton: skeleton, samples: [foot]) - (-1.0)) < 1e-9)
         #expect(Easing.value(0.5, "inOut") == 0.5 && Easing.value(0.25, "linear") == 0.25)
     }
+
+    @Test("Cadrage : corps entier sol compris, ou zone du corps de plus près")
+    func cameraFraming() throws {
+        // Corps allongé le long de X à 60 cm du sol : tête, bassin, pieds.
+        let lying = [[Vec3(-0.8, 0.6, 0), Vec3(0, 0.6, 0), Vec3(0.9, 0.62, 0.1)]]
+        let whole = try #require(CameraFraming.shot(keyPositions: lying, joints: nil, yaw: 0, pitch: 30, margin: nil, aspect: 1))
+        // Cadre entier : boîte élargie de 20 cm, sol compris (x de −1 à 1,1 ; y de 0 à 0,82 ; z de −0,2 à 0,3).
+        let half = tan(15 * Double.pi / 180)
+        #expect(abs(whole.target.x - 0.05) < 1e-9 && abs(whole.target.y - 0.41 * 0.95) < 1e-9 && abs(whole.target.z - 0.05) < 1e-9)
+        #expect(abs(whole.distance - (2.1 / 2 / half * 1.06 + 0.25)) < 1e-9)
+        #expect(abs(whole.eye.y - (whole.target.y + whole.distance * 0.5)) < 1e-9)
+
+        // Cadrage resserré sur les pieds : la caméra vise la zone et s'en approche, sans descendre sous sa distance minimale.
+        let feet = try #require(CameraFraming.shot(keyPositions: lying, joints: [2], yaw: 0, pitch: 30, margin: 0.3, aspect: 1))
+        #expect(abs(feet.target.x - 0.9) < 1e-9 && abs(feet.target.y - 0.62) < 1e-9 && abs(feet.target.z - 0.1) < 1e-9)
+        #expect(feet.distance < whole.distance * 0.6 && feet.distance >= CameraFraming.minimumDistance)
+        #expect(feet.eye.y > feet.target.y + 0.4, "la caméra reste au-dessus de la zone, donc du matelas")
+        let close = try #require(CameraFraming.shot(keyPositions: lying, joints: [2], yaw: 0, pitch: 30, margin: 0.01, aspect: 1))
+        #expect(close.distance == CameraFraming.minimumDistance)
+        // Vue tournée : le personnage tourne de `yaw` autour de la verticale, la caméra reste en face.
+        let turned = try #require(CameraFraming.shot(keyPositions: lying, joints: [2], yaw: 90, pitch: 30, margin: 0.3, aspect: 1))
+        #expect(abs(turned.target.x - 0.1) < 1e-9 && abs(turned.target.z + 0.9) < 1e-9)
+        #expect(CameraFraming.shot(keyPositions: [], joints: nil, yaw: 0, pitch: nil, margin: nil, aspect: 1) == nil)
+        #expect(CameraFraming.shot(keyPositions: lying, joints: [7], yaw: 0, pitch: nil, margin: nil, aspect: 1) == nil)
+    }
+
+    @Test("Serviette : deux brins et un passage à plat sous le pied, bande sans vrille")
+    func towelPath() throws {
+        let left = Vec3(0.3, 0.9, 0.4), right = Vec3(-0.25, 0.9, 0.4), foot = Vec3(0.05, 0.02, 0.2)
+        let segments = try #require(TowelPath.segments(leftHand: left, foot: foot, rightHand: right,
+                                                       under: [[0.06, 0], [-0.05, 0.01]], thickness: 0.006))
+        #expect(segments.count == 3)
+        // Brin gauche du sol à la main gauche, passage sous le pied posé au sol, brin droit du sol à la main droite.
+        #expect(segments[0].to == left && segments[2].to == right)
+        #expect(segments[0].from == segments[1].from && segments[1].to == segments[2].from)
+        #expect(abs(segments[1].from.y - 0.003) < 1e-12 && abs(segments[1].to.y - 0.003) < 1e-12)
+        #expect(abs(segments[1].from.x - 0.11) < 1e-12 && abs(segments[1].to.x - 0.0) < 1e-12 && abs(segments[1].to.z - 0.21) < 1e-12)
+        func dot(_ a: Vec3, _ b: Vec3) -> Double { a.x * b.x + a.y * b.y + a.z * b.z }
+        for segment in segments {
+            let d = (segment.to - segment.from) * (1 / segment.length)
+            // Repère orthonormé direct : largeur, direction, épaisseur.
+            #expect(abs(segment.side.length - 1) < 1e-9 && abs(segment.normal.length - 1) < 1e-9)
+            #expect(abs(dot(segment.side, d)) < 1e-9 && abs(dot(segment.normal, d)) < 1e-9 && abs(dot(segment.side, segment.normal)) < 1e-9)
+            let cross = Vec3(segment.side.y * d.z - segment.side.z * d.y, segment.side.z * d.x - segment.side.x * d.z,
+                             segment.side.x * d.y - segment.side.y * d.x)
+            #expect((cross - segment.normal).length < 1e-9)
+        }
+        // Sous le pied, la bande est à plat : épaisseur verticale, largeur dans l'axe du pied.
+        #expect(abs(abs(segments[1].normal.y) - 1) < 1e-9 && abs(segments[1].side.y) < 1e-12)
+        #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0.06, 0]], thickness: 0.006) == nil)
+        #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0, 0], [0, 0]], thickness: 0.006) == nil)
+    }
 }

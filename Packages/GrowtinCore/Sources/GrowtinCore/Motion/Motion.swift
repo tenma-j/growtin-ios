@@ -123,6 +123,12 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     public let floor: Bool?
     /// Accessoire tenu (serviette) : sommets de la peau qu'il relie à chaque image (main gauche, pied, main droite).
     public let vertices: [Int]?
+    /// Serviette : les deux points au sol entre lesquels elle passe sous le pied, de part et d'autre de la voûte,
+    /// en décalages horizontaux [x, z] (mètres) depuis le sommet du pied ; le premier du côté de la main gauche.
+    public let under: [[Double]]?
+    /// Serviette : largeur et épaisseur de la bande à plat (mètres).
+    public let width: Double?
+    public let thickness: Double?
 }
 
 /// Mouvement issu d'une capture réelle : rotations locales des os, image par image (quaternions x, y, z, w).
@@ -154,6 +160,18 @@ public struct Motion: Decodable, Sendable {
     public struct Camera: Decodable, Sendable {
         public let yaw: Double
         public let pitch: Double?
+        /// Cadrage resserré : articulations à garder dans l'image (la caméra se rapproche de cette zone) ;
+        /// absent : le corps entier, sol compris.
+        public let frame: [String]?
+        /// Marge autour des articulations cadrées (mètres).
+        public let margin: Double?
+
+        public init(yaw: Double, pitch: Double? = nil, frame: [String]? = nil, margin: Double? = nil) {
+            self.yaw = yaw
+            self.pitch = pitch
+            self.frame = frame
+            self.margin = margin
+        }
     }
 
     /// Poses clés (mouvements construits) ; vide quand le mouvement vient d'une capture.
