@@ -41,6 +41,13 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      abdos, extension du dos, cercles de hanches), `keep_hands` garde les mains au même endroit de la partie du corps
      qui les porte. Une transition où une main traverserait le corps reçoit trois points de passage, mains écartées
      de 3 cm de la peau, sur la même courbe de vitesse. Environ deux minutes et demie pour les deux corps ;
+   - appuis fixes (pompes inclinées, pont fessier, chat-vache, posture de l'enfant, rowing) : l'app interpole des angles,
+     un appui dériverait entre deux clés éloignées. `planted` découpe la transition en clés rapprochées où mains,
+     pieds et genoux sont résolus à chaque fois ; les hauteurs sont réglées sur la peau (paumes, genoux, front, dos
+     touchent le sol ensemble). `flat_hands` écarte le pouce dans le plan de la paume d'une main posée à plat ;
+   - serviette (`"kind": "towel"`, champ `vertices`) : trois indices de sommets de la peau (poing gauche, creux du pied
+     posé dessus, poing droit), calculés pour chaque corps ; l'app trace un brin droit de chaque main au pied. L'écart
+     des mains est élargi jusqu'à ce que les brins passent à 2 cm au moins du genou et du tibia ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
 3. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :

@@ -46,7 +46,9 @@ struct MotionTests {
             for region in motion.muscles { #expect(regions.contains(region), "\(id) : \(region)") }
             for prop in motion.props {
                 if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
-                #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow"].contains(prop.kind), "\(id) : \(prop.kind)")
+                #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow", "towel"].contains(prop.kind), "\(id) : \(prop.kind)")
+                // Serviette : trois sommets de la peau (main gauche, pied, main droite).
+                if prop.kind == "towel" { #expect(prop.vertices?.count == 3 && prop.vertices?.allSatisfy({ $0 >= 0 }) == true, "\(id) : sommets de la serviette") }
             }
             for key in motion.keys {
                 let pose = library.resolve(key.pose)
