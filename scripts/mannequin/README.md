@@ -8,11 +8,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
   [MakeHuman](https://github.com/makehumancommunity/makehuman) (dossier `makehuman/data`), dont les ressources sont
   publiées dans le domaine public (**CC0 1.0**). Seule la morphologie (silhouette athlétique) est reprise ; tête de
   mannequin lisse, tenue de sport modélisée ici (short, brassière, liseré vert).
-- **Marche, marche rapide et boxe dans le vide** : captures de mouvement du
+- **Marche et marche rapide** : captures de mouvement du
   [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) (conversion BVH de B. Hahne), base créée avec le
   financement de la NSF (EIA-0196217). Conditions : utilisation libre, y compris dans un produit commercial ;
   revente des données interdite, même converties.
-- **Tous les autres mouvements** : poses clés écrites dans `motions.py`.
+- **Tous les autres mouvements** (boxe dans le vide comprise) : poses clés écrites dans `motions.py`.
 
 ## Pipeline
 
@@ -49,7 +49,15 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      posé dessus, poing droit), calculés pour chaque corps ; l'app trace un brin droit de chaque main au pied. L'écart
      des mains est élargi jusqu'à ce que les brins passent à 2 cm au moins du genou et du tibia ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
-     boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
+     boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`. Chaque capture a sa
+     vitesse de lecture et un redressement du buste (le reciblage le penche trop en avant) : la marche est la capture
+     « marche lente » ralentie (un cycle en 1,7 s), la marche rapide une marche normale accélérée (un cycle en
+     0,85 s, toujours un pied au sol) ;
+   - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
+     cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
+   - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
+     posé pointe en l'air au bord du lit, paume sur le sommet du crâne, mur au ras de la paume. Un pied qui quitte
+     le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
 3. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :
    cinématique directe, skinning linéaire, mise au sol, décalages mis à l'échelle du corps). `MAXK=n` limite le
    nombre d'images par mouvement.

@@ -710,11 +710,14 @@ def drink(u, tip=0.0):
     if u < 0.01:
         return p
     R, J = ik.fk(p)
-    glass = J["head"] + R["head"] @ (MOUTH + [0.0, -0.065, 0.05])
-    w1 = glass + [-0.06, -0.02 + 0.03 * tip, -0.035]
-    f1, n1 = np.array([0.45, 0.35 + 0.35 * tip, 0.82]), np.array([1.0, 0.0, -0.35])
+    glass = J["head"] + R["head"] @ (MOUTH + [0.0, -0.05, 0.045])
+    w1 = glass + [-0.05, -0.075 + 0.02 * tip, 0.025]
     w = _w0 + (w1 - _w0) * u + [0.0, 0.0, 0.14 * np.sin(np.pi * u)]                # la main monte par l'avant du corps
-    return hands(p, R=w, fingers_R=_f0 + (f1 - _f0) * u, palm_R=_n0 + (n1 - _n0) * u, pole_R=(-1, -0.9, -0.2))
+    pole = (-0.45, -1, 0.1)                                                        # coude bas, avant-bras presque vertical
+    q = with_bones(p, ik.arm(p, "R", w, pole)); Jq = joints(q)
+    f1 = Jq["wrist.R"] - Jq["lowerarm01.R"]; f1 = f1 / np.linalg.norm(f1) + np.array([0.1, 0.0, -0.25 * tip])   # main dans l'axe de l'avant-bras
+    n1 = np.array([0.75, 0.0, -0.65])                                              # paume vers le verre, tenu devant les lèvres
+    return hands(p, R=w, fingers_R=_f0 + (f1 - _f0) * u, palm_R=_n0 + (n1 - _n0) * u, pole_R=pole)
 _sip = drink(1, 1)
 motion("water-break", [K(0, "stand")] + planted(0.3, 1.5, drink) + [K(1.9, _sip), K(2.9, _sip), K(3.3, drink(1))]
        + planted(3.3, 4.5, lambda s: drink(1 - s)) + [K(4.8, slow_step("L", 0))] + slow_steps(4.8, 4) + [K(10.6, "stand")], yaw=35)
@@ -742,9 +745,11 @@ def boxing(jab=0.0, cross=0.0):
         kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [0.45 * sg, -1, -0.15])})
     return grip_thumbs(hands(p, **kw))
 _guard = boxing()
-motion("shadow-boxing", [K(0, _guard)] + planted(0, 0.24, lambda s: boxing(jab=s), n=4) + planted(0.24, 0.6, lambda s: boxing(jab=1 - s), n=4)
-       + [K(0.95, _guard)] + planted(0.95, 1.23, lambda s: boxing(cross=s), n=4) + planted(1.23, 1.65, lambda s: boxing(cross=1 - s), n=4)
-       + [K(2.2, _guard)], muscles=("shoulders", "triceps", "abs"), yaw=40)
+_jab, _cross = boxing(jab=1), boxing(cross=1)
+motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, lambda s: boxing(jab=s), n=4) + [K(0.37, _jab)]
+       + planted(0.37, 0.7, lambda s: boxing(jab=1 - s), n=4) + [K(1.1, _guard)] + planted(1.1, 1.36, lambda s: boxing(cross=s), n=4)
+       + [K(1.46, _cross)] + planted(1.46, 1.84, lambda s: boxing(cross=1 - s), n=4) + [K(2.2, _guard)],
+       muscles=("shoulders", "triceps", "abs"), yaw=58)
 
 # Échauffement : marche sur place et grands cercles de bras vers l'arrière (devant → en haut → derrière → en bas).
 def warmup(theta):
@@ -1004,9 +1009,13 @@ _quad_r = mirror_pose(_quad)
 def quad_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
     # Le pied décolle genou un peu en avant (il ne traîne pas au sol), le talon monte, puis la main le saisit.
-    off = legs(quad_stretch(0, 0, 0, 0.5, False), L=ankle("L", lift=0.10 * S_LEG, dz=-0.07 * S_LEG), foot_pitch_L=28)
-    hold, off, high = f(_quad), f(off), f(quad_stretch(118, 0, 30, 1.0, False))
-    return [K(t0 + 0.6, off), K(t0 + 1.2, high), K(t0 + 1.9, hold), K(t0 + 4.9, hold), K(t0 + 5.5, high), K(t0 + 6.1, off), K(t0 + 6.7, "stand")]
+    # (le talon se lève d'abord, la pointe du pied reste posée au même endroit jusqu'à ce que le pied quitte le sol)
+    toe = STAND["toes.L"]; a = ANK["L"] - toe; c, sn = np.cos(np.radians(34)), np.sin(np.radians(34))
+    off = legs(quad_stretch(0, 0, 0, 0.6, False), L=toe + [a[0], a[1] * c - a[2] * sn, a[1] * sn + a[2] * c], foot_pitch_L=34, toes_L=-34)
+    up = legs(quad_stretch(0, 0, 0, 1.0, False), L=ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG), foot_pitch_L=45)
+    hold, off, up, high = f(_quad), f(off), f(up), f(quad_stretch(118, 0, 30, 1.0, False))
+    return [K(t0 + 0.5, off), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 2.0, hold), K(t0 + 5.0, hold), K(t0 + 5.6, high),
+            K(t0 + 6.0, up, "in"), K(t0 + 6.3, off, "linear"), K(t0 + 6.8, "stand")]
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
 # (rapprochées, elles se traversaient derrière le dos).
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
@@ -1014,8 +1023,8 @@ chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-
                    R=[-0.1, float(STAND["root"][1] - 0.02), float(STAND["root"][2] - 0.16)],
                    fingers_L=[0, -1, -0.35], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.35], palm_R=[1, 0, 0],
                    pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
-motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(6.7, True)
-       + [K(14.9, chest_open), K(17.4, P(chest_open, **CHEST_IN)), K(19.4, chest_open), K(20.9, "stand")], muscles=("quads", "chest"), yaw=140)
+motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(6.8, True)
+       + [K(15.1, chest_open), K(17.6, P(chest_open, **CHEST_IN)), K(19.6, chest_open), K(21.1, "stand")], muscles=("quads", "chest"), yaw=140)
 
 # ─── Mobilité, épaules, nuque ───
 # Grands cercles d'épaules vers l'arrière : avant → haut → arrière → bas. Les bras restent pendants.
@@ -1070,7 +1079,7 @@ def doorway(lean):
     p = legs(p, L=ankle("L"), R=ankle("R"))
     for side, sg in (("L", 1), ("R", -1)):
         sh = STAND[f"upperarm01.{side}"]
-        dz = DOOR_Z - PALM - 0.006 - sh[2]; dy = -0.02; back = 0.022          # l'avant-bras, plus épais au coude, s'écarte un peu
+        dz = DOOR_Z - PALM - 0.017 - sh[2]; dy = -0.02; back = 0.028          # l'avant-bras, plus épais au coude, s'écarte un peu
         elbow = sh + [sg * np.sqrt(UPPER_ARM ** 2 - (dz - back) ** 2 - dy ** 2), dy, dz - back]
         out = float(np.clip((0.5 - abs(elbow[0])) / FOREARM, 0.0, 0.75))                    # avant-bras incliné jusqu'au montant
         fore = np.array([sg * out, np.sqrt(1 - out ** 2 - (back / FOREARM) ** 2), back / FOREARM])
@@ -1381,11 +1390,16 @@ def hamstring(side, hinge):
                  pole_L=(1, -0.6, -0.3), pole_R=(-0.5, -0.3, -1))
 hL0, hL1 = hamstring("L", 0), hamstring("L", 30)
 # La jambe se tend pied décollé du sol, puis le talon se pose.
-_hway = legs(P("chairSit"), L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * 0.92 + [0, 0.06, 0], foot_pitch_L=HAM_PITCH * 0.9)
-_hway = legs(_hway, R=_seat["foot.R"])
-hR0, hR1, _hway_r = mirror_pose(hL0), mirror_pose(hL1), mirror_pose(_hway)
-motion("bed-hamstring", [K(0, "chairSit"), K(0.9, _hway), K(1.6, hL0), K(3.4, hL1), K(7.4, hL1), K(9.0, hL0), K(9.7, _hway), K(10.4, "chairSit"),
-                         K(11.3, _hway_r), K(12.0, hR0), K(13.8, hR1), K(17.8, hR1), K(19.4, hR0), K(20.1, _hway_r), K(20.8, "chairSit")],
+def ham_way(f, lift):
+    p = legs(P("chairSit"), L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f + [0, lift, 0], foot_pitch_L=HAM_PITCH * f)
+    return legs(p, R=_seat["foot.R"])
+_hway = [ham_way(0.12, 0.04), ham_way(0.5, 0.075), ham_way(0.93, 0.05)]
+def ham_keys(t0, flip):
+    f = mirror_pose if flip else (lambda p: p)
+    w = [f(p) for p in _hway]; h0, h1 = f(hL0), f(hL1)
+    return [K(t0 + 0.3, w[0]), K(t0 + 0.8, w[1], "linear"), K(t0 + 1.3, w[2], "linear"), K(t0 + 1.8, h0, "out"), K(t0 + 3.6, h1), K(t0 + 7.6, h1),
+            K(t0 + 9.2, h0), K(t0 + 9.7, w[2], "in"), K(t0 + 10.2, w[1], "linear"), K(t0 + 10.7, w[0], "linear"), K(t0 + 11.0, "chairSit", "out")]
+motion("bed-hamstring", [K(0, "chairSit")] + ham_keys(0, False) + ham_keys(11.0, True),
        muscles=("hamstrings", "calves"), yaw=62, pitch=8, props=(BED_SIT,))
 
 # Hanches (« 4 ») : cheville droite posée sur le genou gauche, genou droit ouvert, léger penché en avant.
