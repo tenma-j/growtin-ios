@@ -118,6 +118,25 @@ struct MotionTests {
         #expect(motions.allSatisfy { $0.props.contains { $0.kind == "bed" && $0.bare == true } })
     }
 
+    @Test("Porte à la mesure du corps, serviette tenue dans le poing, chevilles et menton vus de près", arguments: MotionLibrary.bodies)
+    func fittedPropsAndCloseUps(body: String) throws {
+        let library = try MotionLibrary.bundled(body: body)
+        // Porte : distance entre les axes des montants, là où tombent les avant-bras de ce corps.
+        let door = try #require(library.motion("doorway-stretch")?.props.first { $0.kind == "door" })
+        let width = try #require(door.width)
+        #expect(width > 0.6 && width < 1.2)
+        // Serviette : le bout de chaque brin est dans le creux du poing, à quelques millimètres de la paume.
+        let towel = try #require(library.motion("towel-row")?.props.first { $0.kind == "towel" })
+        #expect(towel.vertices?.count == 3 && towel.backs?.count == 2)
+        let depth = try #require(towel.depth)
+        #expect(depth > 0.003 && depth < 0.03)
+        // Petits mouvements cadrés de près.
+        for id in ["ankle-circles", "chin-tucks"] {
+            let frame = try #require(library.motion(id)?.camera.frame, "\(id)")
+            #expect(!frame.isEmpty && frame.allSatisfy { library.bones.contains($0) }, "\(id)")
+        }
+    }
+
     @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit", arguments: MotionLibrary.bodies)
     func plantedFeet(body: String) throws {
         // Chaque corps a sa propre version des mouvements, calculée sur son squelette.
@@ -251,6 +270,10 @@ struct MotionTests {
         }
         // Sous le pied, la bande est à plat : épaisseur verticale, largeur dans l'axe du pied.
         #expect(abs(abs(segments[1].normal.y) - 1) < 1e-9 && abs(segments[1].side.y) < 1e-12)
+        // Prise dans le creux du poing : à 9 mm de la paume, à l'opposé du dos de la main.
+        let grip = TowelPath.grip(palm: Vec3(0.3, 0.9, 0.4), back: Vec3(0.3, 0.9, 0.425), depth: 0.009)
+        #expect((grip - Vec3(0.3, 0.9, 0.391)).length < 1e-12)
+        #expect(TowelPath.grip(palm: left, back: left, depth: 0.009) == left)
         #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0.06, 0]], thickness: 0.006) == nil)
         #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0, 0], [0, 0]], thickness: 0.006) == nil)
     }

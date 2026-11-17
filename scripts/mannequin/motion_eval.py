@@ -156,9 +156,10 @@ def boxes_for(prop, anchor):
     elif k == "pillow":
         out.append(((0, a[1] - 0.05, 0), (0.17, 0.05, 0.28)))
     elif k == "door":
-        for x in (-0.5, 0.5):
+        half = (prop.get("width") or 1.0) / 2                # distance entre les axes des montants : à la mesure du corps
+        for x in (-half, half):
             out.append(((x, 1.025, 0), (0.035, 1.025, 0.06)))
-        out.append(((0, 2.085, 0), (0.535, 0.035, 0.06)))
+        out.append(((0, 2.085, 0), (half + 0.035, 0.035, 0.06)))
     yaw = np.radians(prop.get("yaw", 0)); c, s_ = np.cos(yaw), np.sin(yaw)
     Ry = np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]])
     res = []
@@ -189,6 +190,11 @@ def box_mesh(center, half, R):
 TOWEL_WIDTH, TOWEL_THICKNESS = 0.05, 0.006              # bande à plat (valeurs par défaut)
 TOWEL_GRIP = (0.022, 0.012)                             # bande resserrée dans le poing (largeur, épaisseur)
 
+def towel_grip(palm, back, depth):
+    """Point tenu dans le creux du poing : à « depth » de la paume, à l'opposé du dos de la main (TowelPath.grip)."""
+    out = palm - back; n = np.linalg.norm(out)
+    return palm + out * (depth / n) if n > 1e-6 else palm
+
 def towel_segments(prop, v):
     """Trois tronçons de bande d'une serviette coincée sous un pied, d'après la peau déformée « v » :
     brin gauche (du sol au poing), passage à plat sous le pied, brin droit (du sol au poing).
@@ -198,6 +204,9 @@ def towel_segments(prop, v):
         return []
     w, th = prop.get("width") or TOWEL_WIDTH, prop.get("thickness") or TOWEL_THICKNESS
     left, foot, right = (np.asarray(v[i], float) for i in ids)
+    backs = prop.get("backs")
+    if backs and len(backs) == 2:
+        left, right = (towel_grip(p, np.asarray(v[i], float), prop.get("depth") or 0.0) for p, i in ((left, backs[0]), (right, backs[1])))
     a = np.array([foot[0] + under[0][0], th / 2, foot[2] + under[0][1]])
     b = np.array([foot[0] + under[1][0], th / 2, foot[2] + under[1][1]])
     u = (b - a) / np.linalg.norm(b - a)

@@ -46,16 +46,21 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      pieds et genoux sont résolus à chaque fois ; les hauteurs sont réglées sur la peau (paumes, genoux, front, dos
      touchent le sol ensemble). `flat_hands` écarte le pouce dans le plan de la paume d'une main posée à plat ;
    - serviette (`"kind": "towel"`) : une bande qui passe à plat sous la voûte du pied avant, puis monte de chaque
-     côté jusqu'à un poing. Champs : `vertices` (trois indices de sommets de la peau : creux du poing gauche, dessous
-     de la voûte du pied, creux du poing droit, calculés pour chaque corps), `under` (les deux points au sol où la
+     côté jusqu'à un poing. Champs : `vertices` (trois indices de sommets de la peau : paume gauche, dessous de la
+     voûte du pied, paume droite, calculés pour chaque corps), `backs` et `depth` (sommet du dos de chaque main, en
+     face de celui de la paume, et distance dont le bout du brin s'écarte de la paume à l'opposé du dos de la main :
+     il est tenu dans le creux du poing, pas sur la peau ; `TowelPath.grip`), `under` (les deux points au sol où la
      bande sort de sous le pied, en décalages horizontaux `[x, z]` depuis le sommet du pied : d'abord celui du brin de
      la main gauche, puis celui de la main droite ; ils sont à 12 mm du contour du pied), `width` et `thickness`
      (section de la bande à plat, en mètres ; elle se resserre à 22 × 12 mm dans le poing). L'app (`TowelPath`,
      GrowtinCore) et les planches (`towel_segments`, `motion_eval.py`) tracent les mêmes trois tronçons, sans vrille :
      la largeur de la bande reste dans l'axe du pied. Une serviette ne s'allonge pas : chaque poing se déplace sur une
      sphère centrée sur le point où son brin sort de sous le pied (longueur totale constante à quelques millimètres
-     près, grâce à des clés rapprochées), des bras tendus vers l'avant jusqu'aux côtes basses. Le poing est orienté
-     pour que le brin en sorte du côté de l'auriculaire ; le pied avant est surélevé de l'épaisseur de la bande ;
+     près, grâce à des clés rapprochées), des bras tendus vers l'avant jusqu'aux côtes basses. Le brin entre dans
+     le poing du côté de l'auriculaire, en travers de la paume (le poignet s'incline de 20° au plus pour rester dans
+     cet axe) ; sa profondeur dans le poing et la fermeture de chaque doigt sont réglées sur la peau : la bande
+     passe à 1,5 mm de la paume et des doigts qui l'entourent, sans les traverser ; le pied avant est surélevé de
+     l'épaisseur de la bande ;
      l'écart des mains est élargi jusqu'à ce que les brins passent à 6 mm au moins de la peau (`towel_clearance` :
      pied avant, tibias, genoux, cuisses, bras) ;
    - scan corporel au lit (`bed-scan-*`) : le corps repose vraiment sur le matelas. La hanche s'étend jusqu'à ce que
@@ -63,7 +68,19 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      placé sous l'arrière du crâne de chaque corps et le cou se règle pour que la tête y reste posée (`scan_solve`).
      La respiration soulève le milieu du buste par des rotations qui se compensent : bassin, épaules et tête ne bougent
      pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
-     y sont posées) : seuls le geste et le cadrage changent ;
+     y sont posées) : seuls le geste et le cadrage changent. Gestes lents mais francs, lisibles sur un téléphone :
+     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève de 2 à 3 cm, les mains se
+     referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller ;
+   - torsion allongée, genoux vers la poitrine (`laid`, `bed_head`, `bed_pillow`) : même principe, mais chaque clé
+     est placée exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui
+     échantillonne la peau, à quelques millimètres près) ; bras ouverts posés (mains fixes), oreiller sous le crâne
+     de chaque corps, regard à l'opposé des genoux ;
+   - porte (`"kind": "door"`) : bras en chandelier, coudes à hauteur d'épaule, avant-bras verticaux et paumes à plat
+     sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
+     montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le buste avance ;
+   - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
+     appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (24 clés par
+     cycle), ils ne glissent pas au sol ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`. Chaque capture a sa
      vitesse de lecture et un redressement du buste (le reciblage le penche trop en avant) : la marche est la capture
@@ -94,7 +111,8 @@ Cadrage : `camera` donne l'angle de vue (`yaw`, `pitch`). Sans autre champ, l'ap
 sur toutes les images clés. `camera.frame` (liste d'articulations) demande un cadrage resserré : la caméra vise le
 centre de la boîte de ces articulations sur toutes les images clés, élargie de `camera.margin` mètres (20 cm par
 défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
-(et du matelas). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+(et du matelas). Cercles de cheville (des genoux au sol, le mur au bord de l'image) et menton rentré (tête, cou et
+épaules de profil) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
