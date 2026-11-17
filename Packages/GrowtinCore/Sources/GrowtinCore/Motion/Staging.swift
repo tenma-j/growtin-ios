@@ -88,7 +88,15 @@ public enum TowelPath {
     public static let gripWidth = 0.022
     public static let gripThickness = 0.012
 
-    /// - `leftHand`, `rightHand`, `foot` : sommets de la peau déformée ; `under` : décalages [x, z] depuis `foot`.
+    /// Point tenu dans le creux du poing : à `depth` mètres de la paume, à l'opposé du dos de la main
+    /// (`palm` et `back` : deux sommets de la peau déformée, face à face de part et d'autre de la main).
+    public static func grip(palm: Vec3, back: Vec3, depth: Double) -> Vec3 {
+        let out = palm - back
+        guard out.length > 1e-6 else { return palm }
+        return palm + out * (depth / out.length)
+    }
+
+    /// - `leftHand`, `rightHand` : points tenus (voir `grip`) ; `foot` : sommet de la peau déformée ; `under` : décalages [x, z] depuis `foot`.
     /// - Renvoie [brin gauche (du sol vers la main), passage sous le pied, brin droit (du sol vers la main)],
     ///   ou `nil` si les points sont confondus.
     public static func segments(leftHand: Vec3, foot: Vec3, rightHand: Vec3, under: [[Double]], thickness: Double) -> [Segment]? {

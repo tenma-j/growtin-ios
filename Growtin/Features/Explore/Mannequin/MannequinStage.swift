@@ -57,6 +57,9 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
     private struct Towel {
         let bands: [SCNNode]
         let vertices: [Int]
+        /// Sommets du dos de chaque main et profondeur de la prise dans le creux du poing (voir `TowelPath.grip`).
+        let backs: [Int]?
+        let depth: Double
         let under: [[Double]]
         let thickness: Double
     }
@@ -365,9 +368,14 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 func point(_ i: Int) -> Vec3 { Vec3(Double(p[i * 3]), Double(p[i * 3 + 1]), Double(p[i * 3 + 2])) }
                 func float(_ v: Vec3) -> SIMD3<Float> { SIMD3<Float>(Float(v.x), Float(v.y), Float(v.z)) }
                 // Cachée pendant la transition depuis le mouvement précédent : les mains n'en tiennent pas encore les bouts.
+                func hand(_ i: Int) -> Vec3 {
+                    let palm = point(towel.vertices[i == 0 ? 0 : 2])
+                    guard let backs = towel.backs else { return palm }
+                    return TowelPath.grip(palm: palm, back: point(backs[i]), depth: towel.depth)
+                }
                 let segments: [TowelPath.Segment]? = fromRotations == nil
-                    ? TowelPath.segments(leftHand: point(towel.vertices[0]), foot: point(towel.vertices[1]),
-                                         rightHand: point(towel.vertices[2]), under: towel.under, thickness: towel.thickness)
+                    ? TowelPath.segments(leftHand: hand(0), foot: point(towel.vertices[1]),
+                                         rightHand: hand(1), under: towel.under, thickness: towel.thickness)
                     : nil
                 for (i, node) in towel.bands.enumerated() {
                     guard let segments, i < segments.count else { node.isHidden = true; continue }
@@ -574,9 +582,12 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
             case "pillow":
                 box(0.34, 0.1, 0.56, SIMD3(0, top - 0.05, 0), pillowCloth, chamfer: 0.045)
             case "door":
-                // Montants juste à l'extérieur des avant-bras, quelle que soit la carrure du personnage.
+                // Montants à la mesure du personnage : `width` donne la distance entre leurs axes (les avant-bras y sont
+                // posés). Sans ce champ : juste à l'extérieur des poignets.
                 var half: Float = 0.5
-                if let wrist = asset.skeleton.index["wrist.L"], keyIndex < keyPositions.count {
+                if let width = prop.width {
+                    half = Float(width) / 2
+                } else if let wrist = asset.skeleton.index["wrist.L"], keyIndex < keyPositions.count {
                     half = Float(abs(keyPositions[keyIndex][wrist].x - a.x)) + 0.08
                 }
                 for x in [-half, half] { box(0.07, 2.05, 0.12, SIMD3(x, 1.025, 0), wall, chamfer: 0.006) }
@@ -598,7 +609,10 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                     container.addChildNode(n)
                     return n
                 }
-                let held = Towel(bands: bands, vertices: ids, under: under, thickness: Double(flat.thickness))
+                let count = asset.file.surface.rest.count / 3
+                let backs = prop.backs.flatMap { $0.count == 2 && $0.allSatisfy { $0 >= 0 && $0 < count } ? $0 : nil }
+                let held = Towel(bands: bands, vertices: ids, backs: backs, depth: prop.depth ?? 0, under: under,
+                                 thickness: Double(flat.thickness))
                 lock.lock(); towel = held; lock.unlock()
                 continue
             default:

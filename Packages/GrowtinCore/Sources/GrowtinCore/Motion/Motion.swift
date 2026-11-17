@@ -126,9 +126,14 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     /// Serviette : les deux points au sol entre lesquels elle passe sous le pied, de part et d'autre de la voûte,
     /// en décalages horizontaux [x, z] (mètres) depuis le sommet du pied ; le premier du côté de la main gauche.
     public let under: [[Double]]?
-    /// Serviette : largeur et épaisseur de la bande à plat (mètres).
+    /// Serviette : largeur et épaisseur de la bande à plat (mètres). Porte : distance entre les axes des montants.
     public let width: Double?
     public let thickness: Double?
+    /// Serviette : sommets du dos de chaque main (gauche, droite), en face des sommets des paumes, et distance (mètres)
+    /// dont le bout de chaque brin s'écarte de la paume, à l'opposé du dos de la main : il est dans le creux du poing,
+    /// entouré par les doigts, et non sur la peau (voir `TowelPath.grip`).
+    public let backs: [Int]?
+    public let depth: Double?
     /// Lit sans plaid replié au pied : quelqu'un y est allongé de tout son long, les jambes posées à cet endroit.
     public let bare: Bool?
 }
