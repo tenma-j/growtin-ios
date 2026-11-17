@@ -1138,7 +1138,7 @@ def ankle_keys(t0, side):
         + planted(t0 + 4.8, t0 + 5.6, lambda s: ankle_pose(side, 1 - s), n=3)
 _a0 = ankle_pose("R", 0)
 _wall = float(posed_skin(_a0)[0][HAND_VERTS["L"], 0].max() - joints(_a0)["wrist.L"][0])         # mur au ras de la paume
-motion("ankle-circles", [K(0, _a0)] + ankle_keys(0, "R") + ankle_keys(5.6, "L"), muscles=("calves", "shins"), yaw=35, pitch=3,
+motion("ankle-circles", [K(0, _a0)] + ankle_keys(0, "R") + ankle_keys(5.6, "L"), muscles=("calves", "shins"), yaw=10, pitch=3,
        props=(prop("wall", "wrist.L", 0, (_wall, 0, -0.02), floor=True),))
 
 side_bend = lambda a: P("stand", upperarm01=[0, 0, 168], lowerarm01=[-6, 0, 0], clavicle=[0, 0, 8], spine03=[0, 0, a * 0.4], spine02=[0, 0, a * 0.35],
@@ -1461,10 +1461,11 @@ motion("legs-tense", [K(0, "chairSit"), K(1.5, legs_out), K(3, legs_out), K(4.5,
 # ─── Mouvements issus de captures réelles (CMU Graphics Lab, http://mocap.cs.cmu.edu) ───
 # (identifiant, fichier BVH, fenêtre en secondes, durée de boucle min/max, vitesse, angle de vue, muscles, redressement)
 # Marche : capture « marche lente », ralentie ; marche rapide : capture de marche normale, accélérée (un pied toujours
-# au sol, rien d'un petit trot). Redressement : degrés dont le buste, que le reciblage penche trop en avant, est relevé.
+# au sol, rien d'un petit trot). Redressement : flexion ajoutée à un os (degrés, > 0 vers l'avant) ; le reciblage penche
+# trop le buste en avant et, dans la marche lente, lève trop le menton.
 MOCAP = [
-    ("walk", "007/07_04.bvh", (0.2, 3.7), (1.2, 2.2), 0.85, 70, ("quads", "calves", "glutes"), 2.0),
-    ("walk-fast", "007/07_01.bvh", (0.2, 2.6), (0.9, 1.4), 1.3, 70, ("quads", "calves", "glutes", "hamstrings"), 3.0),
+    ("walk", "007/07_04.bvh", (0.2, 3.7), (1.2, 2.2), 0.85, 70, ("quads", "calves", "glutes"), {"spine05": -2.0, "neck01": 8.0, "head": 9.0}),
+    ("walk-fast", "007/07_01.bvh", (0.2, 2.6), (0.9, 1.4), 1.3, 70, ("quads", "calves", "glutes", "hamstrings"), {"spine05": -3.0}),
 ]
 KEY_BONES = ["root", "spine03", "spine01", "neck01", "upperarm01.L", "upperarm01.R", "lowerarm01.L", "lowerarm01.R",
              "upperleg01.L", "upperleg01.R", "lowerleg01.L", "lowerleg01.R"]
@@ -1491,8 +1492,8 @@ def build_mocap(bvh_root, joints_):
             w = (k + 1) / (nb + 1)
             for b in range(C.shape[1]):
                 C[len(C) - nb + k, b] = slerp(C[len(C) - nb + k, b], Q[j, b] if j < len(Q) else C[0, b], w)
-        if upright:                              # buste relevé : rotation vers l'arrière ajoutée au bas de la colonne
-            h = np.radians(-upright) / 2; cx, cw = np.sin(h), np.cos(h); b = names.index("spine05")
+        for bone, deg in upright.items():         # redressement : rotation autour de X ajoutée à l'os, à chaque image
+            h = np.radians(deg) / 2; cx, cw = np.sin(h), np.cos(h); b = names.index(bone)
             for f in range(len(C)):
                 x, y, z, w = C[f, b]
                 C[f, b] = [cw * x + cx * w, cw * y - cx * z, cw * z + cx * y, cw * w - cx * x]
