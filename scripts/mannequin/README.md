@@ -45,22 +45,52 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      un appui dériverait entre deux clés éloignées. `planted` découpe la transition en clés rapprochées où mains,
      pieds et genoux sont résolus à chaque fois ; les hauteurs sont réglées sur la peau (paumes, genoux, front, dos
      touchent le sol ensemble). `flat_hands` écarte le pouce dans le plan de la paume d'une main posée à plat ;
-   - serviette (`"kind": "towel"`, champ `vertices`) : trois indices de sommets de la peau (poing gauche, creux du pied
-     posé dessus, poing droit), calculés pour chaque corps ; l'app trace un brin droit de chaque main au pied. L'écart
-     des mains est élargi jusqu'à ce que les brins passent à 2 cm au moins du genou et du tibia ;
+   - serviette (`"kind": "towel"`) : une bande qui passe à plat sous la voûte du pied avant, puis monte de chaque
+     côté jusqu'à un poing. Champs : `vertices` (trois indices de sommets de la peau : creux du poing gauche, dessous
+     de la voûte du pied, creux du poing droit, calculés pour chaque corps), `under` (les deux points au sol où la
+     bande sort de sous le pied, en décalages horizontaux `[x, z]` depuis le sommet du pied : d'abord celui du brin de
+     la main gauche, puis celui de la main droite ; ils sont à 12 mm du contour du pied), `width` et `thickness`
+     (section de la bande à plat, en mètres ; elle se resserre à 22 × 12 mm dans le poing). L'app (`TowelPath`,
+     GrowtinCore) et les planches (`towel_segments`, `motion_eval.py`) tracent les mêmes trois tronçons, sans vrille :
+     la largeur de la bande reste dans l'axe du pied. Une serviette ne s'allonge pas : chaque poing se déplace sur une
+     sphère centrée sur le point où son brin sort de sous le pied (longueur totale constante à quelques millimètres
+     près, grâce à des clés rapprochées), des bras tendus vers l'avant jusqu'aux côtes basses. Le poing est orienté
+     pour que le brin en sorte du côté de l'auriculaire ; le pied avant est surélevé de l'épaisseur de la bande ;
+     l'écart des mains est élargi jusqu'à ce que les brins passent à 6 mm au moins de la peau (`towel_clearance` :
+     pied avant, tibias, genoux, cuisses, bras) ;
+   - scan corporel au lit (`bed-scan-*`) : le corps repose vraiment sur le matelas. La hanche s'étend jusqu'à ce que
+     mollets et talons touchent, le dos des mains est posé (hauteur du poignet réglée à chaque clé), l'oreiller est
+     placé sous l'arrière du crâne de chaque corps et le cou se règle pour que la tête y reste posée (`scan_solve`).
+     La respiration soulève le milieu du buste par des rotations qui se compensent : bassin, épaules et tête ne bougent
+     pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
+     y sont posées) : seuls le geste et le cadrage changent ;
    - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
      boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`.
-3. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :
+3. `review.py <dossier> [N] [exercices…]` : planches de contrôle de chaque étape d'exercice pour les deux corps, N
+   images réparties sur la boucle, interpolées comme dans l'app, avec le sol, les accessoires (serviette comprise),
+   la consigne et le cadrage resserré des mouvements qui en ont un. `SIZE` : taille d'une image ; `MOTIONS_JSON` :
+   autre fichier de mouvements.
+4. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :
    cinématique directe, skinning linéaire, mise au sol, décalages mis à l'échelle du corps). `MAXK=n` limite le
    nombre d'images par mouvement.
-4. `solve_poses.py <corps.npz>` : outil d'auteur des poses au sol (à quatre pattes, tailleur, papillon, enfant).
-5. `mocap_preview.py` : aperçu d'un extrait de capture avant de l'ajouter.
+5. `solve_poses.py <corps.npz>` : outil d'auteur des poses au sol (à quatre pattes, tailleur, papillon, enfant).
+6. `mocap_preview.py` : aperçu d'un extrait de capture avant de l'ajouter.
 
 `motions.json` (format 3) contient une version de chaque mouvement par corps (`bodies.male`, `bodies.female`) :
 le script est rejoué pour chaque squelette, si bien que les mains jointes se touchent et que les pieds restent posés
 pour l'homme comme pour la femme. Bras levés : la clavicule et l'omoplate participent au mouvement (rythme
 scapulo-huméral), ce qui évite l'épaule écrasée du skinning linéaire. Mouvements au lit : `support` donne la hauteur
 du matelas sur lequel le corps repose.
+
+Cadrage : `camera` donne l'angle de vue (`yaw`, `pitch`). Sans autre champ, l'app cadre le corps entier, sol compris,
+sur toutes les images clés. `camera.frame` (liste d'articulations) demande un cadrage resserré : la caméra vise le
+centre de la boîte de ces articulations sur toutes les images clés, élargie de `camera.margin` mètres (20 cm par
+défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
+(et du matelas). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+`CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
+`review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
+proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
+l'app le garde en place au lieu de le reconstruire.
 
 Articulations d'appoint (`upperarm01-half.L`, `lowerarm01-half.L`, `upperleg01-half.L`, `lowerleg01-half.L` et leurs
 pendants à droite) : placées au même point que l'os qu'elles doublent (champ `half` dans `mannequin.json`), elles

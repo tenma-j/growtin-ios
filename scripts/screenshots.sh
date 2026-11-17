@@ -103,6 +103,13 @@ for appearance in light dark; do
     capture_seq "light-35-echauffement-femme" 3 0.6 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 0 -demoFigure female
     capture_seq "light-36-salutation-femme" 2 1.5 -demoScreen exerciseStep -demoExercise yoga-doux -demoStep 1 -demoFigure female
     capture3d "light-37-scan-corporel-lit" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 0 -demoFigure male
+    # Scan corporel : la caméra s'approche de la zone de chaque étape (jambes, bras, visage).
+    capture3d "light-37-scan-corporel-jambes" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 2 -demoFigure female
+    capture3d "light-37-scan-corporel-bras" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 4 -demoFigure male
+    capture3d "light-37-scan-corporel-visage" -demoScreen exerciseStep -demoExercise scan-corporel -demoStep 5 -demoFigure female
+    # Rowing serviette : la serviette passe sous le pied avant, un bout dans chaque poing.
+    capture_seq "light-34-rowing-serviette-femme" 2 1.2 -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 4 -demoFigure female
+    capture3d "light-34-rowing-serviette-homme" -demoScreen exerciseStep -demoExercise renforcement-poids-du-corps -demoStep 4 -demoFigure male
     capture_seq "light-38-etirement-cuisses" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 2 -demoFigure female
     capture_seq "light-39-etirement-hanches" 2 2.0 -demoScreen exerciseStep -demoExercise etirements-soir -demoStep 3 -demoFigure male
     # En dernier : cette capture choisit le personnage féminin (préférence conservée par l'app).

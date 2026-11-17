@@ -560,7 +560,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 box(1.85, 0.012, 0.64, SIMD3(0, 0.006, 0), mat, chamfer: 0.005)
             case "bed":
                 // Lit le long de X, tête vers −X : sommier en bois, matelas épais aux bords arrondis, tête de lit,
-                // plaid replié au pied. Posé au sol, le matelas est à 50 cm ; sinon il arrive sous l'ancre.
+                // plaid replié au pied (sauf « bare » : des jambes y reposent). Posé au sol, le matelas est à 50 cm ;
+                // sinon il arrive sous l'ancre.
                 let mattressTop = prop.floor == true ? Float(0.5) : top
                 let frameTop = mattressTop - 0.19
                 for x: Float in [-0.92, 0.92] {
@@ -569,7 +570,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 box(2.0, max(frameTop - 0.1, 0.05), 1.46, SIMD3(0, (frameTop + 0.1) / 2, 0), wood, chamfer: 0.02)
                 box(1.96, 0.2, 1.42, SIMD3(0, mattressTop - 0.1, 0), linen, chamfer: 0.06)
                 box(0.07, mattressTop + 0.45, 1.46, SIMD3(-1.03, (mattressTop + 0.45) / 2, 0), wood, chamfer: 0.025)
-                box(0.42, 0.05, 1.38, SIMD3(0.7, mattressTop + 0.02, 0), throwCloth, chamfer: 0.025)
+                if prop.bare != true { box(0.42, 0.05, 1.38, SIMD3(0.7, mattressTop + 0.02, 0), throwCloth, chamfer: 0.025) }
             case "pillow":
                 box(0.34, 0.1, 0.56, SIMD3(0, top - 0.05, 0), pillowCloth, chamfer: 0.045)
             case "door":

@@ -129,6 +129,8 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     /// Serviette : largeur et épaisseur de la bande à plat (mètres).
     public let width: Double?
     public let thickness: Double?
+    /// Lit sans plaid replié au pied : quelqu'un y est allongé de tout son long, les jambes posées à cet endroit.
+    public let bare: Bool?
 }
 
 /// Mouvement issu d'une capture réelle : rotations locales des os, image par image (quaternions x, y, z, w).

@@ -15,10 +15,11 @@ from scipy.spatial.transform import Rotation, Slerp
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, "../.."))
-from motion_eval import Body, resolve, library_for, local_rotations, boxes_for, box_mesh  # noqa: E402
+from motion_eval import (Body, resolve, library_for, local_rotations, boxes_for, box_mesh, towel_segments, band_mesh,  # noqa: E402
+                         camera_shot)
 from export import render, MATERIAL_COLORS  # noqa: E402
 
-MOTIONS = os.path.join(ROOT, "Packages/GrowtinCore/Sources/GrowtinCore/Resources/motions.json")
+MOTIONS = os.environ.get("MOTIONS_JSON") or os.path.join(ROOT, "Packages/GrowtinCore/Sources/GrowtinCore/Resources/motions.json")
 EXERCISES = os.path.join(ROOT, "Packages/GrowtinCore/Sources/GrowtinCore/Explore/Exercises.swift")
 RES = os.path.join(ROOT, "Growtin/Resources/Mannequin")
 
@@ -141,6 +142,11 @@ def strip(job):
     lo = np.min([b[0] for b in boxes], 0); hi = np.max([b[1] for b in boxes], 0)
     c = (lo + hi) / 2; ext = max(hi[1] - min(lo[1], 0), hi[0] - lo[0], hi[2] - lo[2]) * 1.2
     c[1] = (hi[1] + min(lo[1], 0)) / 2
+    if cam.get("frame"):
+        # Cadrage resserré sur une zone du corps : même point visé et même champ que l'app (CameraFraming), calculés
+        # sur les articulations des images clés ; aperçu sans perspective, à l'échelle de la distance de la caméra.
+        ids = [body.names.index(j) for j in cam["frame"]]
+        c, _, ext = camera_shot([pl.at(k[0])[1] for k in pl.keys], ids, cam["yaw"], cam.get("pitch"), cam.get("margin"))
     fv, fn, ft = floor_mesh(c[0], c[2])
     for (v, n), t, mt in zip(poses, times, metrics):
         cols = [MATERIAL_COLORS[int(x)] for x in body.tri_mat]
@@ -153,13 +159,10 @@ def strip(job):
         V.append(fv); N.append(fn); T.append(ft + off); C += [np.array([0.62, 0.62, 0.64])] * len(ft)
         off += len(fv)
         for pr in m.get("props", []):
-            if pr["kind"] != "towel" or len(pr.get("vertices") or []) != 3: continue
-            a, foot, b = (v[i] for i in pr["vertices"])
-            for hand in (a, b):
-                d = hand - foot; L = np.linalg.norm(d)
-                if L < 0.01: continue
-                y = d / L; x = np.cross(y, [0, 0, 1.0]); x = x / (np.linalg.norm(x) + 1e-9); z = np.cross(x, y)
-                bv, bn, bt = box_mesh((hand + foot) / 2, np.array([0.022, L / 2, 0.022]), np.stack([x, y, z], 1))
+            if pr["kind"] != "towel": continue
+            # Serviette : brin gauche, passage à plat sous le pied, brin droit (mêmes tronçons que l'app).
+            for seg in towel_segments(pr, v):
+                bv, bn, bt = band_mesh(seg)
                 V.append(bv); N.append(bn); T.append(bt + off); off += len(bv); C += [np.array([0.42, 0.63, 0.78])] * len(bt)
         tmp = f"/tmp/_rv_{os.getpid()}.png"
         render(np.vstack(V), np.vstack(N), np.vstack(T), C, tmp, size=size, yaw=cam["yaw"], pitch=cam.get("pitch", 8),

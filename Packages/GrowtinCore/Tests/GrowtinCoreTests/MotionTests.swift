@@ -47,8 +47,26 @@ struct MotionTests {
             for prop in motion.props {
                 if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
                 #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow", "towel"].contains(prop.kind), "\(id) : \(prop.kind)")
-                // Serviette : trois sommets de la peau (main gauche, pied, main droite).
-                if prop.kind == "towel" { #expect(prop.vertices?.count == 3 && prop.vertices?.allSatisfy({ $0 >= 0 }) == true, "\(id) : sommets de la serviette") }
+                // Serviette : trois sommets de la peau (main gauche, pied, main droite), deux points au sol de part et
+                // d'autre du pied (à quelques centimètres du sommet du pied, celui de la main gauche du côté gauche),
+                // bande plate.
+                if prop.kind == "towel" {
+                    #expect(prop.vertices?.count == 3 && prop.vertices?.allSatisfy({ $0 >= 0 }) == true, "\(id) : sommets de la serviette")
+                    let under = prop.under ?? []
+                    #expect(under.count == 2 && under.allSatisfy { $0.count == 2 && $0.allSatisfy { $0.isFinite && abs($0) < 0.15 } },
+                            "\(id) : passage de la serviette sous le pied")
+                    if under.count == 2, under.allSatisfy({ $0.count == 2 }) {
+                        #expect(under[0][0] - under[1][0] > 0.06, "\(id) : la serviette traverse toute la largeur du pied")
+                    }
+                    let width = prop.width ?? TowelPath.defaultWidth, thickness = prop.thickness ?? TowelPath.defaultThickness
+                    #expect(width > 0.02 && width < 0.12 && thickness > 0.001 && thickness < 0.02, "\(id) : section de la serviette")
+                }
+            }
+            // Cadrage resserré : articulations connues, marge raisonnable.
+            if let frame = motion.camera.frame {
+                #expect(!frame.isEmpty, "\(id) : cadrage vide")
+                for joint in frame { #expect(bones.contains(joint), "\(id) : cadrage sur \(joint)") }
+                #expect((motion.camera.margin ?? CameraFraming.defaultMargin) >= 0.05, "\(id) : marge du cadrage")
             }
             for key in motion.keys {
                 let pose = library.resolve(key.pose)
@@ -70,6 +88,34 @@ struct MotionTests {
                 for region in step.focus ?? [] { #expect(regions.contains(region), "\(exercise.id) / \(step.title) : \(region)") }
             }
         }
+    }
+
+    @Test("Scan corporel : un mouvement et un cadrage par étape, dans le même lit", arguments: MotionLibrary.bodies)
+    func bodyScanSteps(body: String) throws {
+        let library = try MotionLibrary.bundled(body: body)
+        let exercise = try #require(ExerciseLibrary.exercise(id: "scan-corporel"))
+        let motions = try exercise.steps.map { try #require(library.motion($0.motion), "\($0.motion)") }
+        // Chaque étape a son propre mouvement.
+        #expect(Set(exercise.steps.map(\.motion)).count == exercise.steps.count)
+        // Même décor (lit, oreiller), même angle de vue et même pose de départ : rien ne saute d'une étape à l'autre.
+        let first = try #require(motions.first)
+        let start = try #require(first.keys.first.map { library.resolve($0.pose) })
+        for (step, motion) in zip(exercise.steps, motions) {
+            #expect(motion.props == first.props, "\(step.title) : décor")
+            #expect(motion.camera.yaw == first.camera.yaw && motion.camera.pitch == first.camera.pitch, "\(step.title) : angle de vue")
+            #expect(motion.support == first.support && (motion.support ?? 0) > 0.3, "\(step.title) : matelas")
+            let pose = try #require(motion.keys.first.map { library.resolve($0.pose) })
+            #expect(pose.rotations == start.rotations && pose.rootRotation == start.rootRotation && pose.rootOffset == start.rootOffset,
+                    "\(step.title) : pose de départ")
+            // La boucle se referme sur la pose de départ.
+            let last = try #require(motion.keys.last.map { library.resolve($0.pose) })
+            #expect(last.rotations == start.rotations, "\(step.title) : boucle")
+        }
+        // Vue d'ensemble au début et à la fin ; entre les deux, la caméra s'approche de la zone de l'étape.
+        #expect(motions.first?.camera.frame == nil && motions.last?.camera.frame == nil)
+        let frames = motions.dropFirst().dropLast().map { $0.camera.frame ?? [] }
+        #expect(frames.allSatisfy { !$0.isEmpty } && Set(frames).count == frames.count)
+        #expect(motions.allSatisfy { $0.props.contains { $0.kind == "bed" && $0.bare == true } })
     }
 
     @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit", arguments: MotionLibrary.bodies)

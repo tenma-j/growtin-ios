@@ -185,6 +185,79 @@ def box_mesh(center, half, R):
     n /= np.linalg.norm(n, axis=1, keepdims=True)
     return v, n, tris
 
+# ─── Serviette (même calcul que TowelPath, GrowtinCore) ───
+TOWEL_WIDTH, TOWEL_THICKNESS = 0.05, 0.006              # bande à plat (valeurs par défaut)
+TOWEL_GRIP = (0.022, 0.012)                             # bande resserrée dans le poing (largeur, épaisseur)
+
+def towel_segments(prop, v):
+    """Trois tronçons de bande d'une serviette coincée sous un pied, d'après la peau déformée « v » :
+    brin gauche (du sol au poing), passage à plat sous le pied, brin droit (du sol au poing).
+    Chaque tronçon : (départ, arrivée, largeur, normale, (largeur, épaisseur) au départ, (largeur, épaisseur) à l'arrivée)."""
+    ids, under = prop.get("vertices") or [], prop.get("under") or []
+    if len(ids) != 3 or len(under) != 2:
+        return []
+    w, th = prop.get("width") or TOWEL_WIDTH, prop.get("thickness") or TOWEL_THICKNESS
+    left, foot, right = (np.asarray(v[i], float) for i in ids)
+    a = np.array([foot[0] + under[0][0], th / 2, foot[2] + under[0][1]])
+    b = np.array([foot[0] + under[1][0], th / 2, foot[2] + under[1][1]])
+    u = (b - a) / np.linalg.norm(b - a)
+    side0 = np.array([-u[2], 0.0, u[0]])                # largeur sous le pied : horizontale, dans l'axe du pied
+    out = []
+    for p, q, s0, s1 in ((a, left, (w, th), TOWEL_GRIP), (a, b, (w, th), (w, th)), (b, right, (w, th), TOWEL_GRIP)):
+        d = (q - p) / np.linalg.norm(q - p)
+        side = side0 - d * (side0 @ d); side /= np.linalg.norm(side)
+        out.append((p, q, side, np.cross(side, d), s0, s1))
+    return out
+
+def band_mesh(seg):
+    """Maillage d'un tronçon de bande (section qui change d'un bout à l'autre), comme le dessine l'app."""
+    p, q, side, normal, s0, s1 = seg
+    corners = np.array([c + sx * side * s[0] / 2 + sz * normal * s[1] / 2
+                        for c, s in ((p, s0), (q, s1)) for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    v, n, t = [], [], []
+    for f in faces:
+        pts = corners[list(f)]; fn = np.cross(pts[1] - pts[0], pts[2] - pts[0]); fn /= np.linalg.norm(fn)
+        base = len(v); v += list(pts); n += [fn] * 4; t += [(base, base + 1, base + 2), (base, base + 2, base + 3)]
+    return np.array(v), np.array(n), np.array(t)
+
+def band_distance(seg, pts):
+    """Distance de points à la surface d'un tronçon de bande (négative à l'intérieur) et abscisse le long du tronçon (m)."""
+    p, q, side, normal, s0, s1 = seg
+    L = np.linalg.norm(q - p); d = (q - p) / L
+    rel = np.asarray(pts, float) - p
+    s = rel @ d; f = np.clip(s / L, 0, 1)
+    hw = (s0[0] + (s1[0] - s0[0]) * f) / 2; ht = (s0[1] + (s1[1] - s0[1]) * f) / 2
+    e = np.stack([np.abs(rel @ side) - hw, np.abs(rel @ normal) - ht, np.maximum(-s, s - L)], 1)
+    outside = np.linalg.norm(np.maximum(e, 0), axis=1)
+    return np.where(outside > 0, outside, e.max(1)), s
+
+# ─── Cadrage (même calcul que CameraFraming, GrowtinCore) ───
+VIEW_ASPECT = 1.03                                      # largeur / hauteur de la carte du personnage dans l'app
+MIN_DISTANCE = 1.0                                      # cadrage resserré : distance minimale de la caméra
+
+def camera_shot(key_positions, joints, yaw, pitch=None, margin=None, aspect=VIEW_ASPECT, fov=30.0):
+    """Cadrage de l'app : point visé (repère du personnage, avant rotation de « yaw »), distance de la caméra et
+    hauteur de la scène visible à cette distance (pour un aperçu sans perspective).
+    key_positions : positions des articulations à chaque image clé ; joints : indices à cadrer, None = corps entier."""
+    a = np.radians(yaw); c, s = np.cos(a), np.sin(a)
+    Ry = np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+    pts = np.concatenate([np.asarray(P)[joints] if joints is not None else np.asarray(P) for P in key_positions]) @ Ry.T
+    m = 0.2 if margin is None else margin
+    lo, hi = pts.min(0) - m, pts.max(0) + m
+    if joints is None: lo[1] = 0
+    center = (lo + hi) / 2; width, height, depth = hi - lo
+    p = np.radians(max(8 if pitch is None else pitch, 6))
+    half_v = np.tan(np.radians(fov) / 2); half_h = half_v * aspect
+    if joints is not None:
+        seen = height * np.cos(p) + depth * np.sin(p); along = depth * np.cos(p) + height * np.sin(p)
+        distance = max(max(seen / 2 / half_v, width / 2 / half_h) * 1.06 + along / 2, MIN_DISTANCE)
+        target = center
+    else:
+        distance = max(height / 2 / half_v, width / 2 / half_h) * 1.06 + depth / 2
+        target = np.array([center[0], center[1] * 0.95, center[2]])
+    return Ry.T @ target, float(distance), float(2 * distance * half_v)
+
 def library_for(lib, body_name):
     """Bibliothèque d'un corps (format 3 : une version par corps ; format 2 : bibliothèque unique)."""
     if "bodies" in lib:

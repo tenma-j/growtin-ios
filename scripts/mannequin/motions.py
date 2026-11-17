@@ -785,36 +785,23 @@ motion("glute-bridge", [K(0, bridge_rest)] + planted(0, 1.5, lambda s: bridge(BR
        + planted(3.5, 5.0, lambda s: bridge(BRIDGE_TOP * (1 - s))) + [K(5.6, bridge_rest)],
        muscles=("glutes", "hamstrings"), yaw=0, pitch=12, props=(MAT,))
 
-# Rowing serviette : un pied un peu avancé, à plat sur la serviette, talons au sol, genoux souples, buste penché
-# d'environ 35° dos long. Chaque main tient un bout ; on tire des bras tendus vers le pied jusqu'aux côtes basses,
+# Rowing serviette : un pied un peu avancé, posé sur la serviette, talons au sol, genoux souples, buste penché
+# d'environ 35° dos long. La serviette passe à plat sous la voûte du pied avant ; chaque poing en tient un bout.
+# Une serviette ne s'allonge pas : chaque poing reste à distance constante du point où son brin sort de sous le
+# pied (il se déplace sur une sphère centrée sur ce point), des bras tendus vers l'avant jusqu'aux côtes basses,
 # coudes en arrière, omoplates serrées.
+from motion_eval import towel_segments, band_distance, TOWEL_WIDTH  # noqa: E402
 ROW_LEAN = 35.0
+TOWEL_THICK = 0.005
 ROW_FEET = {"L": np.array([0.03 * S_HIP, FLOOR_ANKLE, ANK["L"][2] + 0.11 * S_LEG]),
-            "R": np.array([-0.15 * S_HIP, FLOOR_ANKLE, ANK["R"][2] - 0.01 * S_LEG])}
+            "R": np.array([-0.17 * S_HIP, FLOOR_ANKLE, ANK["R"][2] - 0.03 * S_LEG])}
 def row_body(u):
     p = P("stand", root={"rot": [["x", ROW_LEAN]], "offset": [-0.04 * S_HIP, -0.02 * S_LEG, -0.085 * S_LEG]},
           spine01=[-4 * u, 0, 0], neck01=[-16, 0, 0], head=[-6, 0, 0], clavicle=[0, 4 + 14 * u, -2 * u], **fist(1.0))
     return legs(p, L=ROW_FEET["L"], R=ROW_FEET["R"], pole_L=(0.2, 0, 1), pole_R=(-0.3, 0, 1))
-def row_targets(u):
-    J = joints(row_body(u)); out = {}
-    for s, sg in (("L", 1), ("R", -1)):
-        sh = J[f"upperarm01.{s}"]
-        aim = np.array([sg * (SH[0] + 0.06), 0.0, ROW_FEET["L"][2] + 0.10]) - sh
-        a = sh + 0.965 * ARM * aim / np.linalg.norm(aim)
-        b = np.array([sg * (SH[0] * ROW_WIDE), J["spine03"][1] + ROW_END[0], J["spine03"][2] + ROW_END[1]])
-        out[s] = a + (b - a) * u
-    return out
-ROW_WIDE, ROW_END = 1.06, (0.0, 0.135)
-def row(u):
-    p = row_body(u); T = row_targets(u)
-    for s, sg in (("L", 1), ("R", -1)):
-        pole = (0.35 * sg, 0.25, -1)
-        q = with_bones(p, ik.arm(p, s, T[s], pole)); J = joints(q)
-        f = J[f"wrist.{s}"] - J[f"lowerarm01.{s}"]                     # poing dans l'axe de l'avant-bras
-        p = hands(p, **{s: T[s], f"fingers_{s}": f, f"palm_{s}": [-sg, 0.15, 0], f"pole_{s}": pole})
-    return grip_thumbs(p)
-# Serviette : deux brins, de chaque poing au creux du pied avant (indices de sommets de la peau, propres à chaque corps).
+FRONT_FOOT = region(("foot", "toes"), "L")
 def towel_vertices():
+    """Sommets de la peau que la serviette relie : creux de chaque poing, dessous de la voûte du pied avant."""
     v, n = MESH.v, MESH.n
     out = []
     for s, sg in (("L", 1), ("R", -1)):
@@ -823,29 +810,90 @@ def towel_vertices():
         c = w + 0.62 * f + 0.012 * palm
         idx = HAND_VERTS[s][(n[HAND_VERTS[s]] @ palm) > 0.5]
         out.append(int(idx[np.argmin(np.linalg.norm(v[idx] - c, axis=1))]))
-    foot = region(("foot", "toes"), "L")
     a, t = ik.H["foot.L"], ik.H["toes.L"]
-    c = np.array([(a[0] + t[0]) / 2, 0.0, a[2] + 0.6 * (t[2] - a[2])])
-    idx = foot[n[foot, 1] < -0.6]
+    c = np.array([(a[0] + t[0]) / 2, 0.0, a[2] + 0.45 * (t[2] - a[2])])
+    idx = FRONT_FOOT[n[FRONT_FOOT, 1] < -0.6]
     i_foot = int(idx[np.argmin(np.linalg.norm(v[idx] - c, axis=1))])
     return [out[0], i_foot, out[1]]
-TOWEL = dict(prop("towel", None, 0), vertices=towel_vertices())
-_free = {s: np.setdiff1d(np.arange(len(MESH.v)), np.concatenate([HAND_VERTS[s], region(("foot", "toes"), "L")])) for s in "LR"}
+TOWEL = dict(prop("towel", None, 0), vertices=towel_vertices(), width=TOWEL_WIDTH, thickness=TOWEL_THICK)
+# Pied avant surélevé de l'épaisseur de la serviette : la voûte repose dessus, le pied arrière reste le point le plus bas.
+for _ in range(4):
+    _v = posed_skin(row_body(0))[0]; _f = _v[TOWEL["vertices"][1]]; _fv = _v[FRONT_FOOT]
+    _zone = _fv[np.abs(_fv[:, 2] - _f[2]) < TOWEL_WIDTH / 2 + 0.005]
+    ROW_FEET["L"][1] += TOWEL_THICK + _v[MESH.sample, 1].min() - _zone[:, 1].min()
+# Points où la serviette sort de sous le pied : 12 mm à l'extérieur du contour du pied (jusqu'à 8 cm de haut), côté
+# extérieur pour le brin de la main gauche, côté intérieur pour celui de la main droite.
+_side = _zone[_zone[:, 1] < _zone[:, 1].min() + 0.08]
+TOWEL["under"] = [[float(_side[:, 0].max() + 0.012 - _f[0]), 0.0], [float(_side[:, 0].min() - 0.012 - _f[0]), 0.0]]
+def towel_points(pose):
+    """Peau posée au sol (comme dans l'app) et tronçons de la serviette."""
+    v = posed_skin(pose)[0]; v = v - [0, v[MESH.sample, 1].min(), 0]
+    return v, towel_segments(TOWEL, v)
+ROW_EXIT = [s[0] for s in towel_points(row_body(0))[1][::2]]          # sortie du brin gauche, du brin droit
+ROW_WIDE, ROW_END = 1.10, (0.0, 0.20)
+def grip_point(pose, s):
+    v = posed_skin(pose)[0]
+    return v[TOWEL["vertices"][0 if s == "L" else 2]] - [0, v[MESH.sample, 1].min(), 0]
+def row_grips(u):
+    """Position des creux des poings : sur la sphère centrée sur la sortie du brin, du départ bras tendus (u = 0)
+    à l'arrivée contre les côtes basses (u = 1)."""
+    J1 = joints(row_body(1)); J0 = joints(row_body(0)); out = {}
+    for i, (s, sg) in enumerate((("L", 1), ("R", -1))):
+        E = ROW_EXIT[i]
+        b = np.array([sg * SH[0] * ROW_WIDE, J1["spine03"][1] + ROW_END[0], J1["spine03"][2] + ROW_END[1]])
+        L = np.linalg.norm(b - E)
+        # départ : même longueur de brin, bras presque tendu, poing devant l'épaule
+        sh = J0[f"upperarm01.{s}"]; x = sg * (SH[0] + 0.02); reach = 0.96 * (ARM + ROW_FIST)
+        r = np.sqrt(L ** 2 - (x - E[0]) ** 2)                            # cercle de la sphère dans le plan x
+        lo, hi = 0.0, np.pi / 2                                         # angle depuis la verticale, vers l'avant
+        for _ in range(40):
+            m = (lo + hi) / 2
+            a = np.array([x, E[1] + r * np.cos(m), E[2] + r * np.sin(m)])
+            if np.linalg.norm(a - sh) < reach: lo = m
+            else: hi = m
+        da, db = (a - E) / L, (b - E) / L
+        w = np.arccos(np.clip(da @ db, -1, 1))
+        d = (np.sin((1 - u) * w) * da + np.sin(u * w) * db) / np.sin(w)
+        out[s] = (E + L * d, E)
+    return out
+ROW_FIST = float(np.linalg.norm(MESH.v[TOWEL["vertices"][0]] - ik.H["wrist.L"]))     # du poignet au creux du poing
+def row(u):
+    p = row_body(u); G = row_grips(u)
+    for s, sg in (("L", 1), ("R", -1)):
+        g, E = G[s]
+        pole = (0.35 * sg, 0.25, -1)
+        w = g - ROW_FIST * (g - joints(p)[f"upperarm01.{s}"]) / np.linalg.norm(g - joints(p)[f"upperarm01.{s}"])
+        for _ in range(6):
+            q = with_bones(p, ik.arm(p, s, w, pole)); J = joints(q)
+            f = J[f"wrist.{s}"] - J[f"lowerarm01.{s}"]; f /= np.linalg.norm(f)      # poing dans l'axe de l'avant-bras
+            d = (E - g) / np.linalg.norm(E - g)                          # le brin sort du poing du côté de l'auriculaire
+            across = -(d - f * (d @ f)); across /= np.linalg.norm(across)
+            q = fixed_hand(p, s, w, f, sg * np.cross(f, across), pole, flat=False)
+            err = g - grip_point(q, s)
+            if np.linalg.norm(err) < 2e-4: break
+            w = w + err
+        p = q
+    return placed(grip_thumbs(p))
 def towel_clearance(pose):
-    """Plus petite distance entre l'axe d'un brin et la peau (hors main qui le tient et pied posé dessus)."""
-    v = posed_skin(pose)[0]; a, f, b = (v[i] for i in TOWEL["vertices"]); worst = 9.0
-    for s, h in (("L", a), ("R", b)):
-        pts = v[_free[s]]; pts = pts[np.linalg.norm(pts - f, axis=1) > 0.10]
-        d = h - f; t = np.clip(((pts - f) @ d) / (d @ d), 0, 1)
-        worst = min(worst, float(np.linalg.norm(pts - (f + t[:, None] * d), axis=1).min()))
+    """Plus petite distance entre les brins (bande réelle) et la peau : pied avant, tibias, genoux, cuisses, bras,
+    autre main ; seul le poing qui tient le brin est exclu, sur ses 7 derniers centimètres."""
+    v, segs = towel_points(pose); worst = 9.0
+    for i, s in ((0, "L"), (2, "R")):
+        d, along = band_distance(segs[i], v)
+        held = np.zeros(len(v), bool)
+        held[HAND_VERTS[s]] = along[HAND_VERTS[s]] > np.linalg.norm(segs[i][1] - segs[i][0]) - 0.07
+        worst = min(worst, float(d[~held].min()))
     return worst
-# Mains assez écartées pour que les brins (22 mm de rayon) passent à 2 cm au moins du genou et de la cuisse.
-for _ in range(8):
-    if min(towel_clearance(row(u)) for u in (0.5, 0.8, 1.0)) >= 0.042: break
-    ROW_END = (ROW_END[0], ROW_END[1] + 0.012); ROW_WIDE += 0.02
-print("serviette : écartement des mains", round(ROW_WIDE, 2), "dégagement", [round(towel_clearance(row(u)), 3) for u in (0, 0.5, 1)])
+# Mains assez écartées pour que les brins passent à 6 mm au moins de la peau (genou et cuisse de la jambe avant).
+for _ in range(6):
+    if min(towel_clearance(row(u)) for u in (0, 0.25, 0.5, 0.75, 1.0)) >= 0.006: break
+    ROW_WIDE += 0.03
 row_start, row_end = row(0), row(1)
-motion("towel-row", [K(0, row_start)] + planted(0, 1.5, row, n=5) + [K(2.3, row_end)] + planted(2.3, 3.6, lambda s: row(1 - s), n=5)
+print("serviette : écartement des mains", round(ROW_WIDE, 2), "dégagement", [round(towel_clearance(row(u)), 3) for u in (0, 0.5, 1)])
+print("serviette : longueur des brins", [round(float(np.linalg.norm(row_grips(0)[s][0] - row_grips(0)[s][1])), 3) for s in "LR"],
+      "pied avant surélevé de", round(float(ROW_FEET["L"][1] - FLOOR_ANKLE) * 1000, 1), "mm")
+# Clés rapprochées : entre deux clés l'app interpole des angles, les poings s'écarteraient de leur sphère.
+motion("towel-row", [K(0, row_start)] + planted(0, 1.5, row, n=10) + [K(2.3, row_end)] + planted(2.3, 3.6, lambda s: row(1 - s), n=10)
        + [K(4.0, row_start)], muscles=("upperBack", "biceps"), yaw=70, props=(TOWEL,))
 
 plank = P("stand", root={"rot": [["x", 76], ["y", 90]]}, upperleg01=[0, 0, 0], lowerleg01=[70, 0, 0], foot=[30, 0, 0],
@@ -1225,6 +1273,101 @@ def knees_chest(pull):
 kc0, kc1 = knees_chest(0), knees_chest(1)
 motion("bed-knees-chest", [K(0, kc0), K(3, kc1), K(6, kc0)], muscles=("lowerBack", "glutes"), yaw=-28, pitch=24,
        props=(BED_LYING, PILLOW), support=BED_TOP)
+
+# Scan corporel : le corps repose vraiment sur le matelas (dos, bassin, mollets, talons, dos des mains), la tête sur
+# l'oreiller. Chaque étape a son geste, discret et lent, et son cadrage (`camera.frame`) : la caméra s'approche de la
+# zone dont parle la consigne. Toutes les étapes partent de la même pose : le lit et l'oreiller ne bougent pas.
+# Le squelette n'a pas de cage thoracique qui se gonfle : la respiration soulève le milieu du buste (le dos se creuse
+# à peine), bassin et épaules restent posés ; la tête, les bras et les jambes ne bougent donc pas avec elle.
+SCAN_GAP = 0.0005                                                 # jeu au-dessus du matelas : le buste reste le point le plus bas
+SCAN_BASE = P("supine", **HEAD_ON_PILLOW)
+SCAN_Y = low_of(SCAN_BASE, region(("spine", "root", "pelvis", "clavicle", "shoulder", "upperleg")))   # matelas, avant mise au sol
+SCAN_LEGS = region(("lowerleg", "foot", "toes"))
+SCAN_HAND = {s: region(("wrist", "finger"), s) for s in "LR"}
+SCAN_HEAD = region(("head", "neck"))
+def scan_solve(build, idx, lo, hi, target=None, n=13):
+    """Paramètre (entre lo et hi) pour lequel le point le plus bas de la partie « idx » touche le matelas ;
+    le point le plus bas descend quand le paramètre augmente."""
+    target = SCAN_Y + SCAN_GAP if target is None else target
+    for _ in range(n):
+        m = (lo + hi) / 2
+        if low_of(build(m), idx) > target: lo = m
+        else: hi = m
+    return build(lo)
+def scan_breath(pose, amount, peak="spine03"):
+    """Inspiration : le buste se soulève autour de « peak » ; bassin, épaules et tête restent où ils sont
+    (les rotations se compensent, la dernière est réglée pour que le haut du buste retrouve sa hauteur)."""
+    if amount < 1e-6:
+        return pose
+    rest = joints(pose)["neck01"][1]
+    def build(b):
+        return P(pose, spine05=[amount, 0, 0], **{peak: [-b, 0, 0]}, spine01=[b - amount, 0, 0])
+    lo, hi = amount, 4 * amount                                   # le haut du buste descend quand b augmente
+    for _ in range(16):
+        m = (lo + hi) / 2
+        if joints(build(m))["neck01"][1] > rest: lo = m
+        else: hi = m
+    return build((lo + hi) / 2)
+def scan_legs(pose, turn=18.0, point=14.0, toes=0.0, knee=3.0):
+    """Jambes posées : la hanche s'étend jusqu'à ce que mollets et talons touchent le matelas.
+    turn : rotation des jambes vers l'extérieur ; point : pointe du pied relâchée ; toes : orteils relevés (< 0)."""
+    return scan_solve(lambda e: P(pose, upperleg01=[e, turn, 0], lowerleg01=[knee, 0, 0], foot=[point, 0, 0], toes=[toes, 0, 0]),
+                      SCAN_LEGS, -2.0, 14.0)
+_sj = joints(SCAN_BASE)
+SCAN_WRIST = {s: np.array([_sj[f"upperarm01.{s}"][0] + 0.93 * ARM * np.cos(np.radians(16)), 0.0,
+                           _sj[f"upperarm01.{s}"][2] + (1 if s == "R" else -1) * 0.93 * ARM * np.sin(np.radians(16))]) for s in "LR"}
+def scan_hands(pose, curl=0.0, shrug=0.0):
+    """Bras le long du corps, dos des mains posé sur le matelas, paumes vers le plafond, doigts naturellement
+    recourbés (curl : doigts un peu plus refermés ; shrug : épaules décollées du matelas et remontées)."""
+    p = P(pose, clavicle=[0, -6 * shrug, 4 * shrug], **{k: [0, 0, v[2] * 0.5 * curl] for k, v in fist(1.0).items()})
+    for s in "LR":
+        out = 1 if s == "R" else -1
+        def build(drop, s=s, out=out, p=p):
+            w = SCAN_WRIST[s] + [0, SCAN_Y + 0.09 - drop, 0]
+            return fixed_hand(p, s, w, [1, 0, 0.12 * out], [0, 1, 0], (0, -0.25, out), flat=False)
+        p = scan_solve(build, SCAN_HAND[s], 0.0, 0.085)
+    return p
+def scan_head(pose, lift=0.0, turn=0.0):
+    """Tête posée sur l'oreiller : le cou se règle pour que l'arrière du crâne reste à la hauteur de l'oreiller
+    (lift : menton un peu relevé ; turn : tête tournée de quelques degrés)."""
+    if abs(lift) < 1e-6 and abs(turn) < 1e-6:
+        return pose
+    return scan_solve(lambda x: P(pose, neck01=[16 - x, 0, 0], head=[6 - lift, turn, 0]), SCAN_HEAD, -8.0, 12.0, target=SCAN_PILLOW)
+def scan_pose(breath=0.0, peak="spine03", curl=0.0, shrug=0.0, lift=0.0, turn=0.0, **leg):
+    p = scan_legs(scan_breath(SCAN_BASE, breath, peak), **leg)
+    return placed(scan_head(scan_hands(p, curl, shrug), lift, turn))
+SCAN_PILLOW = low_of(SCAN_BASE, SCAN_HEAD)                         # dessus de l'oreiller : sous l'arrière du crâne au repos
+scan_rest = scan_pose()
+# Oreiller réglé sur le crâne de chaque corps, bord au ras de la nuque ; lit sans plaid (« bare » : les jambes sont
+# posées à cet endroit), centré sur le corps allongé.
+PILLOW_SCAN = prop("pillow", "head", 0, (-0.10, SCAN_PILLOW - joints(SCAN_BASE)["head"][1] - 0.001, 0))
+BED_SCAN = dict(prop("bed", "root", 0, (0, 0, 0), floor=True), bare=True)
+def scan_motion(mid, keys, frame=None, margin=None, muscles=()):
+    motion(mid, keys, muscles=muscles, yaw=8, pitch=30, props=(BED_SCAN, PILLOW_SCAN), support=BED_TOP)
+    if frame:
+        names = [n for j in frame for n in ((f"{j}.L", f"{j}.R") if j in SIDES else (j,))]
+        MOTIONS[mid]["camera"].update(frame=names, margin=margin)
+# Installation et corps entier : respiration seule, vue d'ensemble (très lente à la fin).
+scan_motion("bed-scan-rest", [K(0, scan_rest), K(3, scan_pose(breath=3.0)), K(6, scan_rest)])
+scan_motion("bed-scan-whole", [K(0, scan_rest), K(4.5, scan_pose(breath=2.5)), K(10, scan_rest)])
+# Respiration : 4 secondes d'inspiration, 6 d'expiration ; le haut du buste se soulève, les épaules suivent à peine.
+scan_motion("bed-scan-breath", [K(0, scan_rest), K(4, scan_pose(breath=4.5, peak="spine02", shrug=0.3)), K(10, scan_rest)],
+            frame=("head", "upperarm01", "spine05"), margin=0.22, muscles=("chest", "abs"))
+# Pieds et jambes : à l'inspiration les pieds se redressent un peu, orteils relevés ; à l'expiration ils retombent
+# vers l'extérieur, pointes relâchées.
+scan_motion("bed-scan-legs", [K(0, scan_rest), K(4, scan_pose(breath=1.5, turn=4.0, point=0.0, toes=-12.0)), K(10, scan_rest)],
+            frame=("upperleg01", "foot", "toes"), margin=0.2, muscles=("feet", "calves", "shins", "quads", "hamstrings"))
+# Ventre et poitrine : le ventre se soulève et redescend.
+scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=5.0)), K(8, scan_rest)],
+            frame=("neck01", "upperarm01", "upperleg01"), margin=0.12, muscles=("abs", "chest"))
+# Mains, bras, épaules : à l'inspiration les doigts se referment un peu et les épaules se décollent ; à l'expiration
+# les mains se desserrent et les épaules se déposent dans le matelas.
+scan_motion("bed-scan-arms", [K(0, scan_rest), K(4, scan_pose(breath=1.5, curl=1.0, shrug=1.0)), K(10, scan_rest)],
+            frame=("neck01", "upperarm01", "wrist", "finger3-3"), margin=0.12, muscles=("hands", "forearms", "biceps", "triceps", "shoulders"))
+# Visage : le menton se relève à peine à l'inspiration et la tête roule de quelques degrés, puis se dépose.
+scan_motion("bed-scan-face", [K(0, scan_rest), K(4, scan_pose(breath=1.5, lift=4.0, turn=7.0)), K(10, scan_rest),
+                              K(14, scan_pose(breath=1.5, lift=4.0, turn=-7.0)), K(20, scan_rest)],
+            frame=("head", "neck01", "clavicle"), margin=0.24, muscles=("head", "neck"))
 
 # ─── Assis sur une chaise ───
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
