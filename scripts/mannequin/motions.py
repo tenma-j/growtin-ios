@@ -1739,7 +1739,7 @@ from rig import axis_angle  # noqa: E402
 from ik import to_euler  # noqa: E402
 from motion_eval import AX  # noqa: E402
 from scipy.spatial.transform import Rotation  # noqa: E402
-TW_OPEN = np.radians(48.0)                                         # bras ouverts en V : angle avec l'axe du corps
+TW_OPEN = np.radians(30.0)                                         # bras ouverts en V : angle avec l'axe du corps
 TW_PELVIS, TW_KNEES, TW_HEAD, TW_ROLL = 45.0, 96.0, 60.0, 45.0     # bassin, plan des jambes, tête, pieds sur la tranche (degrés)
 TW_SPINE = dict(spine05=0.3, spine04=0.3, spine03=0.25, spine02=0.15)       # part de la torsion prise par chaque étage
 TW_BACK = region(("spine01", "spine02", "spine03", "clavicle", "shoulder"))  # haut du dos
