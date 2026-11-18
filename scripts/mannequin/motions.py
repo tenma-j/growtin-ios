@@ -1138,20 +1138,27 @@ def quad_stretch(knee=150.0, hip=6.0, foot=38.0, u=1.0, grab=True, off=0.0):
     f = inward + 0.25 * axis; f /= np.linalg.norm(f)
     p = P(p, **{S(k, "L"): [x * 0.45 * max(0.0, 1 - off / 0.08) for x in v] for k, v in fist(1.0).items()})
     return hands(p, L=mid + top * (0.04 + 0.25 * off) - f * (0.12 + off) + axis * QUAD_HOLD[1], fingers_L=f, palm_L=-top, pole_L=(1, 0.1, -0.45))
+QUAD_PEEL = (24.0, 0.02)                                     # talon levé (degrés), puis pied soulevé à la verticale (m)
 _quad = quad_stretch()
 _quad_r = mirror_pose(_quad)
+def quad_foot(pitch, lift, u):
+    """Pied gauche qui quitte le sol ou s'y pose : talon levé de « pitch » degrés autour de la base des orteils, qui
+    restent à plat au même endroit, puis pied soulevé de « lift » mètres à la verticale, sans changer d'inclinaison."""
+    toe = STAND["toes.L"]; a = ANK["L"] - toe; c, sn = np.cos(np.radians(pitch)), np.sin(np.radians(pitch))
+    return legs(quad_stretch(0, 0, 0, u, False), L=toe + [a[0], a[1] * c - a[2] * sn + lift, a[1] * sn + a[2] * c],
+                foot_pitch_L=pitch, toes_L=-pitch)
 def quad_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
-    # Le pied décolle genou un peu en avant (il ne traîne pas au sol), le talon monte, puis la main le saisit.
-    # (le talon se lève d'abord, la pointe du pied reste posée au même endroit jusqu'à ce que le pied quitte le sol)
-    toe = STAND["toes.L"]; a = ANK["L"] - toe; c, sn = np.cos(np.radians(34)), np.sin(np.radians(34))
-    off = legs(quad_stretch(0, 0, 0, 0.6, False), L=toe + [a[0], a[1] * c - a[2] * sn, a[1] * sn + a[2] * c], foot_pitch_L=34, toes_L=-34)
-    up = legs(quad_stretch(0, 0, 0, 1.0, False), L=ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG), foot_pitch_L=45)
-    hold, off, up, high = f(_quad), f(off), f(up), f(quad_stretch(118, 0, 30, 1.0, False))
+    # Le talon se lève à peine, orteils posés au même endroit ; le pied se soulève ensuite à la verticale, et ne part
+    # vers l'arrière qu'une fois en l'air (il ne traîne pas au sol) ; le talon monte, puis la main le saisit.
+    # Au retour, il redescend de même : à la verticale de son appui, orteils d'abord, puis le talon.
+    heel, peel = f(quad_foot(QUAD_PEEL[0], 0.0, 0.5)), f(quad_foot(QUAD_PEEL[0], QUAD_PEEL[1], 0.7))
+    up = f(legs(quad_stretch(0, 0, 0, 1.0, False), L=ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG), foot_pitch_L=45))
+    hold, high = f(_quad), f(quad_stretch(118, 0, 30, 1.0, False))
     near = f(quad_stretch(off=0.13))                                 # main ouverte à côté du pied, avant de le saisir
-    return [K(t0 + 0.5, off), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 1.75, near), K(t0 + 2.0, hold), K(t0 + 5.0, hold),
-            K(t0 + 5.3, near), K(t0 + 5.7, high),
-            K(t0 + 6.0, up, "in"), K(t0 + 6.3, off, "linear"), K(t0 + 6.8, "stand")]
+    return [K(t0 + 0.35, heel), K(t0 + 0.5, peel, "linear"), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 1.75, near),
+            K(t0 + 2.0, hold), K(t0 + 5.0, hold), K(t0 + 5.3, near), K(t0 + 5.7, high),
+            K(t0 + 6.0, up, "in"), K(t0 + 6.3, peel, "linear"), K(t0 + 6.45, heel, "linear"), K(t0 + 6.8, "stand", "out")]
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
 # (rapprochées, elles se traversaient derrière le dos).
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
