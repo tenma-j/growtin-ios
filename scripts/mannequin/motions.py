@@ -1726,30 +1726,201 @@ def bed_pillow(first, top=None):
     top = BED_TOP + PILLOW_H if top is None else top
     return prop("pillow", "head", 0, (-0.11, top - float(joints(first)["head"][1]) - 0.001, 0))
 
-# Torsion allongée : genoux pliés au-dessus des hanches, ils tombent d'un côté, le regard part de l'autre ; les épaules
-# et les bras ouverts restent posés sur le matelas (mains fixes), la tête sur l'oreiller.
-TW_OPEN, TW_ANGLE = np.radians(52.0), 40.0
-_tw0 = P("supine", upperleg01=[-88, 0, 2], lowerleg01=[90, 0, 0], foot=[-6, 0, 0], **open_hand(0.6))
+# Torsion allongée : sur le dos, genoux pliés, pieds à plat sur le matelas. Les genoux tombent ensemble d'un côté :
+# le bassin roule (TW_PELVIS), les hanches font le reste (TW_KNEES : inclinaison du plan de chaque jambe), jusqu'à ce
+# que le côté de la jambe du dessous se pose ; la jambe du dessus se pose sur elle sans la traverser. Les pieds
+# restent au même endroit et roulent sur leur tranche. La colonne se tord en sens inverse : épaules et bras ouverts
+# restent posés (mains fixes), la tête tourne à l'opposé sur l'oreiller. a : de −1 (genoux à droite) à 1 (à gauche).
+# Comme pour le scan corporel, chaque appui est réglé sur la peau de chaque corps ; chaque clé est placée exactement
+# sur le matelas (`laid`).
+from rig import axis_angle  # noqa: E402
+from ik import to_euler  # noqa: E402
+from motion_eval import AX  # noqa: E402
+from scipy.spatial.transform import Rotation  # noqa: E402
+TW_OPEN = np.radians(52.0)                                         # bras ouverts en V : angle avec l'axe du corps
+TW_PELVIS, TW_KNEES, TW_HEAD, TW_ROLL = 45.0, 96.0, 60.0, 45.0     # bassin, plan des jambes, tête, pieds sur la tranche (degrés)
+TW_SPINE = dict(spine05=0.3, spine04=0.3, spine03=0.25, spine02=0.15)       # part de la torsion prise par chaque étage
+TW_BACK = region(("spine01", "spine02", "spine03", "clavicle", "shoulder"))  # haut du dos
+TW_SEAT = region(("root", "spine05", "spine04", "pelvis"))
+TW_FOOT = {s: region(("foot", "toes"), s) for s in "LR"}
+_knee_y = float(STAND["lowerleg01.L"][1]); _thigh_y = _knee_y + 0.55 * float(STAND["upperleg01.L"][1] - _knee_y)
+TW_SHANK = {s: (lambda r: r[MESH.v[r, 1] < _thigh_y])(region(("upperleg", "lowerleg"), s)) for s in "LR"}   # du bas de la cuisse à la cheville
+TW_HIPS = np.concatenate([TW_SEAT] + [np.setdiff1d(region(("upperleg",), s), TW_SHANK[s]) for s in "LR"])   # bassin et haut des cuisses
+# des genoux aux pieds (le haut des cuisses, chair contre chair, n'empêche pas les genoux de se rejoindre)
+_knee_top = _knee_y + 0.3 * float(STAND["upperleg01.L"][1] - _knee_y)
+TW_LIMB = {s: np.concatenate([TW_SHANK[s][MESH.v[TW_SHANK[s], 1] < _knee_top], TW_FOOT[s]]) for s in "LR"}
+TW_GAP = 0.003                                                     # jeu entre les deux jambes
+_tw0 = P("supine", **open_hand(0.6))
 _twj = joints(_tw0)
 TW_WRIST = {s: np.array([_twj[f"upperarm01.{s}"][0] + 0.93 * ARM * np.cos(TW_OPEN), 0.0,
                          _twj[f"upperarm01.{s}"][2] + (1 if s == "R" else -1) * 0.93 * ARM * np.sin(TW_OPEN)]) for s in "LR"}
-def twist_bed(a):
-    p = P(_tw0, root={"rot": [["y", a], ["x", -90], ["y", 90]]}, spine05=[0, -a * 0.3, 0], spine04=[0, -a * 0.3, 0], spine03=[0, -a * 0.4, 0])
-    d = _twj["neck01"] - joints(p)["neck01"]                       # les épaules ne se déplacent pas
-    p = P(p, root={"offset": [float(d[0]), 0.0, float(d[2])]})
-    level = low_of(p, BED_BODY)
+_tw_leg = float(np.linalg.norm(STAND["lowerleg01.L"] - STAND["upperleg01.L"]) + np.linalg.norm(STAND["foot.L"] - STAND["lowerleg01.L"]))
+TW_ANKLE = {s: np.array([_twj[f"upperleg01.{s}"][0] + 0.58 * _tw_leg, 0.0, float(_twj["root"][2]) + (1 if s == "R" else -1) * 0.075 * S_HIP])
+            for s in "LR"}
+TW_REST = {}                # réglés sur la pose de repos : inclinaison du buste (tilt), centre de chaque pied (L, R), hauteur du crâne (skull)
+def tw_skin(pose, idx):
+    """Une partie de la peau dans cette pose (positions, normales)."""
+    r = resolve(pose, POSES)
+    R, Pj = MESH.rig.fk(local_rotations(r, MESH.names), np.asarray(r["root"]["offset"], float))
+    return MESH.rig.skin(MESH.v[idx], MESH.n[idx], MESH.bi[idx], MESH.bw[idx], R, Pj)
+def tw_low(pose, idx):
+    return float(tw_skin(pose, idx)[0][:, 1].min())
+def twist_arms(p, level, drops=None):
+    """Bras ouverts, dos des mains posé sur le matelas, poignets au même endroit quelle que soit la torsion.
+    drops : hauteur de chaque poignet déjà réglée (sinon elle l'est ici). Rend la pose et ces hauteurs."""
+    found = {}
     for s in "LR":
         out = 1 if s == "R" else -1
         def build(drop, s=s, out=out, p=p):
             return fixed_hand(p, s, TW_WRIST[s] + [0, level + 0.10 - drop, 0], [np.cos(TW_OPEN), 0, out * np.sin(TW_OPEN)], [0, 1, 0],
                               (0, -0.25, out), flat=False)
-        p = scan_solve(build, SCAN_HAND[s], 0.0, 0.095, target=level + SCAN_GAP)
-    return laid(bed_head(p, level, turn=-0.9 * a))
-_tw_rest, _tw_l, _tw_r = twist_bed(0), twist_bed(TW_ANGLE), twist_bed(-TW_ANGLE)
-motion("bed-twist", [K(0, _tw_rest)] + planted(0, 2, lambda s: twist_bed(TW_ANGLE * s)) + [K(5, _tw_l)]
-       + planted(5, 7, lambda s: twist_bed(TW_ANGLE * (1 - s))) + planted(7, 9, lambda s: twist_bed(-TW_ANGLE * s)) + [K(12, _tw_r)]
-       + planted(12, 14, lambda s: twist_bed(-TW_ANGLE * (1 - s))),
-       muscles=("lowerBack", "glutes"), yaw=-60, pitch=30, props=(BED_LYING, bed_pillow(_tw_rest)), support=BED_TOP)
+        lo, hi = 0.0, 0.095                                        # la main descend quand « drop » augmente
+        for _ in range(0 if drops else 13):
+            m = (lo + hi) / 2
+            if tw_low(build(m), SCAN_HAND[s]) > level + SCAN_GAP: lo = m
+            else: hi = m
+        found[s] = drops[s] if drops else lo
+        p = build(found[s])
+    return p, found
+def twist_leg_ik(p, s, ankle, phi, roll):
+    """Jambe « s » : cheville en « ankle », plan de la jambe incliné de « phi » degrés (vers la gauche du corps si > 0),
+    pied pointé vers le bout du lit et roulé de « roll » degrés sur sa tranche."""
+    return legs(p, **{s: ankle, f"pole_{s}": (0.0, float(np.cos(np.radians(phi))), float(-np.sin(np.radians(phi)))),
+                      f"foot_rot_{s}": axis_angle([1, 0, 0], -roll) @ axis_angle([0, 1, 0], 90)})
+def twist_trunk(a, spec=None, flat=None, drops=None):
+    """Bassin roulé, colonne tordue en sens inverse, épaules au même endroit, bras ouverts. Le bassin qui roule sur une
+    fesse soulève le sacrum : il bascule (« tilt ») jusqu'à ce que le bassin et le haut du dos touchent le matelas
+    ensemble, le haut du buste gardant son inclinaison de repos (« flat » ; None : tout le corps bascule d'un bloc).
+    Rend la pose, le niveau du matelas (avant mise en place), la bascule et la hauteur des poignets.
+    spec : jambes déjà réglées (cheville, inclinaison, roulis du pied ; le haut des cuisses compte alors dans l'appui du
+    bassin) ; drops : hauteur des poignets d'un réglage précédent (les bras pèsent sur la peau des épaules : ils sont
+    posés avant de régler la bascule)."""
+    rho = TW_PELVIS * a
+    def world(rot):
+        M = np.eye(3)
+        for axis, deg in rot: M = axis_angle(AX[axis], deg) @ M
+        return M
+    def build(tilt):
+        rot = [["y", rho], ["x", -90], ["y", 90], ["z", tilt]]
+        # la colonne ramène le haut du buste à plat : la rotation qui sépare le bassin du thorax est répartie entre ses
+        # étages, autour du même axe
+        rv = Rotation.from_matrix(world(rot).T @ world([["x", -90], ["y", 90], ["z", tilt if flat is None else flat]])).as_rotvec()
+        p = P(_tw0, root={"rot": rot}, **{k: to_euler(Rotation.from_rotvec(rv * f).as_matrix()) for k, f in TW_SPINE.items()})
+        d = _twj["neck01"] - joints(p)["neck01"]
+        p = P(p, root={"offset": [float(d[0]), 0.0, float(d[2])]})
+        for s, leg in (spec or {}).items(): p = twist_leg_ik(p, s, *leg)
+        return p, tw_low(p, TW_HIPS if spec else TW_SEAT)
+    for _ in range(1 if drops else 2):
+        lo, hi = -10.0, 36.0                                       # le haut du dos descend quand « tilt » augmente
+        for _ in range(13):
+            m = (lo + hi) / 2; p, level = build(m)
+            if tw_low(twist_arms(p, level, drops or {"L": 0.07, "R": 0.07})[0], TW_BACK) > level: lo = m
+            else: hi = m
+        p, level = build((lo + hi) / 2)
+        p, drops = twist_arms(p, level)
+    return p, level, (lo + hi) / 2, drops
+def twist_leg(p, s, level, phi, roll, start=None):
+    """Jambe « s » posée : le pied touche le matelas, son centre au même endroit qu'au repos (il roule sur place).
+    Rend la pose et la cheville visée."""
+    t = TW_ANKLE[s] + [0, level + FLOOR_ANKLE, 0] if start is None else np.array(start, float)
+    for _ in range(6):
+        q = twist_leg_ik(p, s, t, phi, roll)
+        v = tw_skin(q, TW_FOOT[s])[0]
+        c = TW_REST.get(s, (v[:, 0].mean(), v[:, 2].mean()))
+        err = np.array([c[0] - v[:, 0].mean(), level + SCAN_GAP - v[:, 1].min(), c[1] - v[:, 2].mean()])
+        if np.abs(err).max() < 2e-4: break
+        t = t + err
+    return q, t
+def twist_gap(p):
+    """Écart entre les deux jambes, des genoux aux pieds (m ; négatif : elles se traversent). Chaque jambe est prise
+    comme un volume autour de ses os : un point de l'autre jambe est dedans s'il est plus près de l'os que la peau à cet
+    endroit (mesure qui reste juste quand les jambes se traversent de part en part)."""
+    J = joints(p); skin = {s: tw_skin(p, TW_LIMB[s])[0] for s in "LR"}
+    def to_bones(v, s):
+        best = np.full(len(v), np.inf)
+        for a, b in (("upperleg01", "lowerleg01"), ("lowerleg01", "foot"), ("foot", "toes")):
+            p0, d = J[f"{a}.{s}"], J[f"{b}.{s}"] - J[f"{a}.{s}"]
+            u = np.clip((v - p0) @ d / (d @ d), 0, 1)
+            best = np.minimum(best, np.linalg.norm(v - p0 - u[:, None] * d, axis=1))
+        return best
+    worst = 0.08
+    for a, b in ("LR", "RL"):
+        dist, j = cKDTree(skin[b]).query(skin[a], distance_upper_bound=0.08)
+        ok = np.isfinite(dist)
+        if ok.any():
+            worst = min(worst, float((to_bones(skin[a][ok], b) - to_bones(skin[b], b)[j[ok]]).min()))
+    return worst
+def twist_legs(p, level, a, prev=None):
+    """Les deux jambes : celle du côté où tombent les genoux mène, jusqu'à se poser sur le matelas (pas plus bas) ;
+    l'autre la suit et s'arrête à son contact. Rend la pose et le réglage de chaque jambe (cheville, inclinaison,
+    roulis du pied) ; prev : réglage précédent, dont on repart."""
+    low, top = ("L", "R") if a >= 0 else ("R", "L")
+    sg, phi = (1.0 if a >= 0 else -1.0), TW_KNEES * abs(a)         # phi : vers le côté où tombent les genoux
+    spec = {}
+    def one(p, s, phi, start):
+        spec[s] = [None, sg * phi, sg * phi * TW_ROLL / TW_KNEES]
+        q, spec[s][0] = twist_leg(p, s, level, spec[s][1], spec[s][2], start)
+        return q
+    for s, bad in ((low, lambda q: tw_low(q, TW_SHANK[low]) < level + SCAN_GAP), (top, lambda q: twist_gap(q) < TW_GAP)):
+        if prev: phi = sg * prev[s][1]                             # le bassin a été réglé sur ces jambes : elles ne vont pas plus loin
+        q = one(p, s, phi, prev[s][0] if prev else None)
+        if bad(q):
+            lo, hi = -25.0, phi
+            for _ in range(9):
+                m = (lo + hi) / 2
+                if bad(one(p, s, m, spec[s][0])): hi = m
+                else: lo = m
+            q = one(p, s, lo, spec[s][0])
+        p = q
+    return p, spec
+def twist_head(p, level, turn):
+    """Tête sur l'oreiller, tournée de « turn » degrés : le cou se règle pour que le crâne reste à la hauteur qu'il a
+    au repos (au plus près de sa courbure naturelle : tête tournée, la hauteur du crâne ne varie pas dans un seul sens)."""
+    def build(x): return P(p, neck01=[16 - x, turn * 0.45, 0], head=[6, turn * 0.55, 0])
+    if "skull" not in TW_REST: return build(0.0)
+    def over(x): return tw_low(build(x), SCAN_HEAD) - level - TW_REST["skull"]
+    xs = np.arange(-22.0, 30.1, 2.0); f = np.array([over(x) for x in xs])
+    cross = [i for i in range(len(xs) - 1) if f[i] * f[i + 1] <= 0]
+    if not cross:
+        return build(float(xs[np.abs(f).argmin()]))
+    i = min(cross, key=lambda i: abs(xs[i] + 1.0))
+    lo, hi, up = float(xs[i]), float(xs[i + 1]), f[i] > 0
+    for _ in range(9):
+        m = (lo + hi) / 2
+        if (over(m) > 0) == up: lo = m
+        else: hi = m
+    return build(lo if up else hi)                                 # du côté où le crâne effleure l'oreiller, sans y entrer
+def twist_pose(a):
+    p, level, _, drops = twist_trunk(a, flat=TW_REST["tilt"])
+    q, spec = twist_legs(p, level, a)
+    for _ in range(TW_PASSES):                                     # le haut des cuisses, une fois les jambes placées, fait partie de l'appui
+        p, level, _, drops = twist_trunk(a, spec, TW_REST["tilt"], drops)
+        q, spec = twist_legs(p, level, a, spec)
+    return laid(twist_head(q, level, -TW_HEAD * a))
+TW_PASSES = 1
+# Repères pris sur la pose de repos : inclinaison du buste, centre de chaque pied posé à plat, hauteur du crâne.
+_p, _lv, TW_REST["tilt"], _ = twist_trunk(0.0)
+_p = twist_legs(_p, _lv, 0.0)[0]
+for _s in "LR":
+    _v = tw_skin(_p, TW_FOOT[_s])[0]
+    TW_REST[_s] = (float(_v[:, 0].mean()), float(_v[:, 2].mean()))
+TW_REST["skull"] = low_of(twist_pose(0.0), SCAN_HEAD) - BED_TOP - SCAN_GAP
+_tw_cache = {}
+def twist_bed(a):
+    import copy
+    k = round(float(a), 6)
+    if k not in _tw_cache: _tw_cache[k] = twist_pose(k)
+    return copy.deepcopy(_tw_cache[k])
+_tw_rest = twist_bed(0)
+TW_N = 12
+def twist_keys(t0, side, drop=3.0, hold=3.0, back=2.5):
+    """Les genoux tombent d'un côté (side = 1 : à gauche), y restent, puis reviennent au centre."""
+    return (planted(t0, t0 + drop, lambda s: twist_bed(side * s), n=TW_N) + [K(t0 + drop + hold, twist_bed(side))]
+            + planted(t0 + drop + hold, t0 + drop + hold + back, lambda s: twist_bed(side * (1 - s)), n=TW_N))
+motion("bed-twist", [K(0, _tw_rest)] + twist_keys(0, 1) + twist_keys(8.5, -1), muscles=("lowerBack", "glutes"), yaw=-72, pitch=38,
+       props=(dict(BED_LYING, bare=True), bed_pillow(_tw_rest, BED_TOP + SCAN_GAP + TW_REST["skull"])), support=BED_TOP)
+# Vu depuis le pied du lit, de haut : on voit les genoux tomber et la tête tourner ; cadré sur le corps, pas sur le lit.
+close_up("bed-twist", ("head", "wrist", "lowerleg01", "foot", "toes"), 0.2)
 
 # Genoux vers la poitrine : mains posées sur les genoux, par l'extérieur, coudes ouverts sur les côtés. Cuisses
 # repliées, le bassin ne cale plus le dos : le buste repose plus bas, la nuque garde sa courbure et l'oreiller est
