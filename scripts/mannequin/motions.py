@@ -1152,13 +1152,15 @@ def quad_keys(t0, flip):
     # Le talon se lève à peine, orteils posés au même endroit ; le pied se soulève ensuite à la verticale, et ne part
     # vers l'arrière qu'une fois en l'air (il ne traîne pas au sol) ; le talon monte, puis la main le saisit.
     # Au retour, il redescend de même : à la verticale de son appui, orteils d'abord, puis le talon.
-    heel, peel = f(quad_foot(QUAD_PEEL[0], 0.0, 0.5)), f(quad_foot(QUAD_PEEL[0], QUAD_PEEL[1], 0.7))
+    half, heel = f(quad_foot(QUAD_PEEL[0] / 2, 0.0, 0.25)), f(quad_foot(QUAD_PEEL[0], 0.0, 0.5))
+    peel = f(quad_foot(QUAD_PEEL[0], QUAD_PEEL[1], 0.7))
     up = f(legs(quad_stretch(0, 0, 0, 1.0, False), L=ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG), foot_pitch_L=45))
     hold, high = f(_quad), f(quad_stretch(118, 0, 30, 1.0, False))
     near = f(quad_stretch(off=0.13))                                 # main ouverte à côté du pied, avant de le saisir
-    return [K(t0 + 0.35, heel), K(t0 + 0.5, peel, "linear"), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 1.75, near),
+    return [K(t0 + 0.2, half, "in"), K(t0 + 0.35, heel, "linear"), K(t0 + 0.5, peel, "linear"), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 1.75, near),
             K(t0 + 2.0, hold), K(t0 + 5.0, hold), K(t0 + 5.3, near), K(t0 + 5.7, high),
-            K(t0 + 6.0, up, "in"), K(t0 + 6.3, peel, "linear"), K(t0 + 6.45, heel, "linear"), K(t0 + 6.8, "stand", "out")]
+            K(t0 + 6.0, up, "in"), K(t0 + 6.3, peel, "linear"), K(t0 + 6.45, heel, "linear"), K(t0 + 6.6, half, "linear"),
+            K(t0 + 6.8, "stand", "out")]
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
 # (rapprochées, elles se traversaient derrière le dos).
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
