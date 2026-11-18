@@ -1751,6 +1751,9 @@ TW_HIPS = np.concatenate([TW_SEAT] + [np.setdiff1d(region(("upperleg",), s), TW_
 # du milieu des cuisses aux pieds (plus haut, près de l'aine, les cuisses se touchent toujours)
 _knee_top = _knee_y + 0.5 * float(STAND["upperleg01.L"][1] - _knee_y)
 TW_LIMB = {s: np.concatenate([TW_SHANK[s][MESH.v[TW_SHANK[s], 1] < _knee_top], TW_FOOT[s]]) for s in "LR"}
+# des genoux aux pieds : là, les jambes ne se touchent pas au repos et ne doivent jamais se traverser
+_knee_top = _knee_y + 0.3 * float(STAND["upperleg01.L"][1] - _knee_y)
+TW_KNEES_DOWN = {s: np.concatenate([TW_SHANK[s][MESH.v[TW_SHANK[s], 1] < _knee_top], TW_FOOT[s]]) for s in "LR"}
 TW_ROLL_SHIFT = 0.009                                              # déplacement du centre d'un pied roulé à fond sur sa tranche
 TW_GAP, TW_SQUEEZE = 0.003, 0.006                                  # jeu entre les deux jambes ; chair écrasée, là où les cuisses se touchent déjà au repos
 _tw0 = P("supine", **open_hand(0.6))
@@ -1835,11 +1838,11 @@ def twist_leg(p, s, level, phi, roll, start=None):
         if np.abs(err).max() < 2e-4: break
         t = t + err
     return q, t
-def twist_gap(p):
-    """Écart entre les deux jambes, du milieu des cuisses aux pieds (m ; négatif : elles se traversent). Chaque jambe est prise
+def twist_gap(p, limb=TW_LIMB):
+    """Écart entre les deux jambes sur la zone « limb » (m ; négatif : elles se traversent). Chaque jambe est prise
     comme un volume autour de ses os : un point de l'autre jambe est dedans s'il est plus près de l'os que la peau à cet
     endroit (mesure qui reste juste quand les jambes se traversent de part en part)."""
-    J = joints(p); skin = {s: tw_skin(p, TW_LIMB[s])[0] for s in "LR"}
+    J = joints(p); skin = {s: tw_skin(p, limb[s])[0] for s in "LR"}
     def to_bones(v, s):
         best = np.full(len(v), np.inf)
         for a, b in (("upperleg01", "lowerleg01"), ("lowerleg01", "foot"), ("foot", "toes")):
@@ -1856,7 +1859,7 @@ def twist_gap(p):
     return worst
 def twist_legs(p, level, a, prev=None):
     """Les deux jambes : celle du côté où tombent les genoux mène, jusqu'à se poser sur le matelas (pas plus bas) ;
-    l'autre la suit et s'arrête à son contact (TW_REST["gap"]). Rend la pose et le réglage de chaque jambe (cheville, inclinaison,
+    l'autre la suit et s'arrête à son contact (TW_GAP des genoux aux pieds, TW_REST["gap"] jusqu'au milieu des cuisses). Rend la pose et le réglage de chaque jambe (cheville, inclinaison,
     roulis du pied) ; prev : réglage précédent, dont on repart."""
     low, top = ("L", "R") if a >= 0 else ("R", "L")
     sg, phi = (1.0 if a >= 0 else -1.0), TW_KNEES * abs(a)         # phi : vers le côté où tombent les genoux
@@ -1865,7 +1868,7 @@ def twist_legs(p, level, a, prev=None):
         spec[s] = [None, sg * phi, sg * phi * TW_ROLL / TW_KNEES]
         q, spec[s][0] = twist_leg(p, s, level, spec[s][1], spec[s][2], start)
         return q
-    for s, bad in ((low, lambda q: tw_low(q, TW_SHANK[low]) < level + SCAN_GAP), (top, lambda q: twist_gap(q) < TW_REST.get("gap", -1.0))):
+    for s, bad in ((low, lambda q: tw_low(q, TW_SHANK[low]) < level + SCAN_GAP), (top, lambda q: twist_gap(q, TW_KNEES_DOWN) < TW_GAP or twist_gap(q) < TW_REST.get("gap", -1.0))):
         if prev: phi = sg * prev[s][1]                             # le bassin a été réglé sur ces jambes : elles ne vont pas plus loin
         q = one(p, s, phi, prev[s][0] if prev else None)
         if bad(q):
