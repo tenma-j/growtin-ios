@@ -1737,7 +1737,7 @@ from rig import axis_angle  # noqa: E402
 from ik import to_euler  # noqa: E402
 from motion_eval import AX  # noqa: E402
 from scipy.spatial.transform import Rotation  # noqa: E402
-TW_OPEN = np.radians(52.0)                                         # bras ouverts en V : angle avec l'axe du corps
+TW_OPEN = np.radians(48.0)                                         # bras ouverts en V : angle avec l'axe du corps
 TW_PELVIS, TW_KNEES, TW_HEAD, TW_ROLL = 45.0, 96.0, 60.0, 45.0     # bassin, plan des jambes, tête, pieds sur la tranche (degrés)
 TW_SPINE = dict(spine05=0.3, spine04=0.3, spine03=0.25, spine02=0.15)       # part de la torsion prise par chaque étage
 TW_BACK = region(("spine01", "spine02", "spine03", "clavicle", "shoulder"))  # haut du dos
@@ -1749,6 +1749,7 @@ TW_HIPS = np.concatenate([TW_SEAT] + [np.setdiff1d(region(("upperleg",), s), TW_
 # des genoux aux pieds (le haut des cuisses, chair contre chair, n'empêche pas les genoux de se rejoindre)
 _knee_top = _knee_y + 0.3 * float(STAND["upperleg01.L"][1] - _knee_y)
 TW_LIMB = {s: np.concatenate([TW_SHANK[s][MESH.v[TW_SHANK[s], 1] < _knee_top], TW_FOOT[s]]) for s in "LR"}
+TW_ROLL_SHIFT = 0.009                                              # déplacement du centre d'un pied roulé à fond sur sa tranche
 TW_GAP = 0.003                                                     # jeu entre les deux jambes
 _tw0 = P("supine", **open_hand(0.6))
 _twj = joints(_tw0)
@@ -1820,14 +1821,15 @@ def twist_trunk(a, spec=None, flat=None, drops=None):
         p, drops = twist_arms(p, level)
     return p, level, (lo + hi) / 2, drops
 def twist_leg(p, s, level, phi, roll, start=None):
-    """Jambe « s » posée : le pied touche le matelas, son centre au même endroit qu'au repos (il roule sur place).
-    Rend la pose et la cheville visée."""
+    """Jambe « s » posée : le pied touche le matelas et roule sur place. Son centre se déplace à peine vers le côté où
+    il roule (TW_ROLL_SHIFT) : c'est le partage qui fait le moins glisser à la fois le pied et la peau qui touche le
+    matelas. Rend la pose et la cheville visée."""
     t = TW_ANKLE[s] + [0, level + FLOOR_ANKLE, 0] if start is None else np.array(start, float)
     for _ in range(6):
         q = twist_leg_ik(p, s, t, phi, roll)
         v = tw_skin(q, TW_FOOT[s])[0]
         c = TW_REST.get(s, (v[:, 0].mean(), v[:, 2].mean()))
-        err = np.array([c[0] - v[:, 0].mean(), level + SCAN_GAP - v[:, 1].min(), c[1] - v[:, 2].mean()])
+        err = np.array([c[0] - v[:, 0].mean(), level + SCAN_GAP - v[:, 1].min(), c[1] - TW_ROLL_SHIFT * roll / TW_ROLL - v[:, 2].mean()])
         if np.abs(err).max() < 2e-4: break
         t = t + err
     return q, t

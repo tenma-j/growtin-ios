@@ -71,10 +71,18 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      y sont posées) : seuls le geste et le cadrage changent. Gestes lents mais francs, lisibles sur un téléphone :
      les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève d'environ 2 cm, les mains se
      referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller ;
-   - torsion allongée, genoux vers la poitrine (`laid`, `bed_head`, `bed_pillow`) : même principe, mais chaque clé
-     est placée exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui
-     échantillonne la peau, à quelques millimètres près) ; bras ouverts posés (mains fixes), oreiller sous le crâne
-     de chaque corps, regard à l'opposé des genoux ;
+   - torsion allongée, genoux vers la poitrine (`laid`, `bed_pillow`) : même principe, mais chaque clé est placée
+     exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui échantillonne la
+     peau, à quelques millimètres près) ; oreiller sous le crâne de chaque corps ;
+   - torsion allongée (`twist_pose`) : sur le dos, genoux pliés, pieds à plat sur le matelas (lit sans plaid), bras
+     ouverts en V. Les genoux tombent ensemble d'un côté : le bassin roule de 45°, les hanches font le reste ; la jambe
+     du dessous s'arrête quand son côté touche le matelas, celle du dessus quand elle touche l'autre (les jambes sont
+     prises comme des volumes autour de leurs os, mesure qui reste juste même si elles se traversaient). Les pieds
+     roulent sur leur tranche sans changer de place. Le bassin qui roule sur une fesse soulève le sacrum : il bascule
+     jusqu'à ce que le bassin (haut des cuisses compris) et le haut du dos touchent le matelas ensemble, et la colonne
+     répartit entre ses étages la rotation qui le sépare du thorax, resté à plat : épaules et mains ne bougent pas.
+     La tête tourne à l'opposé des genoux, le cou réglé pour que le crâne reste à la hauteur de l'oreiller. Clés
+     rapprochées (12 par descente), cadrage resserré sur le corps, vu de haut depuis le pied du lit ;
    - porte (`"kind": "door"`) : bras en chandelier, coudes à hauteur d'épaule, avant-bras verticaux et paumes à plat
      sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
      montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le buste avance ;
@@ -91,6 +99,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
      posé pointe en l'air au bord du lit, paume sur le sommet du crâne, mur au ras de la paume. Un pied qui quitte
      le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
+     Étirement de la cuisse (retour au calme) : le talon se lève de 24°, orteils posés au même endroit, puis le pied
+     monte de 2 cm à la verticale avant de partir vers l'arrière ; il se repose de même (`quad_foot`).
 3. `review.py <dossier> [N] [exercices…]` : planches de contrôle de chaque étape d'exercice pour les deux corps, N
    images réparties sur la boucle, interpolées comme dans l'app, avec le sol, les accessoires (serviette comprise),
    la consigne et le cadrage resserré des mouvements qui en ont un. `SIZE` : taille d'une image ; `MOTIONS_JSON` :
