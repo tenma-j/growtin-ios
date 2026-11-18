@@ -40,7 +40,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      soit la morphologie. Quand le buste, les épaules ou le bassin bougent (respiration, haussements d'épaules,
      abdos, extension du dos, cercles de hanches), `keep_hands` garde les mains au même endroit de la partie du corps
      qui les porte. Une transition où une main traverserait le corps reçoit trois points de passage, mains écartées
-     de 3 cm de la peau, sur la même courbe de vitesse. Environ dix minutes pour les deux corps ;
+     de 3 cm de la peau, sur la même courbe de vitesse. Environ vingt minutes pour les deux corps ;
    - appuis fixes (pompes inclinées, pont fessier, chat-vache, posture de l'enfant, rowing) : l'app interpole des angles,
      un appui dériverait entre deux clés éloignées. `planted` découpe la transition en clés rapprochées où mains,
      pieds et genoux sont résolus à chaque fois ; les hauteurs sont réglées sur la peau (paumes, genoux, front, dos
@@ -77,8 +77,9 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - torsion allongée (`twist_pose`) : sur le dos, genoux pliés, pieds à plat sur le matelas (lit sans plaid), bras
      ouverts en V. Les genoux tombent ensemble d'un côté : le bassin roule de 45°, les hanches font le reste ; la jambe
      du dessous s'arrête quand son côté touche le matelas, celle du dessus quand elle touche l'autre (les jambes sont
-     prises comme des volumes autour de leurs os, mesure qui reste juste même si elles se traversaient). Les pieds
-     roulent sur leur tranche sans changer de place. Le bassin qui roule sur une fesse soulève le sacrum : il bascule
+     prises comme des volumes autour de leurs os, mesure qui reste juste même si elles se traversaient ; du milieu
+     des cuisses aux pieds, pas plus serrées qu'au repos à 6 mm près). Les pieds roulent sur leur tranche presque sur
+     place (centre déplacé de 9 mm au plus : ni le pied ni la peau posée ne glissent de plus de 15 mm). Le bassin qui roule sur une fesse soulève le sacrum : il bascule
      jusqu'à ce que le bassin (haut des cuisses compris) et le haut du dos touchent le matelas ensemble, et la colonne
      répartit entre ses étages la rotation qui le sépare du thorax, resté à plat : épaules et mains ne bougent pas.
      La tête tourne à l'opposé des genoux, le cou réglé pour que le crâne reste à la hauteur de l'oreiller. Clés

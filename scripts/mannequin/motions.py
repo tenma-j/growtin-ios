@@ -1731,7 +1731,7 @@ def bed_pillow(first, top=None):
 # Torsion allongée : sur le dos, genoux pliés, pieds à plat sur le matelas. Les genoux tombent ensemble d'un côté :
 # le bassin roule (TW_PELVIS), les hanches font le reste (TW_KNEES : inclinaison du plan de chaque jambe), jusqu'à ce
 # que le côté de la jambe du dessous se pose ; la jambe du dessus se pose sur elle sans la traverser. Les pieds
-# restent au même endroit et roulent sur leur tranche. La colonne se tord en sens inverse : épaules et bras ouverts
+# roulent sur leur tranche, presque sur place (TW_ROLL_SHIFT). La colonne se tord en sens inverse : épaules et bras ouverts
 # restent posés (mains fixes), la tête tourne à l'opposé sur l'oreiller. a : de −1 (genoux à droite) à 1 (à gauche).
 # Comme pour le scan corporel, chaque appui est réglé sur la peau de chaque corps ; chaque clé est placée exactement
 # sur le matelas (`laid`).
@@ -1748,11 +1748,11 @@ TW_FOOT = {s: region(("foot", "toes"), s) for s in "LR"}
 _knee_y = float(STAND["lowerleg01.L"][1]); _thigh_y = _knee_y + 0.55 * float(STAND["upperleg01.L"][1] - _knee_y)
 TW_SHANK = {s: (lambda r: r[MESH.v[r, 1] < _thigh_y])(region(("upperleg", "lowerleg"), s)) for s in "LR"}   # du bas de la cuisse à la cheville
 TW_HIPS = np.concatenate([TW_SEAT] + [np.setdiff1d(region(("upperleg",), s), TW_SHANK[s]) for s in "LR"])   # bassin et haut des cuisses
-# des genoux aux pieds (le haut des cuisses, chair contre chair, n'empêche pas les genoux de se rejoindre)
-_knee_top = _knee_y + 0.3 * float(STAND["upperleg01.L"][1] - _knee_y)
+# du milieu des cuisses aux pieds (plus haut, près de l'aine, les cuisses se touchent toujours)
+_knee_top = _knee_y + 0.5 * float(STAND["upperleg01.L"][1] - _knee_y)
 TW_LIMB = {s: np.concatenate([TW_SHANK[s][MESH.v[TW_SHANK[s], 1] < _knee_top], TW_FOOT[s]]) for s in "LR"}
 TW_ROLL_SHIFT = 0.009                                              # déplacement du centre d'un pied roulé à fond sur sa tranche
-TW_GAP = 0.003                                                     # jeu entre les deux jambes
+TW_GAP, TW_SQUEEZE = 0.003, 0.006                                  # jeu entre les deux jambes ; chair écrasée, là où les cuisses se touchent déjà au repos
 _tw0 = P("supine", **open_hand(0.6))
 _twj = joints(_tw0)
 TW_WRIST = {s: np.array([_twj[f"upperarm01.{s}"][0] + 0.93 * ARM * np.cos(TW_OPEN), 0.0,
@@ -1836,7 +1836,7 @@ def twist_leg(p, s, level, phi, roll, start=None):
         t = t + err
     return q, t
 def twist_gap(p):
-    """Écart entre les deux jambes, des genoux aux pieds (m ; négatif : elles se traversent). Chaque jambe est prise
+    """Écart entre les deux jambes, du milieu des cuisses aux pieds (m ; négatif : elles se traversent). Chaque jambe est prise
     comme un volume autour de ses os : un point de l'autre jambe est dedans s'il est plus près de l'os que la peau à cet
     endroit (mesure qui reste juste quand les jambes se traversent de part en part)."""
     J = joints(p); skin = {s: tw_skin(p, TW_LIMB[s])[0] for s in "LR"}
@@ -1856,7 +1856,7 @@ def twist_gap(p):
     return worst
 def twist_legs(p, level, a, prev=None):
     """Les deux jambes : celle du côté où tombent les genoux mène, jusqu'à se poser sur le matelas (pas plus bas) ;
-    l'autre la suit et s'arrête à son contact. Rend la pose et le réglage de chaque jambe (cheville, inclinaison,
+    l'autre la suit et s'arrête à son contact (TW_REST["gap"]). Rend la pose et le réglage de chaque jambe (cheville, inclinaison,
     roulis du pied) ; prev : réglage précédent, dont on repart."""
     low, top = ("L", "R") if a >= 0 else ("R", "L")
     sg, phi = (1.0 if a >= 0 else -1.0), TW_KNEES * abs(a)         # phi : vers le côté où tombent les genoux
@@ -1865,7 +1865,7 @@ def twist_legs(p, level, a, prev=None):
         spec[s] = [None, sg * phi, sg * phi * TW_ROLL / TW_KNEES]
         q, spec[s][0] = twist_leg(p, s, level, spec[s][1], spec[s][2], start)
         return q
-    for s, bad in ((low, lambda q: tw_low(q, TW_SHANK[low]) < level + SCAN_GAP), (top, lambda q: twist_gap(q) < TW_GAP)):
+    for s, bad in ((low, lambda q: tw_low(q, TW_SHANK[low]) < level + SCAN_GAP), (top, lambda q: twist_gap(q) < TW_REST.get("gap", -1.0))):
         if prev: phi = sg * prev[s][1]                             # le bassin a été réglé sur ces jambes : elles ne vont pas plus loin
         q = one(p, s, phi, prev[s][0] if prev else None)
         if bad(q):
@@ -1908,6 +1908,7 @@ _p = twist_legs(_p, _lv, 0.0)[0]
 for _s in "LR":
     _v = tw_skin(_p, TW_FOOT[_s])[0]
     TW_REST[_s] = (float(_v[:, 0].mean()), float(_v[:, 2].mean()))
+TW_REST["gap"] = min(TW_GAP, twist_gap(_p) - TW_SQUEEZE)            # jambes : pas plus serrées qu'au repos, à la chair écrasée près
 TW_REST["skull"] = low_of(twist_pose(0.0), SCAN_HEAD) - BED_TOP - SCAN_GAP
 _tw_cache = {}
 def twist_bed(a):
@@ -1924,7 +1925,7 @@ def twist_keys(t0, side, drop=3.0, hold=3.0, back=2.5):
 motion("bed-twist", [K(0, _tw_rest)] + twist_keys(0, 1) + twist_keys(8.5, -1), muscles=("lowerBack", "glutes"), yaw=-72, pitch=38,
        props=(dict(BED_LYING, bare=True), bed_pillow(_tw_rest, BED_TOP + SCAN_GAP + TW_REST["skull"])), support=BED_TOP)
 # Vu depuis le pied du lit, de haut : on voit les genoux tomber et la tête tourner ; cadré sur le corps, pas sur le lit.
-close_up("bed-twist", ("head", "wrist", "lowerleg01", "foot", "toes"), 0.2)
+close_up("bed-twist", ("head", "wrist", "lowerleg01", "toes"), 0.08)
 
 # Genoux vers la poitrine : mains posées sur les genoux, par l'extérieur, coudes ouverts sur les côtés. Cuisses
 # repliées, le bassin ne cale plus le dos : le buste repose plus bas, la nuque garde sa courbure et l'oreiller est
