@@ -416,6 +416,38 @@ POSES["chairSit"] = hands(P("chairLegs"),
                           fingers_L=[-0.15, -0.15, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.15, 1], palm_R=[0, -1, 0],
                           pole_L=(0.5, -0.3, -1), pole_R=(-0.5, -0.3, -1))
 
+# ─── Assises : la peau touche le dessus de la chaise ou du matelas, sans s'y enfoncer ───
+# La hauteur de l'assise est lue sur la peau de chaque corps (fesses et cuisses plus ou moins épaisses) : avec un
+# écart fixe sous le bassin, la femme s'enfonçait de 13 mm dans la chaise et l'homme flottait à 13 mm.
+SEAT_GAP = 0.0005                                       # jeu entre la peau et l'assise (m)
+def seat_low(pose, front, back=None):
+    """Hauteur au-dessus du sol du point le plus bas de la peau posée sur une assise : en arrière de « front » (z du
+    bord avant), au-dessus des mollets. Le sol est celui de l'app (point le plus bas de son échantillon de peau)."""
+    v = posed_skin(pose)[0]
+    ground = float(v[MESH.sample, 1].min())
+    on = (v[:, 2] < front) & (v[:, 1] > ground + 0.2)
+    if back is not None: on &= v[:, 2] > back
+    return float(v[on, 1].min()) - ground
+
+def root_height(pose):
+    """Hauteur du bassin (articulation racine) au-dessus du sol de l'app."""
+    return float(joints(pose)["root"][1] - posed_skin(pose)[0][MESH.sample, 1].min())
+
+def on_seat(build, front, top, lo=-0.03, hi=0.09):
+    """Pose assise posée sur son assise : build(dy) construit la pose avec le bassin monté de dy ; dy est réglé pour
+    que la peau touche le dessus de l'assise (hauteur « top », bord avant en z = « front »)."""
+    for _ in range(18):
+        dy = (lo + hi) / 2
+        if seat_low(build(dy), front) > top + SEAT_GAP: hi = dy
+        else: lo = dy
+    return build(hi)
+
+SEAT_Z = float(_ch["root"][2])                           # bassin assis (z) : repère des bords d'assise
+CHAIR_BACK = 0.06                                        # centre de la chaise derrière le bassin (assise de 42 cm)
+BED_EDGE = 0.12                                          # bord du matelas devant le bassin : assis au bord du lit
+SEAT_TOP = seat_low("chairSit", SEAT_Z - CHAIR_BACK + 0.21) - SEAT_GAP      # dessus de l'assise, au-dessus du sol
+SEAT_DROP = root_height("chairSit") - SEAT_TOP           # … et sous le bassin (ancre des accessoires)
+
 MOTIONS = {}
 def root_rotations(M):
     """Rotation de la racine en rotations successives autour des axes du monde, dans l'ordre d'axes le plus éloigné
@@ -591,7 +623,7 @@ def close_up(mid, frame, margin=None):
 def prop(kind, anchor=None, key=0, offset=(0, 0, 0), yaw=0, floor=False):
     return {"kind": kind, "anchor": anchor, "key": key, "offset": [float(x) for x in offset], "yaw": float(yaw), "floor": floor}
 
-CHAIR = prop("chair", "root", 0, (0, -0.105, -0.06))
+CHAIR = prop("chair", "root", 0, (0, -SEAT_DROP, -CHAIR_BACK))
 MAT = prop("mat", "root", 0, (0, 0, 0), floor=True)
 
 def breathe(base, cycle=5.0, extra=None):
@@ -834,9 +866,34 @@ motion("half-squat-arms", [K(0, top), K(1.8, squat(0.2, 0.09, 24, arms_front)), 
        muscles=("quads", "glutes", "shoulders"), yaw=60)
 
 # Squat sur chaise : s'asseoir en 3 secondes, se relever en 1, sans les mains.
-seat = squat(0.4, 0.2, 34, dict(upperarm01=[-78, 0, 6], lowerarm01=[-4, 0, 0], **open_hand(0.6)))
-motion("chair-squat", [K(0, "stand"), K(3, seat), K(3.3, seat), K(4.3, "stand", "out"), K(5.2, "stand")],
-       muscles=("quads", "glutes"), yaw=70, props=(prop("chair", "root", 1, (0, -0.075, -0.17)),))
+# Debout devant la chaise, pieds largeur de bassin. Les hanches partent vers l'arrière, le buste se penche, les bras
+# montent devant pour l'équilibre ; les fesses descendent jusqu'à effleurer le dessus de l'assise (hauteur du bassin
+# réglée sur la peau de chaque corps), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque
+# verticaux (genoux au-dessus des pieds). La chaise est posée d'après le corps : assise à 46 cm, son milieu sous les
+# hanches en bas du squat, son bord avant derrière les mollets du personnage debout. Pieds résolus à chaque clé.
+SQUAT_SEAT = 0.46                                            # hauteur de l'assise (m)
+SQUAT_BACK, SQUAT_LEAN = 0.31 * S_LEG, 30.0                  # recul du bassin, inclinaison du buste en bas du squat
+def chair_squat(s, depth=0.3 * S_LEG):
+    """s : 0 debout, 1 fesses sur l'assise ; depth : descente du bassin en bas du squat."""
+    a = s ** 0.8                                             # hanches en arrière et buste penché d'abord, puis on descend
+    p = P("stand", root={"rot": [["x", SQUAT_LEAN * a]], "offset": [0, -depth * s ** 1.25, -SQUAT_BACK * a]},
+          spine04=[4 * a, 0, 0], neck01=[-SQUAT_LEAN * 0.45 * a, 0, 0],
+          upperarm01=[-78 * a, 0, 6 * a], lowerarm01=[-4 * a, 0, 0], **open_hand(0.6 * a))
+    return legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.15, 0, 1), pole_R=(-0.15, 0, 1))
+_sv = posed_skin("stand")[0]
+_calf = float(_sv[(_sv[:, 1] > _sv[:, 1].min() + 0.05) & (_sv[:, 1] < _sv[:, 1].min() + SQUAT_SEAT + 0.01), 2].min())
+# Bord avant de l'assise : milieu de l'assise sous les hanches, et au moins 1 cm derrière les mollets debout.
+SQUAT_FRONT = min(float(joints(chair_squat(1))["upperleg01.L"][2]) + 0.21, _calf - 0.01)
+_lo, _hi = 0.15 * S_LEG, 0.6 * S_LEG
+for _ in range(20):
+    SQUAT_DEPTH = (_lo + _hi) / 2
+    if seat_low(chair_squat(1, SQUAT_DEPTH), SQUAT_FRONT, SQUAT_FRONT - 0.42) > SQUAT_SEAT + 2 * SEAT_GAP: _lo = SQUAT_DEPTH
+    else: _hi = SQUAT_DEPTH
+SQUAT_DEPTH = _lo
+seat = chair_squat(1, SQUAT_DEPTH)
+motion("chair-squat", [K(0, "stand")] + planted(0, 3, lambda s: chair_squat(s, SQUAT_DEPTH), n=9) + [K(3.3, seat)]
+       + planted(3.3, 4.3, lambda s: chair_squat(1 - s, SQUAT_DEPTH), n=6) + [K(5.2, "stand")],
+       muscles=("quads", "glutes"), yaw=70, props=(prop("chair", None, 0, (0, SQUAT_SEAT, SQUAT_FRONT - 0.21)),))
 
 # ─── Renforcement ───
 # Pompes inclinées : le corps, planche rigide, pivote sur l'avant des pieds ; les mains restent posées au bord du plateau.
@@ -1527,7 +1584,7 @@ motion("child-pose", [K(0, child), K(3, child_pose(1)), K(6, child)], muscles=("
 # ─── Au lit : scan corporel et étirements du soir ───
 BED_TOP = 0.5
 BED_LYING = prop("bed", "root", 0, (-0.05, 0, 0), floor=True)            # allongé dans la longueur, tête vers −X
-BED_SIT = prop("bed", "root", 0, (0, -0.105, -0.55))                      # assis au bord, le lit derrière soi
+BED_SIT = prop("bed", "root", 0, (0, -SEAT_DROP, BED_EDGE - 0.71))        # assis au bord, le lit derrière soi
 HEAD_ON_PILLOW = dict(neck01=[16, 0, 0], head=[6, 0, 0])
 
 motion("bed-sit-breathe", breathe("chairSit"), yaw=28, pitch=10, props=(BED_SIT,))
