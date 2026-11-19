@@ -8,11 +8,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
   [MakeHuman](https://github.com/makehumancommunity/makehuman) (dossier `makehuman/data`), dont les ressources sont
   publiées dans le domaine public (**CC0 1.0**). Seule la morphologie (silhouette athlétique) est reprise ; tête de
   mannequin lisse, tenue de sport modélisée ici (short, brassière, liseré vert).
-- **Marche et marche rapide** : captures de mouvement du
-  [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) (conversion BVH de B. Hahne), base créée avec le
-  financement de la NSF (EIA-0196217). Conditions : utilisation libre, y compris dans un produit commercial ;
-  revente des données interdite, même converties.
-- **Tous les autres mouvements** (boxe dans le vide comprise) : poses clés écrites dans `motions.py`.
+- **Tous les mouvements** (marche et boxe dans le vide comprises) : poses clés écrites dans `motions.py`. Plus aucun ne
+  vient d'une capture : les deux captures de marche du [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu)
+  utilisées jusque-là avaient le genou d'appui plié de 20 à 30° (marche « accroupie »). L'outil de reciblage (`mocap.py`,
+  `mocap_preview.py`) reste disponible ; conditions de la base : utilisation libre, y compris dans un produit commercial,
+  revente des données interdite, même converties (financement NSF EIA-0196217).
 
 ## Pipeline
 
@@ -90,11 +90,34 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
-   - captures CMU reciblées (`mocap.py`) : rotations « monde » de chaque articulation depuis la pose en T,
-     boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH`. Chaque capture a sa
-     vitesse de lecture et un redressement du buste (le reciblage le penche trop en avant) : la marche est la capture
-     « marche lente » ralentie (un cycle en 1,7 s), la marche rapide une marche normale accélérée (un cycle en
-     0,85 s, toujours un pied au sol) ;
+   - marche et marche soutenue (`walk_foot`, `walk_pose`, `walking`) : écrites par objectifs, sur place, le sol défilant
+     sous le corps à vitesse constante. Chaque pied suit le cycle réel (attaque du talon pointe relevée, pied à plat,
+     talon qui se lève en roulant sur l'avant-pied, poussée, passage du pas) ; le pied d'appui est posé sur le sol
+     d'après sa peau. Le bassin est porté par la jambe d'appui presque tendue (genou à 167–175° au milieu de l'appui),
+     monte au passage à la verticale, redescend au double appui (le talon se pose à l'instant où la jambe arrière a
+     amené le bassin à la même hauteur : `front` est résolu pour cela), se décale vers la jambe d'appui et tourne avec
+     la jambe qui avance ; les épaules tournent à l'opposé, la tête reste de face. Promenade : un cycle en 1,2 s, bras
+     souples à l'opposé des jambes ; marche soutenue : un cycle en 0,92 s, coudes à 90°, poings qui montent à hauteur
+     de poitrine. 40 et 36 clés par cycle ;
+   - captures reciblées (`mocap.py`, liste `MOCAP`, vide aujourd'hui) : rotations « monde » de chaque articulation
+     depuis la pose en T, boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH` ;
+   - bras levés (`reach_arm`, `overhead_y`, `joined_up`) : la main est visée depuis l'épaule une fois montée avec le
+     bras (rythme scapulo-huméral). Visée depuis l'épaule au repos, elle arrivait trop près et le coude pliait à angle
+     droit (bras « en losange » de la salutation et de l'arbre). Grands cercles de bras de l'échauffement
+     (`warm_arm`) : montée par l'avant, descente par le côté, 22° en arrière du plan des épaules, jamais tendu droit
+     derrière le dos ;
+   - verre tenu (`"kind": "glass"`, pause) : cylindre posé contre la paume droite. Champs : `vertices` (trois sommets
+     de la peau de la main : creux de la paume, bord de la paume côté index, dos de la main en face du premier),
+     `depth` (distance de la paume à l'axe du verre), `width` (diamètre), `height`. L'app (`HeldGlass`, GrowtinCore) et
+     les planches (`glass_pose`, `glass_mesh`, `motion_eval.py`) le placent de la même façon à chaque image. Dans
+     `motions.py`, on donne le centre et l'axe du verre : la main s'en déduit (`glass_hand`), sa distance à la paume
+     et la fermeture de chaque doigt et du pouce sont réglées sur la peau ; pendant les pas, le bras droit garde le
+     verre devant le ventre (`glass_steps`) ;
+   - cercles dans les deux sens (`both_ways` : épaules de la mobilité du matin, hanches) : deux tours dans un sens,
+     arrêt progressif, deux tours dans l'autre. Cercles de hanches : le bassin tourne au-dessus des pieds posés et la
+     colonne se courbe à l'opposé, résolue pour que la tête ne bouge pas ; flexion avant : le dos s'enroule étage par
+     étage (tête, haut du dos, bas du dos, bassin) et se déroule dans l'ordre inverse (`fold`) ; mollets : les talons
+     tournent autour de la base des orteils, qui ne glissent pas (`calf_raise`) ;
    - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
      cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
@@ -123,7 +146,8 @@ sur toutes les images clés. `camera.frame` (liste d'articulations) demande un c
 centre de la boîte de ces articulations sur toutes les images clés, élargie de `camera.margin` mètres (20 cm par
 défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
 (et du matelas). Cercles de cheville (des genoux au sol, le mur au bord de l'image) et menton rentré (tête, cou et
-épaules de profil) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des genoux au sol) et ouverture de poitrine
+dans la porte (du bassin aux mains, de trois quarts avant) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),

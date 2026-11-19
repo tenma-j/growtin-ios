@@ -64,9 +64,8 @@ Les séances de l'onglet Explorer sont montrées par un personnage 3D animé (fe
 en tenue de sport, dans un studio lumineux rendu avec SceneKit (sol, ombres douces, rotation au doigt) : 50 mouvements,
 calculés séparément pour chaque corps, accessoires (chaise, table, mur, encadrement de porte, tapis de yoga, lit).
 Le corps provient des ressources de [MakeHuman](https://github.com/makehumancommunity/makehuman), publiées dans le
-domaine public (CC0 1.0). La marche et la boxe dans le vide sont des captures du
-[CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) (financement NSF EIA-0196217) ; les autres
-mouvements sont écrits par poses clés et cinématique inverse. Tout le pipeline est dans `scripts/mannequin` (voir son README).
+domaine public (CC0 1.0). Tous les mouvements, marche comprise, sont écrits par poses clés et cinématique inverse
+(plus aucune capture de mouvement n'est utilisée). Tout le pipeline est dans `scripts/mannequin` (voir son README).
 
 ## État honnête
 

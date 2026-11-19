@@ -365,6 +365,7 @@ SH = STAND["upperarm01.L"]                               # épaule gauche
 ARM = float(np.linalg.norm(STAND["lowerarm01.L"] - SH) + np.linalg.norm(STAND["wrist.L"] - STAND["lowerarm01.L"]))
 S_LEG = float(STAND["upperleg01.L"][1] / 0.933)          # proportions des jambes par rapport au squelette masculin
 S_HIP = float(STAND["upperleg01.L"][0] / 0.108)
+UPPER_ARM_LEN = float(np.linalg.norm(STAND["lowerarm01.L"] - SH))
 OVERHEAD = [float(SH[1] + 0.88 * ARM), float(STAND["head"][2])]                         # mains jointes au-dessus de la tête
 CHEST = [float(STAND["spine01"][1] - 0.07), float(STAND["spine01"][2] + (0.27 if BODY == "male" else 0.23))]
 
@@ -731,32 +732,123 @@ _deep = P("stand", spine01=[-6, 0, 0], spine02=[-4, 0, 0], spine03=[-2, 0, 0], n
 motion("march-breathe", [K(0, slow_step("L", 0))] + slow_steps(0, 4) + [K(5.8, "stand"), K(9.8, _deep), K(15.4, "stand"), K(16.0, slow_step("L", 0))],
        muscles=("quads", "calves", "chest"), yaw=40)
 
-# Pause : une gorgée d'eau (la main droite porte un verre aux lèvres, la tête bascule un peu en arrière), puis quelques pas
-# tranquilles sur place.
+# Pause : une gorgée d'eau, puis quelques pas tranquilles sur place. La main droite tient un verre (`"kind": "glass"`,
+# cylindre que l'app et les planches posent contre la paume d'après trois sommets de la peau de la main : creux de la
+# paume, bord de la paume côté index, dos de la main) : elle le porte aux lèvres, le verre et la tête basculent le
+# temps de la gorgée, puis le verre revient devant le ventre, avant-bras à l'horizontale, et y reste pendant les pas.
+# Le verre est placé par son centre et son axe ; la main s'en déduit (elle le tient par le côté, à mi-hauteur), sa
+# distance à la paume et la fermeture de chaque doigt sont réglées sur la peau : les doigts l'entourent sans le traverser.
+from motion_eval import glass_pose, glass_distance, GLASS_WIDTH, GLASS_HEIGHT  # noqa: E402
 _head = region(("head",))
 _hv = MESH.v[_head]; _front = _hv[_hv[:, 2] > ik.H["head"][2] + 0.04]
 _chin = _front[np.argmin(_front[:, 1])]
 _lip = _hv[np.abs(_hv[:, 1] - (_chin[1] + 0.045)) < 0.006]
 MOUTH = np.array([0.0, _chin[1] + 0.045, _lip[:, 2].max()]) - ik.H["head"]          # dans le repère de la tête
-_grip = {S(k, "R"): sided("R", v) for k, v in fist(0.5).items()}
-_w0 = STAND["wrist.R"]; _f0, _, _n0 = hand_axes(P("stand"), "R")
+def glass_vertices():
+    """Sommets de la main droite qui portent le verre (partie rigide de la main : le métacarpe)."""
+    v, n = MESH.v, MESH.n; s = "R"
+    w = ik.H[f"wrist.{s}"]; f = ik.H[f"finger3-1.{s}"] - w
+    palm = -np.cross(f, ik.H[f"finger2-1.{s}"] - ik.H[f"finger5-1.{s}"]); palm /= np.linalg.norm(palm)
+    rigid = _bone_weight(("wrist",), s)[HAND_VERTS[s]] > 0.85
+    inner = HAND_VERTS[s][((n[HAND_VERTS[s]] @ palm) > 0.5) & rigid]
+    pick = lambda c: int(inner[np.argmin(np.linalg.norm(v[inner] - c, axis=1))])
+    across = ik.H[f"finger2-1.{s}"] - ik.H[f"finger5-1.{s}"]; across -= f * (across @ f) / (f @ f); across /= np.linalg.norm(across)
+    centre = pick(w + 0.66 * f + 0.012 * palm)
+    index = pick(v[centre] + 0.028 * across)             # même hauteur le long des doigts : l'axe du verre est en travers de la paume
+    outer = HAND_VERTS[s][((n[HAND_VERTS[s]] @ palm) < -0.5) & (_bone_weight(("wrist",), s)[HAND_VERTS[s]] > 0.9)]
+    rel = v[outer] - v[centre]; off = rel - np.outer(rel @ palm, palm)
+    return [centre, index, int(outer[np.argmin(np.linalg.norm(off, axis=1))])]
+GLASS = dict(prop("glass", None, 0), vertices=glass_vertices(), width=GLASS_WIDTH, height=GLASS_HEIGHT, depth=GLASS_WIDTH / 2 + 0.004)
+GLASS_CURL = {f: 0.2 for f in range(2, 6)}                 # fermeture de chaque doigt autour du verre
+GLASS_THUMB = [1.0]                                        # pouce : 0 refermé contre le verre, 1 écarté de lui
+GLASS_FINGER = {f: np.where(sum(_bone_weight((f"finger{f}-{p}",), "R") for p in (1, 2, 3)) > 0.5)[0] for f in range(1, 6)}
+GLASS_PALM = np.setdiff1d(HAND_VERTS["R"], np.concatenate(list(GLASS_FINGER.values())))
+def glass_frame(prop, v):
+    c, a = glass_pose(prop, v); n = v[prop["vertices"][0]] - v[prop["vertices"][2]]
+    n = n - a * (n @ a); n /= np.linalg.norm(n)
+    return c, np.column_stack([a, n, np.cross(a, n)])
+def glass_hand(pose, centre, axis, toward, pole=(-0.45, -1, 0.1)):
+    """Main droite refermée sur le verre : « centre » et « axis » (du fond vers le bord) du verre, « toward » direction
+    de la paume vers le verre. La main est d'abord orientée comme le verre le demande, puis le poignet est corrigé
+    jusqu'à ce que le verre calculé sur la peau soit à sa place (au demi-millimètre)."""
+    a = np.asarray(axis, float); a /= np.linalg.norm(a)
+    n = np.asarray(toward, float); n = n - a * (n @ a); n /= np.linalg.norm(n)
+    want = np.column_stack([a, n, np.cross(a, n)])
+    c0, F0 = glass_frame(GLASS, MESH.v)
+    turn = want @ F0.T
+    f0, _, n0 = hand_axes(P(), "R")
+    d = {f"finger{f}-{ph}_R": [0, 0, 70 * c] for f, c in GLASS_CURL.items() for ph in (1, 2, 3)}
+    p = P(pose, **d)
+    w = np.asarray(centre, float) + turn @ (ik.H["wrist.R"] - c0)
+    for _ in range(5):
+        q = ik.place_hand(p, "R", w, turn @ f0, turn @ n0, pole)
+        # Le pouce part droit devant la paume et passe de l'autre côté du verre, en face des doigts ; « t » l'en écarte.
+        fg, ac, pm = hand_axes(q, "R"); t = GLASS_THUMB[0]
+        aim = pm + (0.15 - 0.9 * t) * fg + 0.1 * ac
+        q = aim_bone(q, "R", "finger1-1", "finger1-2", aim / np.linalg.norm(aim))
+        aim = pm + (0.55 - 0.9 * t) * fg + 0.05 * ac
+        q = aim_bone(q, "R", "finger1-2", "finger1-3", aim / np.linalg.norm(aim))
+        err = np.asarray(centre, float) - glass_pose(GLASS, posed_skin(q)[0])[0]
+        if np.linalg.norm(err) < 3e-4: break
+        w = w + err
+    q["_pinned"] = sorted(set(q.get("_pinned", [])) | {"R"})
+    return placed(q)
+def glass_gap(pose, parts):
+    v = posed_skin(pose)[0]
+    return float(glass_distance(GLASS, v, v[parts]).min())
+_sh_r = STAND["upperarm01.R"]
+GLASS_REST = _sh_r + [0.01, -0.93 * UPPER_ARM_LEN, 0.86 * (ARM - UPPER_ARM_LEN) + 0.10]       # devant le ventre, coude au corps
+_glass_stand = settle_hands(P("stand"))                    # la main gauche, au repos, reste à la surface de la cuisse
 def drink(u, tip=0.0):
-    """u : 0 bras le long du corps, 1 verre aux lèvres ; tip : le verre et la tête basculent pour boire."""
-    p = P("stand", neck01=[-4 * tip, 0, 0], head=[-9 * tip, 0, 0], **{k: [x * u for x in v] for k, v in _grip.items()})
-    if u < 0.01:
-        return p
+    """u : 0 verre tenu devant le ventre, 1 verre aux lèvres ; tip : le verre et la tête basculent pour boire."""
+    p = P(_glass_stand, neck01=[-5 * tip, 0, 0], head=[-9 * tip, 0, 0])
     R, J = ik.fk(p)
-    glass = J["head"] + R["head"] @ (MOUTH + [0.0, -0.05, 0.045])
-    w1 = glass + [-0.05, -0.075 + 0.02 * tip, 0.025]
-    w = _w0 + (w1 - _w0) * u + [0.0, 0.0, 0.14 * np.sin(np.pi * u)]                # la main monte par l'avant du corps
-    pole = (-0.62, -1, 0.1)                                                        # coude bas, avant-bras presque vertical
-    q = with_bones(p, ik.arm(p, "R", w, pole)); Jq = joints(q)
-    f1 = Jq["wrist.R"] - Jq["lowerarm01.R"]; f1 = f1 / np.linalg.norm(f1) + np.array([0.1, 0.0, -0.25 * tip])   # main dans l'axe de l'avant-bras
-    n1 = np.array([0.75, 0.0, -0.65])                                              # paume vers le verre, tenu devant les lèvres
-    return hands(p, R=w, fingers_R=_f0 + (f1 - _f0) * u, palm_R=_n0 + (n1 - _n0) * u, pole_R=pole)
-_sip = drink(1, 1)
-motion("water-break", [K(0, "stand")] + planted(0.3, 1.5, drink) + [K(1.9, _sip), K(2.9, _sip), K(3.3, drink(1))]
-       + planted(3.3, 4.5, lambda s: drink(1 - s)) + [K(4.8, slow_step("L", 0))] + slow_steps(4.8, 4) + [K(10.6, "stand")], yaw=35)
+    tilt = np.radians(12 * u + 38 * tip)                   # le bord du verre penche vers la bouche
+    axis = np.array([0.0, np.cos(tilt), -np.sin(tilt)])
+    r, h = GLASS["width"] / 2, GLASS["height"]
+    back = np.array([0.0, 0, -1.0]); e = back - axis * (back @ axis); e /= np.linalg.norm(e)
+    lips = J["head"] + R["head"] @ (MOUTH + [0.0, -0.012, 0.004])
+    at_lips = lips - axis * h / 2 - e * r                  # le point du bord le plus proche du visage touche la lèvre
+    c = GLASS_REST + (at_lips - GLASS_REST) * u + [0.0, 0.0, 0.10 * np.sin(np.pi * u)]     # le verre monte par l'avant du corps
+    toward = np.array([1.0, 0.0, 0.25 - 0.45 * u])         # la main tient le verre par le côté droit
+    return glass_hand(p, c, axis, toward, pole=(-0.5 - 0.55 * u, -1, 0.05))
+# Prise réglée sur la peau : le verre s'écarte de la paume jusqu'à la dégager (1,5 mm de jeu), puis chaque doigt et le
+# pouce se referment autour de lui jusqu'à 1,5 mm, pas plus.
+GLASS_GAP = 0.0015
+for _ in range(4):
+    GLASS["depth"] = round(GLASS["depth"] + GLASS_GAP - min(glass_gap(drink(u), GLASS_PALM) for u in (0.0, 1.0)), 4)
+for _f in range(2, 6):
+    _lo, _hi = 0.2, 1.0
+    for _ in range(7):
+        _m = (_lo + _hi) / 2; GLASS_CURL[_f] = _m
+        if min(glass_gap(drink(u), GLASS_FINGER[_f]) for u in (0.0, 1.0)) >= GLASS_GAP: _lo = _m
+        else: _hi = _m
+    GLASS_CURL[_f] = round(_lo, 3)
+_lo, _hi = 0.0, 1.0
+for _ in range(7):
+    GLASS_THUMB[0] = (_lo + _hi) / 2
+    if min(glass_gap(drink(u), GLASS_FINGER[1]) for u in (0.0, 1.0)) >= GLASS_GAP: _hi = GLASS_THUMB[0]
+    else: _lo = GLASS_THUMB[0]
+GLASS_THUMB[0] = round(_hi, 3)
+print("verre : axe à", round(GLASS["depth"] * 1000, 1), "mm de la paume, fermeture des doigts", GLASS_CURL, "pouce", GLASS_THUMB[0],
+      "écart verre / main", [round(glass_gap(drink(u, t), HAND_VERTS["R"]) * 1000, 1) for u, t in ((0, 0), (0.5, 0), (1, 0), (1, 1))])
+_hold, _sip = drink(0), drink(1, 1)
+GLASS_ARM = ("upperarm01.R", "lowerarm01.R", "lowerarm02.R", "wrist.R", "clavicle.R", "shoulder01.R") + tuple(
+    f"finger{f}-{ph}.R" for f in range(1, 6) for ph in (1, 2, 3))
+def glass_steps(keys):
+    """Pas tranquilles, le verre tenu devant le ventre : le bras droit garde la pose de repos, le reste du corps marche."""
+    hold = flatten(_hold)["bones"]; out = []
+    for k in keys:
+        q = flatten(settle_hands(k["pose"] if isinstance(k["pose"], dict) else P(k["pose"])))
+        for b in GLASS_ARM:
+            q["bones"].pop(b, None)
+            if b in hold: q["bones"][b] = hold[b]
+        q["_pinned"] = ["R"]
+        out.append(dict(k, pose=placed(q)))
+    return out
+motion("water-break", [K(0, _hold)] + planted(0.3, 1.6, drink, n=7) + planted(1.6, 2.1, lambda s: drink(1, s), n=3) + [K(3.0, _sip)]
+       + planted(3.0, 3.5, lambda s: drink(1, 1 - s), n=3) + planted(3.5, 4.8, lambda s: drink(1 - s), n=7)
+       + glass_steps(slow_steps(4.8, 4)) + [K(10.6, _hold)], yaw=35, props=(GLASS,))
 
 # ─── Marche (promenade, marche soutenue) ───
 # Marche écrite par objectifs, sur place (le sol défile sous le corps à vitesse constante, comme sur un tapis roulant).
@@ -899,38 +991,73 @@ motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, la
        + [K(1.46, _cross)] + planted(1.46, 1.84, lambda s: boxing(cross=1 - s), n=4) + [K(2.2, _guard)],
        muscles=("shoulders", "triceps", "abs"), yaw=58)
 
-# Échauffement : marche sur place et grands cercles de bras vers l'arrière (devant → en haut → derrière → en bas).
+# Échauffement : marche sur place et grands cercles de bras vers l'arrière. Le bras monte par l'avant jusqu'à la
+# verticale, puis redescend par le côté, un peu en arrière du plan des épaules (là où l'épaule le permet : il ne passe
+# jamais tendu droit derrière le dos), et revient le long du corps.
 WARM_TOP = {s: joints(P("stand", **{S("upperleg01", s): sided(s, [-48, 0, -3]), S("lowerleg01", s): [64.8, 0, 0]}))[f"foot.{s}"] for s in "LR"}
+def reach_arm(pose, side, direction, reach=0.985, pole=None):
+    """Bras tendu dans une direction (monde), main à « reach » × la longueur du bras de l'épaule. La ceinture scapulaire
+    monte d'abord (rythme scapulo-huméral), puis la main est visée depuis l'épaule ainsi déplacée : visée depuis l'épaule
+    au repos, elle serait trop près et le coude plierait."""
+    d = np.asarray(direction, float); d = d / np.linalg.norm(d)
+    p = pose if isinstance(pose, dict) else P(pose)
+    down = ik.fk(p)[0]["spine01"] @ np.array([0, -1.0, 0])
+    amt = rhythm_amount(float(np.degrees(np.arccos(np.clip(d @ down, -1, 1)))))
+    if amt > 0.02:
+        p = add_rhythm(p, side, amt)
+    sg = 1 if side == "L" else -1
+    p = with_bones(p, ik.arm(p, side, joints(p)[f"upperarm01.{side}"] + reach * ARM * d, pole or (0.2 * sg, -0.5, -1)))
+    p["_pinned"] = sorted(set(p.get("_pinned", [])) | {side})
+    return p
+WARM_BACK = 22.0                                        # descente par le côté : degrés en arrière du plan des épaules
+def warm_arm(theta, sg):
+    """Direction du bras (de l'épaule vers la main) : theta = 0 le long du corps, 90° devant, 180° en haut, 270° sur le côté."""
+    t = theta % (2 * np.pi)
+    def ramp(a, b):                                       # 0 avant « a », 1 après « b » (degrés), sans à-coup
+        u = float(np.clip((np.degrees(t) - a) / (b - a), 0, 1)); return u * u * (3 - 2 * u)
+    side = ramp(140, 215) * (1 - ramp(325, 360))
+    b = np.radians(WARM_BACK)
+    h = (1 - side) * np.array([0.12 * sg, 0, 1.0]) + side * np.array([np.cos(b) * sg, 0, -np.sin(b)])
+    h /= np.linalg.norm(h)
+    return abs(np.sin(t)) * h + np.array([0.10 * sg * np.cos(t) ** 2, -np.cos(t), 0])
 def warmup(theta):
-    a = -np.degrees(theta)                       # angle du bras autour de l'épaule (0 = le long du corps)
-    lift = max(0.0, -np.sin(theta))              # bras au-dessus de l'horizontale → épaule qui monte
     phase = (theta / (2 * np.pi)) * 2            # deux pas par cercle
     side = "L" if int(phase + 1e-9) % 2 == 0 else "R"
     w = 1 - abs(2 * (phase % 1.0) - 1)           # 0 → 1 → 0 sur chaque pas ; le pied monte et se repose sans glisser
-    p = P("stand", upperarm01=[a, 0, 10], lowerarm01=[-6, 0, 0], clavicle=[0, 0, 12 * lift], **open_hand(0.7))
+    lift = max(0.0, -np.cos(theta))              # bras au-dessus de l'horizontale : la poitrine s'ouvre un peu
+    p = P("stand", spine01=[-3 * lift, 0, 0], **open_hand(0.7))
     p = march_foot(p, side, 0.0 if w < 1e-6 else w, WARM_TOP[side], 33.6)
-    return legs(p, **{other(side): ankle(other(side))})
+    p = legs(p, **{other(side): ankle(other(side))})
+    for s, sg in (("L", 1), ("R", -1)):
+        d = warm_arm(theta, sg); d /= np.linalg.norm(d)
+        p = reach_arm(p, s, d, 0.985, (0.2 * sg, -0.5, -1))
+    return p
 motion("warmup-march", circle_keys(32, 3.2, warmup), muscles=("shoulders", "quads"), yaw=55)
 
-# Pas chassés : deux pas vers la droite, deux vers la gauche ; les pieds se posent vraiment, le bassin suit.
+# Pas chassés : deux pas vers la droite, deux vers la gauche ; les pieds se posent vraiment, le bassin suit. Les bras
+# accompagnent, détendus : ils s'ouvrent sur les côtés quand le pied s'écarte, reviennent près du corps quand l'autre
+# le rejoint ; les genoux plient un peu plus pieds écartés, le buste penche à peine du côté où l'on va.
 def side_steps():
-    step, lift, soft = 0.30 * S_LEG, 0.07 * S_LEG, -0.035 * S_LEG
-    def pose(fl, fr, cx, lifted=None):
-        p = P("stand", root={"offset": [cx, soft, 0]}, upperarm01=[-10, 0, 9], lowerarm01=[-40, 0, 0], **open_hand(0.6))
+    step, lift, soft = 0.30 * S_LEG, 0.07 * S_LEG, -0.03 * S_LEG
+    def pose(fl, fr, cx, lifted=None, wide=0.0, lean=0.0):
+        """wide : 0 pieds joints, 1 pieds écartés (bras ouverts, genoux un peu plus pliés) ; lean : buste penché (degrés)."""
+        p = P("stand", root={"rot": [["z", lean]], "offset": [cx, soft - 0.02 * S_LEG * wide, 0]}, spine03=[0, 0, -0.6 * lean], neck01=[0, 0, -0.4 * lean],
+              upperarm01=[-6 - 4 * wide, 6 * wide, 7 + 25 * wide], lowerarm01=[-34 + 14 * wide, 0, 0], **open_hand(0.3))
         tl = ankle("L", x=fl, lift=lift if lifted == "L" else 0)
         tr = ankle("R", x=fr, lift=lift if lifted == "R" else 0)
-        return legs(p, L=tl, R=tr, pole_L=(0.2, 0, 1), pole_R=(-0.2, 0, 1))
+        kw = {f"foot_pitch_{lifted}": 10.0} if lifted else {}
+        return legs(p, L=tl, R=tr, pole_L=(0.2, 0, 1), pole_R=(-0.2, 0, 1), **kw)
     feet = {"L": float(ANK["L"][0]), "R": float(ANK["R"][0])}
     cx, t = 0.0, 0.0
-    keys = [K(0, pose(feet["L"], feet["R"], cx))]
+    keys = [K(0, pose(feet["L"], feet["R"], cx, wide=0.1))]
     # deux pas vers la droite (−X, le pied droit mène), puis deux vers la gauche ; le pied qui bouge est levé à mi-course
     for direction, lead in ((-1, "R"), (-1, "R"), (1, "L"), (1, "L")):
-        for mover, share in ((lead, 0.22), (other(lead), 0.28)):
+        for mover, share, w0, w1 in ((lead, 0.22, 0.6, 1.0), (other(lead), 0.28, 0.55, 0.1)):
             start = feet[mover]; end = start + direction * step
             mid = dict(feet); mid[mover] = (start + end) / 2
-            t += 0.32; keys.append(K(t, pose(mid["L"], mid["R"], cx + direction * step * share, mover)))
+            t += 0.34; keys.append(K(t, pose(mid["L"], mid["R"], cx + direction * step * share, mover, w0, 2.5 * direction)))
             feet[mover] = end; cx += direction * step / 2
-            t += 0.28; keys.append(K(t, pose(feet["L"], feet["R"], cx)))
+            t += 0.30; keys.append(K(t, pose(feet["L"], feet["R"], cx, None, w1, 1.5 * direction if mover == lead else 0.0)))
     return keys
 motion("side-steps", side_steps(), muscles=("quads", "glutes", "calves"), yaw=8)
 
@@ -942,7 +1069,13 @@ def squat(depth, back, lean, arms):
 arms_up = dict(upperarm01=[-8, 0, 168], lowerarm01=[-4, 0, 0], clavicle=[0, 0, 10], **open_hand(0.8))
 arms_front = dict(upperarm01=[-62, 0, 8], lowerarm01=[-8, 0, 0], **open_hand(0.5))
 top = P("stand", **arms_up)
-motion("half-squat-arms", [K(0, top), K(1.8, squat(0.2, 0.09, 24, arms_front)), K(2.3, squat(0.2, 0.09, 24, arms_front)), K(4.0, top), K(4.6, top)],
+# Demi-squat : les genoux plient à 120–130° (pas jusqu'à l'angle droit), talons au sol, genoux au-dessus des pieds, dos long.
+def half_squat(u):
+    p = P("stand", root={"rot": [["x", 17 * u]], "offset": [0, -0.088 * S_LEG * u, -0.07 * S_LEG * u]}, spine04=[3 * u, 0, 0], neck01=[-8 * u, 0, 0],
+          **arms_front)
+    return legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.15, 0, 1), pole_R=(-0.15, 0, 1))
+_half = half_squat(1.0)
+motion("half-squat-arms", [K(0, top), K(1.8, _half), K(2.3, _half), K(4.0, top), K(4.6, top)],
        muscles=("quads", "glutes", "shoulders"), yaw=60)
 
 # Squat sur chaise : s'asseoir en 3 secondes, se relever en 1, sans les mains.
@@ -1031,13 +1164,13 @@ motion("glute-bridge", [K(0, bridge_rest)] + planted(0, 1.5, lambda s: bridge(BR
        + planted(3.5, 5.0, lambda s: bridge(BRIDGE_TOP * (1 - s))) + [K(5.6, bridge_rest)],
        muscles=("glutes", "hamstrings"), yaw=0, pitch=12, props=(MAT,))
 
-# Rowing serviette : un pied un peu avancé, posé sur la serviette, talons au sol, genoux souples, buste penché
-# d'environ 35° dos long. La serviette passe à plat sous la voûte du pied avant ; chaque poing en tient un bout.
+# Rowing serviette : debout, un pied un peu avancé, posé sur la serviette, talons au sol, genoux fléchis, buste à peine
+# incliné (une vingtaine de degrés, depuis les hanches), dos long, poitrine ouverte, regard devant soi. La serviette passe à plat sous la voûte du pied avant ; chaque poing en tient un bout.
 # Une serviette ne s'allonge pas : chaque poing reste à distance constante du point où son brin sort de sous le
 # pied (il se déplace sur une sphère centrée sur ce point), des bras tendus vers l'avant jusqu'aux côtes basses,
 # coudes en arrière, omoplates serrées.
 from motion_eval import towel_segments, towel_grip, band_distance, TOWEL_WIDTH  # noqa: E402
-ROW_LEAN = 35.0
+ROW_LEAN = 24.0
 TOWEL_THICK = 0.005
 ROW_FEET = {"L": np.array([0.03 * S_HIP, FLOOR_ANKLE, ANK["L"][2] + 0.11 * S_LEG]),
             "R": np.array([-0.17 * S_HIP, FLOOR_ANKLE, ANK["R"][2] - 0.03 * S_LEG])}
@@ -1047,8 +1180,8 @@ def row_fist():
     d["finger1-2"] = [0, 0, -30]; d["finger1-3"] = [0, 0, -40]
     return d
 def row_body(u):
-    p = P("stand", root={"rot": [["x", ROW_LEAN]], "offset": [-0.04 * S_HIP, -0.02 * S_LEG, -0.085 * S_LEG]},
-          spine01=[-4 * u, 0, 0], neck01=[-16, 0, 0], head=[-6, 0, 0], clavicle=[0, 4 + 14 * u, -2 * u], **row_fist())
+    p = P("stand", root={"rot": [["x", ROW_LEAN]], "offset": [-0.04 * S_HIP, -0.08 * S_LEG, -0.085 * S_LEG]},
+          spine01=[-4 * u, 0, 0], neck01=[-10, 0, 0], head=[-5, 0, 0], clavicle=[0, 4 + 14 * u, -2 * u], **row_fist())
     return legs(p, L=ROW_FEET["L"], R=ROW_FEET["R"], pole_L=(0.2, 0, 1), pole_R=(-0.3, 0, 1))
 FRONT_FOOT = region(("foot", "toes"), "L")
 TOWEL_BACKS = []
@@ -1090,7 +1223,7 @@ def towel_points(pose):
     v = posed_skin(pose)[0]; v = v - [0, v[MESH.sample, 1].min(), 0]
     return v, towel_segments(TOWEL, v)
 ROW_EXIT = [s[0] for s in towel_points(row_body(0))[1][::2]]          # sortie du brin gauche, du brin droit
-ROW_WIDE, ROW_END = 1.10, (0.0, 0.20)
+ROW_WIDE, ROW_END = 1.10, (-0.12, 0.16)             # arrivée : vers le ventre, sous les côtes
 def grip_point(pose, s):
     """Bout du brin : dans le creux du poing, à `depth` de la paume (même calcul que l'app)."""
     v = posed_skin(pose)[0]; i = 0 if s == "L" else 1
@@ -1212,8 +1345,23 @@ kplank = knee_plank(_kp)
 _kw = {s: joints(kplank)[f"wrist.{s}"] for s in "LR"}
 motion("knee-plank", [K(0, kplank), K(3, knee_plank(_kp, 1, _kw)), K(6, kplank)], muscles=("abs", "shoulders"), yaw=0, props=(MAT,))
 
-motion("calf-raises", [K(0, "stand"), K(1, P("stand", foot=[28, 0, 5], toes=[-34, 0, 0]), "out"),
-                       K(1.4, P("stand", foot=[28, 0, 5], toes=[-34, 0, 0])), K(4, "stand", "inOut")], muscles=("calves",), yaw=70)
+# Mollets : montée sur la pointe des pieds. Les talons décollent en tournant autour de la base des orteils, qui restent
+# à plat au même endroit ; le corps monte d'autant, d'un bloc (genoux tendus, bassin au-dessus de l'avant des pieds).
+# Vu de près : des genoux au sol.
+CALF_RISE = 34.0                                         # talons levés (degrés) : environ 9 cm
+def calf_raise(u):
+    deg = CALF_RISE * u; c, sn = np.cos(np.radians(deg)), np.sin(np.radians(deg)); kw = {}; move = np.zeros(3)
+    for s in "LR":
+        toe = STAND[f"toes.{s}"]; a = ANK[s] - toe
+        t = toe + [a[0], a[1] * c - a[2] * sn + 0.005 * deg / MARCH_PEEL, a[1] * sn + a[2] * c]
+        move = t - ANK[s]
+        kw.update({s: t, f"foot_pitch_{s}": deg, f"toes_{s}": -deg})
+    p = P("stand", root={"offset": [0.0, float(move[1]), float(move[2])]}, upperarm01=[-4 * u, 0, 4 * u], lowerarm01=[-8 * u, 0, 0])
+    return legs(p, **kw)
+_calf = calf_raise(1.0)
+motion("calf-raises", [K(0, "stand")] + planted(0, 1.0, calf_raise, n=6) + [K(1.4, _calf)] + planted(1.4, 4.0, lambda s: calf_raise(1 - s), n=8),
+       muscles=("calves",), yaw=68, pitch=6)
+close_up("calf-raises", ("lowerleg01", "foot", "toes"), 0.16)
 
 # Fentes douces : un pied avance et se pose, les deux genoux plient, retour ; puis l'autre jambe.
 def lunge_keys(side, t0):
@@ -1269,10 +1417,11 @@ def quad_keys(t0, flip):
     up = f(legs(quad_stretch(0, 0, 0, 1.0, False), L=ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG), foot_pitch_L=45))
     hold, high = f(_quad), f(quad_stretch(118, 0, 30, 1.0, False))
     near = f(quad_stretch(off=0.13))                                 # main ouverte à côté du pied, avant de le saisir
-    return [K(t0 + 0.2, half, "in"), K(t0 + 0.35, heel, "linear"), K(t0 + 0.5, peel, "linear"), K(t0 + 0.8, up, "linear"), K(t0 + 1.3, high, "out"), K(t0 + 1.75, near),
-            K(t0 + 2.0, hold), K(t0 + 5.0, hold), K(t0 + 5.3, near), K(t0 + 5.7, high),
-            K(t0 + 6.0, up, "in"), K(t0 + 6.3, peel, "linear"), K(t0 + 6.45, heel, "linear"), K(t0 + 6.6, half, "linear"),
-            K(t0 + 6.8, "stand", "out")]
+    # Le pied monte en une seconde et demie et redescend aussi calmement (il retombait d'un coup, à 5 m/s).
+    return [K(t0 + 0.2, half, "in"), K(t0 + 0.35, heel, "linear"), K(t0 + 0.5, peel, "linear"), K(t0 + 1.1, up, "linear"), K(t0 + 2.0, high, "out"), K(t0 + 2.5, near),
+            K(t0 + 2.8, hold), K(t0 + 5.8, hold), K(t0 + 6.15, near), K(t0 + 6.7, high, "in"),
+            K(t0 + 7.6, up, "linear"), K(t0 + 8.05, peel, "linear"), K(t0 + 8.2, heel, "linear"), K(t0 + 8.35, half, "linear"),
+            K(t0 + 8.55, "stand", "out")]
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
 # (rapprochées, elles se traversaient derrière le dos).
 chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-4, 0, 0], head=[-6, 0, 0]),
@@ -1281,17 +1430,39 @@ chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-
                    fingers_L=[0, -1, -0.35], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.35], palm_R=[1, 0, 0],
                    pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
 _chest_way = P("stand", clavicle=[0, 8, 0], upperarm01=[12, 0, 32], lowerarm01=[-10, 0, 0], spine01=[-3, 0, 0])
-motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(6.8, True)
-       + [K(14.5, _chest_way), K(15.3, chest_open), K(17.8, P(chest_open, **CHEST_IN)), K(19.8, chest_open), K(20.6, _chest_way),
-          K(21.4, "stand")], muscles=("quads", "chest"), yaw=140)
+# Vu de trois quarts avant, presque de profil : le talon qui monte vers la fesse se lit d'un côté comme de l'autre, et
+# l'on voit la poitrine s'ouvrir quand les bras partent en arrière.
+motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(8.55, True)
+       + [K(18.0, _chest_way), K(18.8, chest_open), K(21.3, P(chest_open, **CHEST_IN)), K(23.3, chest_open), K(24.1, _chest_way),
+          K(24.9, "stand")], muscles=("quads", "chest"), yaw=62)
 
 # ─── Mobilité, épaules, nuque ───
 # Grands cercles d'épaules vers l'arrière : avant → haut → arrière → bas. Les bras restent pendants.
+# Cercles amples (l'épaule décrit environ 9 cm de haut et 10 cm d'avant en arrière), vus de près : tête, épaules, haut
+# du buste. « shoulder-rolls » tourne vers l'arrière ; « shoulder-rolls-both » fait deux cercles vers l'arrière puis
+# deux vers l'avant.
 def roll(theta):
-    z = 7 + 17 * np.sin(theta)                # élévation
-    y = -15 * np.cos(theta)                   # recul (> 0) ou avancée (< 0) de l'omoplate
-    return P("stand", clavicle=[0, y, z], upperarm01=[0, 0, -z + 3], lowerarm01=[-10, 0, 0])
-motion("shoulder-rolls", circle_keys(12, 4.2, roll), muscles=("shoulders", "upperBack"), yaw=58)
+    z = 9 + 17 * np.sin(theta)                # élévation
+    y = -20 * np.cos(theta)                   # recul (> 0) ou avancée (< 0) de l'omoplate
+    return P("stand", clavicle=[0, y, z], upperarm01=[0, -0.5 * y, -z + 3], lowerarm01=[-10, 0, 0], spine01=[0.12 * y, 0, 0],
+             neck01=[-0.12 * y, 0, 0])
+def both_ways(period, turns, n, build):
+    """« turns » tours dans un sens puis autant dans l'autre (n clés par tour) ; le mouvement ralentit, s'arrête et
+    repart en sens inverse sans à-coup."""
+    span = period * turns; total = 2 * np.pi * turns; e = 0.12
+    def angle(u):                                         # avancement 0 → 1 : départ et arrêt progressifs, vitesse constante entre
+        v = 1 / (1 - e)
+        if u < e: return v * u * u / (2 * e)
+        if u > 1 - e: return 1 - v * (1 - u) ** 2 / (2 * e)
+        return v * (u - e / 2)
+    m = n * turns
+    go = [K(span * i / m, build(total * angle(i / m)), "linear") for i in range(m + 1)]
+    back = [K(span + span * i / m, build(total * angle(1 - i / m)), "linear") for i in range(1, m + 1)]
+    return go + back
+motion("shoulder-rolls", circle_keys(12, 4.2, roll), muscles=("shoulders", "upperBack"), yaw=50)
+motion("shoulder-rolls-both", both_ways(4.2, 2, 12, roll), muscles=("shoulders", "upperBack"), yaw=50)
+for _mid in ("shoulder-rolls", "shoulder-rolls-both"):
+    close_up(_mid, ("head", "upperarm01", "lowerarm01"), 0.12)
 
 shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 0])
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(3.2, P("stand", **shrug_up)),
@@ -1336,8 +1507,9 @@ motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True
 # posés à plat avec les paumes sur la face des montants. La porte est à la mesure de chaque corps : ses montants sont
 # là où tombent les avant-bras (`width` : distance entre les axes des montants). Avant-bras et mains ne bougent plus ;
 # le corps avance d'un bloc depuis les chevilles, pieds posés : les épaules passent de l'arrière à l'avant des coudes,
-# les omoplates se serrent, la poitrine s'ouvre entre les montants. Vue de trois quarts arrière.
-UPPER_ARM = float(np.linalg.norm(STAND["lowerarm01.L"] - SH))
+# les omoplates se serrent, la poitrine s'ouvre entre les montants. Vue de trois quarts avant, du bassin aux mains :
+# on voit la poitrine avancer entre les montants, les bras à l'horizontale et les mains posées dessus.
+UPPER_ARM = UPPER_ARM_LEN
 DOOR_IN = 0.11 * S_LEG                                       # avancée du bassin
 DOOR_RHYTHM = rhythm_amount(90.0)                            # bras à l'horizontale : la ceinture scapulaire suit un peu
 _DOOR_ARM, _DOOR_HAND = region(("lowerarm",), "L"), region(("wrist", "finger"), "L")
@@ -1378,22 +1550,34 @@ DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.02)
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
        + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=130, pitch=10,
+       muscles=("chest", "shoulders"), yaw=24, pitch=10,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
+
+close_up("doorway-stretch", ("head", "wrist", "lowerarm01", "upperleg01"), 0.22)
 
 squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-20, 0, 0], spine01=[-5, 0, 0])
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
 
-# Cercles de hanches : le bassin dessine un cercle, les pieds restent posés, le buste reste au-dessus.
+# Cercles de hanches : le bassin dessine un cercle au-dessus des pieds, qui restent posés ; le haut du corps ne suit
+# pas : la colonne se courbe à l'opposé (sur le côté, vers l'avant, vers l'arrière) juste assez pour que la tête reste
+# à sa place, au-dessus des pieds, et le cou la garde droite. Deux tours dans un sens, deux dans l'autre.
+HIP_R = 0.075 * S_LEG
+HIP_SPINE = (("spine05", 0.3), ("spine04", 0.3), ("spine03", 0.25), ("spine02", 0.15))
+_hip_head = STAND["head"]
 def hip_circle(theta):
-    r = 0.08 * S_LEG
-    ox, oz = r * np.cos(theta), r * np.sin(theta)
-    tilt_z, tilt_x = 8 * np.cos(theta), -7 * np.sin(theta)
-    p = P("handsHips", root={"rot": [["z", -tilt_z], ["x", tilt_x]], "offset": [ox, -0.025, oz]},
-          spine05=[-tilt_x * 0.6, 0, tilt_z * 0.6], spine03=[-tilt_x * 0.7, 0, tilt_z * 0.7], spine01=[-tilt_x * 0.4, 0, tilt_z * 0.4])
+    ox, oz = HIP_R * np.cos(theta), HIP_R * np.sin(theta)
+    def body(b):
+        """b : courbure de la colonne (degrés) sur le côté et d'avant en arrière ; le bassin en prend le quart."""
+        bones = {n: [b[1] * w, 0, b[0] * w] for n, w in HIP_SPINE}
+        return P("handsHips", root={"rot": [["z", -0.25 * b[0]], ["x", 0.25 * b[1]]], "offset": [ox, -0.02 * S_LEG, oz]},
+                 neck01=[-0.6 * b[1], 0, -0.6 * b[0]], head=[-0.65 * b[1], 0, -0.65 * b[0]], **bones)
+    def miss(b):
+        h = joints(body(b))["head"]
+        return [(h[0] - _hip_head[0]) * 100, (h[2] - _hip_head[2]) * 100]
+    b = fsolve(miss, [0.0, 0.0])
     # Les mains restent posées sur les hanches pendant que le bassin tourne.
-    return keep_hands(legs(p, L=ankle("L"), R=ankle("R")), "handsHips")
-motion("hip-circles", circle_keys(12, 4.8, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
+    return keep_hands(legs(body(b), L=ankle("L"), R=ankle("R")), "handsHips")
+motion("hip-circles", both_ways(4.8, 2, 12, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
 
 # Cercles de cheville : main gauche à plat contre le mur, genou droit levé, la cheville dessine des cercles.
 _ank_base = hands(P("stand", **open_hand(1.0, "L")), L=[float(SH[0] + 0.415), float(SH[1] - 0.02), -0.02], fingers_L=[0, 1, 0.1], palm_L=[1, 0, 0], pole_L=(0.2, -1, -0.4))
@@ -1446,30 +1630,56 @@ motion("mountain", breathe(mountain, cycle=6), yaw=15, props=(MAT,))
 
 # Salutation des bras : les bras montent devant soi jusqu'au-dessus de la tête, paumes jointes, puis redescendent.
 arms_front_up = P(mountain, upperarm01=[-90, 0, 5], lowerarm01=[-4, 0, 0])
-_up = P(mountain, clavicle=[0, 0, 10], spine01=[-4, 0, 0], neck01=[-6, 0, 0], head=[-8, 0, 0])
-salute = joined_hands(hands(_up, L=[PALM, OVERHEAD[0], OVERHEAD[1]], R=[-PALM, OVERHEAD[0], OVERHEAD[1]], fingers_L=[0, 1, 0], palm_L=[-1, 0, 0],
-                             fingers_R=[0, 1, 0], palm_R=[1, 0, 0], pole_L=(1, 0, -0.3), pole_R=(-1, 0, -0.3)))
+OVER_APART = 0.012                                         # poignets un peu écartés quand les bras sont tendus en haut
+OVER_Z = OVERHEAD[1] + 0.035                              # un peu en avant du sommet du crâne : les bras passent devant les oreilles
+def joined_up(p, x0, y, z, tilt=0.0, pole=0.0, apart=0.0):
+    """Mains jointes en (x0, y, z), placées en miroir de part et d'autre, sans mise en contact séparée : elles restent
+    jointes et symétriques. tilt : doigts inclinés vers l'avant ; pole : coudes vers le bas (< 0) ou sur les côtés (0) ;
+    apart : écart ajouté entre les poignets (bras tendus au-dessus de la tête, les avant-bras se toucheraient avant les
+    paumes : les mains se rejoignent alors par les doigts, en toit très fermé)."""
+    for s, sg in (("L", 1), ("R", -1)):
+        target = [x0 + sg * (PALM + apart), y, z]
+        amt = rhythm_amount(arm_elevation(p, s, target))
+        if amt > 0.02: p = add_rhythm(p, s, amt)
+        p = ik.place_hand(p, s, target, [-sg * apart / 0.17, 1, tilt], [-sg, 0, 0], (sg, pole, -0.3))
+    p = joined_hands(p); p["_pinned"] = ["L", "R"]
+    return placed(p)
+def overhead_y(pose, x0=0.0, reach=0.99):
+    """Hauteur des poignets, mains jointes au-dessus de la tête, bras presque tendus (coude à 165–170°) le long des
+    oreilles : mesurée depuis l'épaule une fois montée avec le bras (rythme scapulo-huméral), pas depuis l'épaule au repos
+    (les mains arrivaient trop bas, coudes pliés à angle droit, bras en losange)."""
+    y = OVERHEAD[0]
+    for _ in range(4):
+        t = [x0 + PALM, y, OVER_Z]
+        sh = joints(add_rhythm(pose, "L", rhythm_amount(arm_elevation(pose, "L", t))))["upperarm01.L"]
+        y = float(sh[1] + np.sqrt((reach * ARM) ** 2 - (sh[0] - t[0]) ** 2 - (sh[2] - t[2]) ** 2))
+    return y
+_up = P(mountain, spine01=[-2, 0, 0], neck01=[-2, 0, 0], head=[-2, 0, 0], **open_hand(1.0))
+salute = joined_up(_up, 0.0, overhead_y(_up), OVER_Z, apart=OVER_APART)
 motion("arm-raise", [K(0, mountain), K(2.4, arms_front_up), K(4.2, salute), K(5.6, salute), K(7.4, arms_front_up), K(9.4, mountain), K(10.4, mountain)],
        muscles=("shoulders",), yaw=40, props=(MAT,))
 
-# Flexion avant douce : le bassin bascule et recule, genoux fléchis, pieds posés ; le dos s'enroule, la tête pend dans le
-# prolongement (nuque relâchée), les bras pendent à la verticale sous les épaules. Remontée en déroulant le dos : le
-# bassin se redresse d'abord, la tête remonte en dernier.
-def fold(u, curl=None):
-    """u : bascule du bassin (0 debout, 1 flexion complète) ; curl : enroulement du dos et de la nuque (u par défaut)."""
-    c = u if curl is None else curl
-    p = P("stand", root={"rot": [["x", 68 * u]], "offset": [0, -0.07 * S_LEG * u, -0.11 * S_LEG * u]}, spine05=[6 * c, 0, 0], spine04=[9 * c, 0, 0],
-          spine03=[10 * c, 0, 0], spine02=[9 * c, 0, 0], spine01=[8 * c, 0, 0], neck01=[14 * c, 0, 0], neck02=[10 * c, 0, 0], neck03=[6 * c, 0, 0],
-          head=[12 * c, 0, 0], **open_hand(0.5))
+# Flexion avant douce, en enroulant le dos : le menton descend vers la poitrine, le haut du dos s'arrondit, puis le bas
+# du dos, et le bassin bascule en dernier (il recule un peu, genoux fléchis, pieds posés) ; tête et bras pendent,
+# relâchés. Remontée en déroulant, dans l'ordre inverse : le bassin se redresse d'abord, la tête remonte en dernier.
+def fold(s):
+    """s : 0 debout, 1 flexion complète ; chaque étage du dos s'enroule à son tour."""
+    def part(a, b):
+        u = float(np.clip((s - a) / (b - a), 0, 1)); return u * u * (3 - 2 * u)
+    h, up, low, u = part(0.0, 0.4), part(0.08, 0.6), part(0.25, 0.85), part(0.35, 1.0)
+    p = P("stand", root={"rot": [["x", 62 * u]], "offset": [0, -0.07 * S_LEG * u, -0.11 * S_LEG * u]}, spine05=[7 * low, 0, 0], spine04=[11 * low, 0, 0],
+          spine03=[13 * up, 0, 0], spine02=[12 * up, 0, 0], spine01=[10 * up, 0, 0], neck01=[18 * h, 0, 0], neck02=[12 * h, 0, 0], neck03=[8 * h, 0, 0],
+          head=[14 * h, 0, 0], clavicle=[0, -8 * up, 0], **open_hand(0.5))
     p = legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.1, 0, 1), pole_R=(-0.1, 0, 1))
     J = joints(p)
-    for s, sg in (("L", 1), ("R", -1)):
-        sh = J[f"upperarm01.{s}"]
-        w = [sh[0] + 0.02 * sg, max(sh[1] - 0.975 * ARM, 0.21), sh[2] + 0.03]              # doigts au ras du sol, pas dedans
-        p = with_bones(p, ik.arm(p, s, w, (sg, 0, -0.4)))
+    for sd, sg in (("L", 1), ("R", -1)):
+        sh = J[f"upperarm01.{sd}"]
+        w = [sh[0] + 0.02 * sg, max(sh[1] - 0.975 * ARM, 0.21), sh[2] + 0.01]              # bras à la verticale sous l'épaule ; doigts au ras du sol
+        p = with_bones(p, ik.arm(p, sd, w, (sg, 0, -0.4)))
     return p
 _fold = fold(1.0)
-motion("forward-fold", [K(0, mountain), K(3, _fold), K(6, _fold), K(7.6, fold(0.45, 0.85)), K(9.4, mountain), K(10, mountain)],
+motion("forward-fold", [K(0, mountain)] + [K(3.2 * i / 10, fold(i / 10), "linear" if i > 1 else "in") for i in range(1, 10)] + [K(3.2, _fold, "out"), K(6, _fold)]
+       + [K(6 + 3.4 * i / 10, fold(1 - i / 10), "linear" if i > 1 else "in") for i in range(1, 10)] + [K(9.4, mountain, "out"), K(10, mountain)],
        muscles=("hamstrings", "lowerBack"), yaw=70, props=(MAT,))
 
 # Guerrier II : pieds très écartés, genou avant plié au-dessus de la cheville, bras à l'horizontale, regard sur la main avant.
@@ -1516,23 +1726,16 @@ def tree_legs(lifted, away=0.0):
         else: hi = m
     return place(lo - away)
 _tree0, _tree1 = tree_legs(False), tree_legs(True)
+TREE_TOP = overhead_y(P(_tree1, spine01=[-2, 0, 0]), float(joints(_tree1)["spine01"][0]))
 def tree_arms(p, u):
     """u : 0 mains jointes devant la poitrine, 1 au-dessus de la tête ; les mains montent jointes devant le visage."""
     x0 = joints(p)["spine01"][0]
-    y = CHEST[0] + (OVERHEAD[0] - CHEST[0]) * u
-    z = CHEST[1] + (OVERHEAD[1] - CHEST[1]) * u + 0.12 * np.sin(np.pi * u) ** 2
-    p = P(p, clavicle=[0, 0, 10 * u], **open_hand(1.0))
-    if u > 0.5: p = P(p, spine01=[-4 * (2 * u - 1), 0, 0], neck01=[-6 * (2 * u - 1), 0, 0], head=[-8 * (2 * u - 1), 0, 0])
-    t = 0.25 * (1 - u); k = -0.5 * (1 - u)
-    # Les deux mains sont placées en miroir autour du sternum, sans mise en contact séparée : elles restent jointes
-    # et symétriques pendant toute la montée.
-    for s, sg in (("L", 1), ("R", -1)):
-        target = [x0 + sg * PALM, y, z]
-        amt = rhythm_amount(arm_elevation(p, s, target))
-        if amt > 0.02: p = add_rhythm(p, s, amt)
-        p = ik.place_hand(p, s, target, [0, 1, t], [-sg, 0, 0], (sg, k, -0.3))
-    p = joined_hands(p); p["_pinned"] = ["L", "R"]
-    return placed(p)
+    y = CHEST[0] + (TREE_TOP - CHEST[0]) * u
+    z = CHEST[1] + (OVER_Z - CHEST[1]) * u + 0.12 * np.sin(np.pi * u) ** 2
+    p = P(p, **open_hand(1.0))
+    if u > 0.5: p = P(p, spine01=[-2 * (2 * u - 1), 0, 0], neck01=[-2 * (2 * u - 1), 0, 0], head=[-2 * (2 * u - 1), 0, 0])
+    # Les deux mains sont placées en miroir autour du sternum : elles restent jointes et symétriques pendant toute la montée.
+    return joined_up(p, x0, y, z, 0.25 * (1 - u), -0.5 * (1 - u), apart=OVER_APART * u * u)
 def tree_keys(flip, t0):
     f = (lambda p: placed(mirror_pose(p)) if is_placed(p) else mirror_pose(p)) if flip else (lambda p: p)
     prayer, up = f(tree_arms(_tree1, 0)), f(tree_arms(_tree1, 1))

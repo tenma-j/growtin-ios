@@ -241,6 +241,40 @@ def band_distance(seg, pts):
     outside = np.linalg.norm(np.maximum(e, 0), axis=1)
     return np.where(outside > 0, outside, e.max(1)), s
 
+# ─── Verre tenu en main (même calcul que HeldGlass, GrowtinCore) ───
+GLASS_WIDTH, GLASS_HEIGHT = 0.062, 0.105                # diamètre et hauteur par défaut
+
+def glass_pose(prop, v):
+    """Centre et axe (du fond vers le bord) d'un verre tenu, d'après la peau déformée « v » : sommets du creux de la
+    paume, du bord de la paume côté index et du dos de la main ; l'axe du verre est à « depth » de la paume."""
+    palm, index, back = (np.asarray(v[i], float) for i in prop["vertices"])
+    n = (palm - back) / np.linalg.norm(palm - back)
+    up = (index - palm) - n * ((index - palm) @ n)
+    return palm + n * (prop.get("depth") or 0.0), up / np.linalg.norm(up)
+
+def glass_mesh(prop, v, sides=20):
+    """Maillage du verre (cylindre fermé), comme le dessine l'app."""
+    c, a = glass_pose(prop, v)
+    r, h = (prop.get("width") or GLASS_WIDTH) / 2, prop.get("height") or GLASS_HEIGHT
+    x = np.cross(a, [1.0, 0, 0] if abs(a[0]) < 0.9 else [0, 0, 1.0]); x /= np.linalg.norm(x); z = np.cross(x, a)
+    ang = np.arange(sides) * 2 * np.pi / sides
+    ring = np.cos(ang)[:, None] * x + np.sin(ang)[:, None] * z
+    V = np.vstack([c - a * h / 2 + r * ring, c + a * h / 2 + r * ring, [c - a * h / 2], [c + a * h / 2]])
+    N = np.vstack([ring, ring, [-a], [a]])
+    T = []
+    for i in range(sides):
+        j = (i + 1) % sides
+        T += [(i, j, sides + j), (i, sides + j, sides + i), (2 * sides, j, i), (2 * sides + 1, sides + i, sides + j)]
+    return V, N, np.array(T)
+
+def glass_distance(prop, v, pts):
+    """Distance de points à la surface du verre (négative à l'intérieur)."""
+    c, a = glass_pose(prop, v)
+    r, h = (prop.get("width") or GLASS_WIDTH) / 2, prop.get("height") or GLASS_HEIGHT
+    rel = np.asarray(pts, float) - c; along = rel @ a
+    dr = np.linalg.norm(rel - np.outer(along, a), axis=1) - r; da = np.abs(along) - h / 2
+    return np.hypot(np.maximum(dr, 0), np.maximum(da, 0)) + np.minimum(np.maximum(dr, da), 0)
+
 # ─── Cadrage (même calcul que CameraFraming, GrowtinCore) ───
 VIEW_ASPECT = 1.03                                      # largeur / hauteur de la carte du personnage dans l'app
 MIN_DISTANCE = 1.0                                      # cadrage resserré : distance minimale de la caméra

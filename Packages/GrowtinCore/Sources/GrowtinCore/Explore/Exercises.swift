@@ -194,7 +194,7 @@ public enum ExerciseLibrary {
             id: "mobilite-matin", title: "Mobilité du matin", category: .mobility, level: .gentle,
             summary: "Huit minutes pour délier les épaules, le dos et les hanches au réveil.",
             steps: [
-                ExerciseStep("Épaules", "Fais de grands cercles lents avec les épaules : 10 vers l'arrière, 10 vers l'avant.", seconds: 60, symbol: "figure.arms.open", motion: "shoulder-rolls"),
+                ExerciseStep("Épaules", "Fais de grands cercles lents avec les épaules : 10 vers l'arrière, 10 vers l'avant.", seconds: 60, symbol: "figure.arms.open", motion: "shoulder-rolls-both"),
                 ExerciseStep("Nuque", "Incline l'oreille vers l'épaule, 3 respirations de chaque côté, sans forcer ni faire de cercles complets.", seconds: 60, symbol: "figure.mind.and.body", motion: "neck-tilt"),
                 ExerciseStep("Chat-vache", "À quatre pattes, arrondis le dos en expirant puis creuse-le en inspirant.", seconds: 90, symbol: "figure.flexibility",
                              cues: ["Commence le mouvement par le bassin, laisse la tête suivre.", "Une respiration complète par mouvement."], motion: "cat-cow"),
