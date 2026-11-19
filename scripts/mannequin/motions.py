@@ -758,6 +758,118 @@ _sip = drink(1, 1)
 motion("water-break", [K(0, "stand")] + planted(0.3, 1.5, drink) + [K(1.9, _sip), K(2.9, _sip), K(3.3, drink(1))]
        + planted(3.3, 4.5, lambda s: drink(1 - s)) + [K(4.8, slow_step("L", 0))] + slow_steps(4.8, 4) + [K(10.6, "stand")], yaw=35)
 
+# ─── Marche (promenade, marche soutenue) ───
+# Marche écrite par objectifs, sur place (le sol défile sous le corps à vitesse constante, comme sur un tapis roulant).
+# Chaque pied suit le cycle réel : attaque du talon pointe relevée, pied à plat, talon qui se lève en roulant sur
+# l'avant-pied, poussée des orteils, puis passage du pas en l'air. Le bassin est porté par la jambe d'appui presque
+# tendue (il monte au passage à la verticale, redescend au double appui), se décale vers elle, tourne avec la jambe
+# qui avance et s'incline un peu du côté du pied levé ; le buste tourne à l'opposé, la tête reste de face. Les bras
+# balancent à l'opposé des jambes.
+LEG_MAX = float(np.linalg.norm(ik.H["lowerleg01.L"] - ik.H["upperleg01.L"]) + np.linalg.norm(ik.H["foot.L"] - ik.H["lowerleg01.L"]))
+LEG_STAND = float(np.linalg.norm(STAND["foot.L"] - STAND["upperleg01.L"])) / LEG_MAX      # jambe « tendue » debout
+WALK_FOOT = {s: region(("foot", "toes"), s) for s in "LR"}
+_sv = posed_skin(P("stand"))[0]
+WALK_FLOOR = float(_sv[:, 1].min())
+# Appui du talon : point du sol sous l'arrière du talon (le pied pivote dessus à l'attaque du pas).
+WALK_HEEL = {s: np.array([ANK[s][0], WALK_FLOOR, float(_sv[WALK_FOOT[s], 2].min()) + 0.03]) for s in "LR"}
+def walk_foot(side, phi, g):
+    """Cheville, inclinaison du pied (> 0 pointe en bas) et flexion des orteils à la phase « phi » du pas de ce pied
+    (0 : attaque du talon ; g["stance"] : les orteils quittent le sol)."""
+    st, flat, off = g["stance"], g["flat"], g["heel_off"]
+    x = ANK[side][0] * g["width"]
+    def stance(f):
+        zc = g["front"] - g["stride"] * f                 # le point d'appui recule avec le sol
+        if f < flat:
+            pitch, pivot = -g["strike"] * (1 - f / flat), WALK_HEEL[side]
+        elif f < off:
+            pitch, pivot = 0.0, None
+        else:
+            pitch, pivot = g["push"] * ((f - off) / (st - off)) ** 1.25, np.array([ANK[side][0], WALK_FLOOR, STAND[f"toes.{side}"][2]])
+        a = ANK[side].copy()
+        if pivot is not None:                              # la cheville tourne autour du talon, ou de la base des orteils
+            r = a - pivot; c, sn = np.cos(np.radians(pitch)), np.sin(np.radians(pitch))
+            a = pivot + [r[0], r[1] * c - r[2] * sn, r[1] * sn + r[2] * c]
+        return np.array([x, a[1], a[2] + zc]), pitch
+    if phi < st:
+        a, pitch = stance(phi)
+        return a, pitch, -max(pitch, 0.0)
+    s = (phi - st) / (1 - st)
+    (a0, p0), (a1, p1) = stance(st - 1e-6), stance(0.0)
+    sm = s * s * (3 - 2 * s)
+    v = -g["stride"] * (1 - st)                            # vitesse du sol, par unité de « s »
+    m0, m1 = 0.25 * v, v                                   # la cheville repart doucement, et se pose à la vitesse du sol
+    z = (2 * s ** 3 - 3 * s ** 2 + 1) * a0[2] + (s ** 3 - 2 * s ** 2 + s) * m0 + (-2 * s ** 3 + 3 * s ** 2) * a1[2] + (s ** 3 - s ** 2) * m1
+    y = a0[1] + (a1[1] - a0[1]) * sm + g["clear"] * np.sin(np.pi * min(1.0, s / 0.85)) ** 2
+    return np.array([x, y, z]), p0 + (p1 - p0) * sm, -p0 * max(0.0, 1 - 3 * s)
+def walk_heights(p, phi, feet, g):
+    """Hauteur du bassin que permet chaque jambe : celle qui porte le corps est presque tendue (un peu plus pliée juste
+    après la pose du talon, quand elle amortit) ; la jambe en l'air compte à l'approche du sol. Au double appui, la
+    plus courte des hauteurs l'emporte, sans à-coup (voir walk_pose)."""
+    _, J = ik.fk(p); out = []
+    for s, f in (("L", phi % 1.0), ("R", (phi + 0.5) % 1.0)):
+        sw = (f - g["stance"]) / (1 - g["stance"])
+        if 0 <= sw < 0.4:
+            continue
+        a = feet[s][0]; hip = J[f"upperleg01.{s}"]
+        reach = (LEG_STAND - g["load"] * np.exp(-((f - 0.13) / 0.07) ** 2)) * LEG_MAX
+        late = 4.0 * max(0.0, f - 0.5) ** 2 if sw < 0 else 0.6 * (1 - sw) ** 2
+        out.append((s, float(a[1] + np.sqrt(max(reach ** 2 - (hip[0] - a[0]) ** 2 - (hip[2] - a[2]) ** 2, 1e-6)) - hip[1] + late)))
+    return out
+def walk_pose(phi, g, solve=True):
+    """phi : phase du pas de la jambe gauche (0 : son talon se pose devant ; 0,5 : celui de la jambe droite)."""
+    c = float(np.cos(2 * np.pi * phi))
+    yaw = -g["pelvis"] * c                                # la hanche de la jambe qui avance part en avant
+    roll = g["list"] * float(np.sin(2 * np.pi * (phi + 0.05)))      # le bassin descend du côté du pied levé
+    twist = g["shoulders"] * c - yaw                      # épaules à l'opposé du bassin
+    arms = {}
+    for s, cs in (("R", c), ("L", -c)):                    # cs = 1 : bras en avant (à l'opposé de la jambe du même côté)
+        fwd = (1 + cs) / 2
+        arms[S("upperarm01", s)] = sided(s, [g["arm_mid"] - g["arm"] * cs, -g["arm_in"] * fwd, g["arm_out"]])
+        arms[S("lowerarm01", s)] = [-(g["elbow"] + g["elbow_swing"] * fwd), 0, 0]
+    p = P("stand", root={"rot": [["x", g["lean"]], ["z", roll], ["y", yaw]], "offset": [g["sway"] * S_HIP * float(np.sin(2 * np.pi * (phi - 0.05))), 0, 0]},
+          spine05=[0, twist * 0.2, -roll * 0.3], spine04=[0, twist * 0.2, -roll * 0.3], spine03=[0, twist * 0.2, -roll * 0.2],
+          spine02=[0, twist * 0.2, -roll * 0.2], spine01=[0, twist * 0.2, 0], neck01=[-g["lean"] * 0.6, -g["shoulders"] * c * 0.5, 0],
+          head=[-g["lean"] * 0.4, -g["shoulders"] * c * 0.5, 0], **arms, **g["hands"])
+    feet = {"L": walk_foot("L", phi % 1.0, g), "R": walk_foot("R", (phi + 0.5) % 1.0, g)}
+    hs = [h for _, h in walk_heights(p, phi, feet, g)]
+    if not solve:
+        return dict(walk_heights(p, phi, feet, g))
+    k = 100.0
+    p["root"]["offset"][1] = float(-np.log(sum(np.exp(-k * (h - min(hs))) for h in hs)) / k + min(hs))
+    for s in "LR":
+        a, pitch, toes = feet[s]
+        sw = ((phi + (0 if s == "L" else 0.5)) % 1.0 - g["stance"]) / (1 - g["stance"])
+        for _ in range(3):
+            q = legs(p, **{s: a, f"pole_{s}": (0, 0, 1), f"foot_pitch_{s}": pitch, f"toes_{s}": toes})
+            gap = low_of(q, WALK_FOOT[s]) - WALK_FLOOR
+            if sw < 0:
+                a = a - [0, gap, 0]                              # pied d'appui : sa peau touche le sol, ni plus ni moins
+            else:                                                # pied en l'air : il passe au-dessus du sol
+                a = a + [0, max(0.0, 0.012 * min(1.0, sw / 0.12, (1 - sw) / 0.1) - gap), 0]
+        p = legs(p, **{s: a, f"pole_{s}": (0, 0, 1), f"foot_pitch_{s}": pitch, f"toes_{s}": toes})
+    return placed(p)
+def walking(mid, period, n, muscles, **g):
+    g = dict(dict(stance=0.62, flat=0.08, heel_off=0.32, width=0.75), **g)
+    g["stride"] *= S_LEG; g["clear"] *= S_LEG
+    # Le talon se pose devant à l'instant où la jambe arrière, tendue, a amené le bassin à la même hauteur : pas d'à-coup.
+    lo, hi = 0.12 * S_LEG, 0.42 * S_LEG
+    for _ in range(14):
+        g["front"] = (lo + hi) / 2
+        h = walk_pose(0.0, g, solve=False)
+        if h["L"] > h["R"]: lo = g["front"]
+        else: hi = g["front"]
+    print(mid, ": talon posé à", round(g["front"] / S_LEG, 3), "de jambe devant la hanche")
+    motion(mid, [K(period * i / n, walk_pose(i / n, g), "linear") for i in range(n)] + [K(period, walk_pose(0.0, g), "linear")],
+           muscles=muscles, yaw=70)
+# Promenade : pas tranquilles, bras souples qui balancent à l'opposé des jambes.
+walking("walk", 1.2, 40, ("quads", "calves", "glutes"), stride=1.08, strike=14, push=36, clear=0.035, pelvis=6, list=2.5,
+        shoulders=4, lean=2, sway=0.018, load=0.007, arm_mid=3, arm=20, arm_in=6, arm_out=7, elbow=12, elbow_swing=16, hands=open_hand(0.3))
+# Marche soutenue : cadence plus élevée, coudes pliés à 90°, bras qui balancent franchement d'avant en arrière
+# (le poing monte à hauteur de poitrine devant, revient à la hanche derrière), buste à peine penché.
+walking("walk-fast", 0.92, 36, ("quads", "calves", "glutes", "hamstrings"), stride=1.30, strike=18, push=42, clear=0.04, pelvis=8,
+        list=3.5, shoulders=7, lean=4, sway=0.016, load=0.009, stance=0.60, arm_mid=4, arm=38, arm_in=8, arm_out=10, elbow=88, elbow_swing=4,
+        hands=fist(0.75))
+
 # Boxe dans le vide : garde (pied gauche devant, genoux souples, poings au menton), direct du gauche, retour en garde,
 # direct du droit avec rotation du buste, retour. Les pieds restent posés.
 BOX_FEET = {"L": ankle("L", dx=0.03 * S_HIP, dz=0.17 * S_LEG), "R": ankle("R", dx=-0.06 * S_HIP, dz=-0.15 * S_LEG)}
@@ -1966,13 +2078,10 @@ motion("legs-tense", [K(0, "chairSit"), K(1.5, legs_out), K(3, legs_out), K(4.5,
 
 # ─── Mouvements issus de captures réelles (CMU Graphics Lab, http://mocap.cs.cmu.edu) ───
 # (identifiant, fichier BVH, fenêtre en secondes, durée de boucle min/max, vitesse, angle de vue, muscles, redressement)
-# Marche : capture « marche lente », ralentie ; marche rapide : capture de marche normale, accélérée (un pied toujours
-# au sol, rien d'un petit trot). Redressement : flexion ajoutée à un os (degrés, > 0 vers l'avant) ; le reciblage penche
-# trop le buste en avant et, dans la marche lente, lève trop le menton.
-MOCAP = [
-    ("walk", "007/07_04.bvh", (0.2, 3.7), (1.2, 2.2), 0.85, 70, ("quads", "calves", "glutes"), {"spine05": -2.0, "neck01": 8.0, "head": 9.0}),
-    ("walk-fast", "007/07_01.bvh", (0.2, 2.6), (0.9, 1.4), 1.3, 70, ("quads", "calves", "glutes", "hamstrings"), {"spine05": -3.0}),
-]
+# Redressement : flexion ajoutée à un os (degrés, > 0 vers l'avant). Plus aucun mouvement n'en vient : les deux captures
+# de marche (CMU 07_04 et 07_01) ont le genou d'appui plié de 20 à 30° dans la capture elle-même, ce qui donnait une
+# marche accroupie ; la promenade et la marche soutenue sont écrites par objectifs (voir « Marche », plus haut).
+MOCAP = []
 KEY_BONES = ["root", "spine03", "spine01", "neck01", "upperarm01.L", "upperarm01.R", "lowerarm01.L", "lowerarm01.R",
              "upperleg01.L", "upperleg01.R", "lowerleg01.L", "lowerleg01.R"]
 
