@@ -869,9 +869,9 @@ motion("half-squat-arms", [K(0, top), K(1.8, squat(0.2, 0.09, 24, arms_front)), 
 # Debout devant la chaise, pieds largeur de bassin. Les hanches partent vers l'arrière, le buste se penche, les bras
 # montent devant pour l'équilibre ; les fesses descendent jusqu'à effleurer le dessus de l'assise (hauteur du bassin
 # réglée sur la peau de chaque corps), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque
-# verticaux (genoux au-dessus des pieds). La chaise est posée d'après le corps : assise à 46 cm, son milieu sous les
+# verticaux (genoux au-dessus des pieds). La chaise est posée d'après le corps : assise à 45 ou 46 cm, son milieu sous les
 # hanches en bas du squat, son bord avant derrière les mollets du personnage debout. Pieds résolus à chaque clé.
-SQUAT_SEAT = 0.46                                            # hauteur de l'assise (m)
+SQUAT_SEAT = 0.46 if BODY == "male" else 0.45              # hauteur de l'assise (m) : chaise à la taille du corps
 SQUAT_BACK, SQUAT_LEAN = 0.31 * S_LEG, 30.0                  # recul du bassin, inclinaison du buste en bas du squat
 def chair_squat(s, depth=0.3 * S_LEG):
     """s : 0 debout, 1 fesses sur l'assise ; depth : descente du bassin en bas du squat."""
@@ -882,17 +882,27 @@ def chair_squat(s, depth=0.3 * S_LEG):
     return legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.15, 0, 1), pole_R=(-0.15, 0, 1))
 _sv = posed_skin("stand")[0]
 _calf = float(_sv[(_sv[:, 1] > _sv[:, 1].min() + 0.05) & (_sv[:, 1] < _sv[:, 1].min() + SQUAT_SEAT + 0.01), 2].min())
-# Bord avant de l'assise : milieu de l'assise sous les hanches, et au moins 1 cm derrière les mollets debout.
-SQUAT_FRONT = min(float(joints(chair_squat(1))["upperleg01.L"][2]) + 0.21, _calf - 0.01)
-_lo, _hi = 0.15 * S_LEG, 0.6 * S_LEG
-for _ in range(20):
-    SQUAT_DEPTH = (_lo + _hi) / 2
-    if seat_low(chair_squat(1, SQUAT_DEPTH), SQUAT_FRONT, SQUAT_FRONT - 0.42) > SQUAT_SEAT + 2 * SEAT_GAP: _lo = SQUAT_DEPTH
-    else: _hi = SQUAT_DEPTH
-SQUAT_DEPTH = _lo
+# Bord avant de l'assise : milieu de l'assise sous les hanches, et au moins 1 cm derrière les mollets debout. Hanches
+# plus hautes que les genoux, les cuisses descendent vers l'avant : si elles touchent le bord avant alors que les
+# fesses restent en l'air (plus de 4 mm), la chaise recule centimètre par centimètre (les hanches restent à 10 cm au
+# moins derrière le bord). La descente du bassin est réglée sur la peau à chaque essai : 1 mm au-dessus de l'assise.
+_hip_z = float(joints(chair_squat(1))["upperleg01.L"][2])
+SQUAT_FRONT = min(_hip_z + 0.21, _calf - 0.01)
+while True:
+    _lo, _hi = 0.15 * S_LEG, 0.6 * S_LEG
+    for _ in range(20):
+        SQUAT_DEPTH = (_lo + _hi) / 2
+        if seat_low(chair_squat(1, SQUAT_DEPTH), SQUAT_FRONT, SQUAT_FRONT - 0.42) > SQUAT_SEAT + 2 * SEAT_GAP: _lo = SQUAT_DEPTH
+        else: _hi = SQUAT_DEPTH
+    SQUAT_DEPTH = _lo
+    _buttocks = seat_low(chair_squat(1, SQUAT_DEPTH), _hip_z + 0.03, SQUAT_FRONT - 0.42) - SQUAT_SEAT
+    if _buttocks <= 0.004 or SQUAT_FRONT - 0.01 < _hip_z + 0.10: break
+    SQUAT_FRONT -= 0.01
+print("squat sur chaise : assise", SQUAT_SEAT, "bord avant", round(SQUAT_FRONT, 3), "hanches", round(_hip_z, 3),
+      "fesses à", round(_buttocks * 1000, 1), "mm de l'assise")
 seat = chair_squat(1, SQUAT_DEPTH)
-motion("chair-squat", [K(0, "stand")] + planted(0, 3, lambda s: chair_squat(s, SQUAT_DEPTH), n=9) + [K(3.3, seat)]
-       + planted(3.3, 4.3, lambda s: chair_squat(1 - s, SQUAT_DEPTH), n=6) + [K(5.2, "stand")],
+motion("chair-squat", [K(0, "stand")] + planted(0, 3, lambda s: chair_squat(s, SQUAT_DEPTH), n=12) + [K(3.3, seat)]
+       + planted(3.3, 4.3, lambda s: chair_squat(1 - s, SQUAT_DEPTH), n=10) + [K(5.2, "stand")],
        muscles=("quads", "glutes"), yaw=70, props=(prop("chair", None, 0, (0, SQUAT_SEAT, SQUAT_FRONT - 0.21)),))
 
 # ─── Renforcement ───

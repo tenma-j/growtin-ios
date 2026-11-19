@@ -94,7 +94,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - squat sur chaise (`chair_squat`) : debout devant la chaise, les hanches reculent, le buste se penche, les bras
      montent devant ; les fesses descendent jusqu'à effleurer l'assise (descente du bassin réglée sur la peau, 1 mm de
      jeu), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque verticaux, pieds résolus
-     à chaque clé. La chaise (assise à 46 cm) est placée d'après chaque corps, en coordonnées du sol (sans ancre) :
+     à chaque clé. La chaise (assise à 46 cm) est placée d'après chaque corps (45 cm pour la femme), en coordonnées du sol (sans ancre) :
      son milieu sous les hanches en bas du squat, son bord avant au moins 1 cm derrière les mollets du personnage
      debout. Une ancre sur une image clé numérotée ne convient pas ici : des clés intermédiaires sont ajoutées
      après coup, et la chaise s'était retrouvée réglée sur une pose presque debout (assise à 77 cm) ;
