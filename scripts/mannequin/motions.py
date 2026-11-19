@@ -1610,14 +1610,20 @@ def ham_body(hinge, ankle_L=None, pitch_L=None):
 # cheville est réglée sur la peau : le talon touche le sol au niveau de la plante de l'autre pied.
 _hip = _seat["upperleg01.L"]; _foot_L, _foot_R = region(("foot", "toes"), "L"), region(("foot", "toes"), "R")
 HAM_ANKLE = np.array([float(_hip[0]), float(_seat["foot.R"][1]) + 0.05, 0.0])
-for _ in range(8):
+# Le bassin qui roule vers l'avant éloigne la hanche du talon, qui ne bouge pas : la jambe part un peu moins tendue
+# (HAM_REACH, part de sa longueur) et finit de se tendre buste penché, à 99,6 % de sa longueur, sans décoller le talon.
+HAM_LEAN, HAM_REACH = 30.0, 0.985
+for _ in range(12):
     _drop = _hip[1] - HAM_ANKLE[1]
-    HAM_ANKLE[2] = _hip[2] + float(np.sqrt(LEG ** 2 - _drop ** 2)) * 0.985
-    HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * 0.985))))) - 12       # perpendiculaire au tibia, puis fléchi
+    HAM_ANKLE[2] = _hip[2] + float(np.sqrt((LEG * HAM_REACH) ** 2 - _drop ** 2))
+    HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * HAM_REACH))))) - 12   # perpendiculaire au tibia, puis fléchi
     _hp = ham_body(0)
     _hv = posed_skin(_hp)[0]
     HAM_ANKLE[1] -= float(_hv[_foot_L, 1].min() - _hv[_foot_R, 1].min())
     _hip = joints(_hp)["upperleg01.L"]                   # hanche de la pose posée sur le matelas (bassin remonté)
+    _far = float(np.linalg.norm(HAM_ANKLE - joints(ham_body(HAM_LEAN))["upperleg01.L"])) / LEG
+    HAM_REACH = min(0.985, HAM_REACH - 0.6 * (_far - 0.996))
+    print("jambe tendue : portée", round(HAM_REACH, 4), "buste penché", round(_far, 4))
 def hamstring(side, hinge):
     o = other(side)
     p = ham_body(hinge)
@@ -1631,7 +1637,7 @@ def hamstring(side, hinge):
     return hands(p, L=hand_on, R=rest_o,
                  fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.3, 1], palm_R=[0, -1, 0],
                  pole_L=(1, -0.6, -0.3), pole_R=(-0.5, -0.3, -1))
-hL0, hL1 = hamstring("L", 0), hamstring("L", 30)
+hL0, hL1 = hamstring("L", 0), hamstring("L", HAM_LEAN)
 # La jambe se tend pied décollé du sol, puis le talon se pose.
 def ham_way(f, lift):
     def build(dy):
@@ -1643,7 +1649,7 @@ _hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12, 0.04), ham_way(0.5, 
 def ham_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
     w = [f(p) for p in _hway]; h0, h1 = f(hL0), f(hL1)
-    lean = lambda s: f(hamstring("L", 30 * s))           # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
+    lean = lambda s: f(hamstring("L", HAM_LEAN * s))           # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
     # entre la jambe presque tendue et le talon posé, la main suit la cuisse (clé intermédiaire remise en contact)
     mid = settle_hands(blend(w[2], h0, 0.5), gap=0.006)
     return ([K(t0 + 0.3, w[0]), K(t0 + 0.8, w[1], "linear"), K(t0 + 1.3, w[2], "linear"), K(t0 + 1.55, mid, "linear"), K(t0 + 1.8, h0, "out")]
