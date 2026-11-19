@@ -1665,13 +1665,13 @@ def ham_way(f):
         p = ham_body(HAM_SIT * f, ankle_L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f, pitch_L=HAM_PITCH * f, lift=lift)
         lift += 0.012 - foot_gap(p)
     return p
-_hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12), ham_way(0.5), ham_way(0.93))]   # la cuisse monte sous la main
+_hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12), ham_way(0.5), ham_way(0.93), ham_way(1.0))]   # la cuisse monte sous la main
 def ham_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
     w = [f(p) for p in _hway]; h0, h1 = f(hL0), f(hL1)
-    lean = lambda s: f(hamstring("L", HAM_LEAN * s))           # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
-    # entre la jambe presque tendue et le talon posé, la main suit la cuisse (clé intermédiaire remise en contact)
-    mid = settle_hands(blend(w[2], h0, 0.5), gap=0.006)
+    # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
+    lean = lambda s: f(hamstring("L", HAM_SIT + (HAM_LEAN - HAM_SIT) * s))
+    mid = w[3]                                           # jambe tendue, talon à 12 mm du sol, juste avant de le poser
     return ([K(t0 + 0.3, w[0]), K(t0 + 0.8, w[1], "linear"), K(t0 + 1.3, w[2], "linear"), K(t0 + 1.55, mid, "linear"), K(t0 + 1.8, h0, "out")]
             + planted(t0 + 1.8, t0 + 3.6, lean, n=5) + [K(t0 + 7.6, h1)] + planted(t0 + 7.6, t0 + 9.2, lambda s: lean(1 - s), n=5)
             + [K(t0 + 9.45, mid, "in"), K(t0 + 9.7, w[2], "linear"), K(t0 + 10.2, w[1], "linear"), K(t0 + 10.7, w[0], "linear"), K(t0 + 11.0, "chairSit", "out")])
