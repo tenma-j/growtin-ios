@@ -1591,24 +1591,36 @@ motion("bed-sit-breathe", breathe("chairSit"), yaw=28, pitch=10, props=(BED_SIT,
 motion("bed-neck", neck_tilt("chairSit"), muscles=("neck", "upperBack"), yaw=12, pitch=10, props=(BED_SIT,))
 
 # Arrière des cuisses : au bord du lit, une jambe tendue talon au sol, buste penché en avant dos long.
+# Le bassin reste posé sur le matelas : la jambe qui se tend descend la cuisse au bord du lit, et le buste qui se penche
+# fait pivoter le bassin autour de l'articulation racine (les hanches, devant elle, descendraient de 4 cm dans le
+# matelas). À chaque clé, le bassin est donc remonté jusqu'à ce que la peau touche le dessus du matelas (`on_seat`) :
+# on roule sur les fesses, pieds et mains résolus ensuite.
 _seat = joints("chairSit")
+BED_FRONT = SEAT_Z + BED_EDGE                            # bord avant du matelas (z)
 LEG = float(np.linalg.norm(STAND["lowerleg01.L"] - STAND["upperleg01.L"]) + np.linalg.norm(STAND["foot.L"] - STAND["lowerleg01.L"]))
+def ham_body(hinge, ankle_L=None, pitch_L=None):
+    """Assis au bord du lit, buste penché de « hinge » degrés, jambe gauche tendue (ou cheville en « ankle_L »)."""
+    def build(dy):
+        q = P("chairSit", root={"rot": [["x", hinge]], "offset": [0, dy, 0]}, spine04=[-hinge * 0.15, 0, 0], neck01=[-hinge * 0.4, 0, 0],
+              **open_hand(0.6))
+        q = legs(q, L=HAM_ANKLE if ankle_L is None else ankle_L, foot_pitch_L=HAM_PITCH if pitch_L is None else pitch_L)
+        return legs(q, R=_seat["foot.R"])
+    return on_seat(build, BED_FRONT, SEAT_TOP)
 # Jambe tendue : seul le talon est posé, pointe du pied vers le haut (cheville fléchie de 12° vers soi). La hauteur de la
 # cheville est réglée sur la peau : le talon touche le sol au niveau de la plante de l'autre pied.
 _hip = _seat["upperleg01.L"]; _foot_L, _foot_R = region(("foot", "toes"), "L"), region(("foot", "toes"), "R")
 HAM_ANKLE = np.array([float(_hip[0]), float(_seat["foot.R"][1]) + 0.05, 0.0])
-for _ in range(6):
+for _ in range(8):
     _drop = _hip[1] - HAM_ANKLE[1]
     HAM_ANKLE[2] = _hip[2] + float(np.sqrt(LEG ** 2 - _drop ** 2)) * 0.985
     HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * 0.985))))) - 12       # perpendiculaire au tibia, puis fléchi
-    _hp = legs(legs(P("chairSit"), L=HAM_ANKLE, foot_pitch_L=HAM_PITCH), R=_seat["foot.R"])
+    _hp = ham_body(0)
     _hv = posed_skin(_hp)[0]
     HAM_ANKLE[1] -= float(_hv[_foot_L, 1].min() - _hv[_foot_R, 1].min())
+    _hip = joints(_hp)["upperleg01.L"]                   # hanche de la pose posée sur le matelas (bassin remonté)
 def hamstring(side, hinge):
     o = other(side)
-    p = P("chairSit", root={"rot": [["x", hinge]]}, spine04=[-hinge * 0.15, 0, 0], neck01=[-hinge * 0.4, 0, 0], **open_hand(0.6))
-    p = legs(p, **{side: HAM_ANKLE}, **{f"foot_pitch_{side}": HAM_PITCH})
-    p = legs(p, **{o: _seat[f"foot.{o}"]})
+    p = ham_body(hinge)
     J = joints(p)
     knee = J[f"lowerleg01.{side}"]; thigh = (J[f"upperleg01.{side}"] + knee) / 2
     hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.055, 0]
@@ -1622,8 +1634,11 @@ def hamstring(side, hinge):
 hL0, hL1 = hamstring("L", 0), hamstring("L", 30)
 # La jambe se tend pied décollé du sol, puis le talon se pose.
 def ham_way(f, lift):
-    p = legs(P("chairSit"), L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f + [0, lift, 0], foot_pitch_L=HAM_PITCH * f)
-    return legs(p, R=_seat["foot.R"])
+    def build(dy):
+        p = legs(P("chairSit", root={"offset": [0, dy, 0]}), L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f + [0, lift, 0],
+                 foot_pitch_L=HAM_PITCH * f)
+        return legs(p, R=_seat["foot.R"])
+    return on_seat(build, BED_FRONT, SEAT_TOP)
 _hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12, 0.04), ham_way(0.5, 0.075), ham_way(0.93, 0.05))]   # la cuisse monte sous la main
 def ham_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
@@ -2120,3 +2135,16 @@ if __name__ == "__main__":
     json.dump({"version": 3, "bones": bones, "regions": REGIONS, "bodies": bodies},
               open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
     print("→", OUT, os.path.getsize(OUT) // 1024, "Ko")
+    # Contrôle des accessoires sur le fichier écrit, tel que l'app le joue (15 images/s) : aucune peau à plus de 5 mm
+    # à l'intérieur d'une chaise, d'un lit, d'une table, d'un mur ou d'une porte.
+    from prop_scan import scan, LIMIT_MM
+    print("Peau dans les accessoires (prop_scan.py)…")
+    bad = scan(show=False)
+    if bad:
+        print("!" * 100)
+        print(f"ATTENTION : peau à plus de {LIMIT_MM:.0f} mm à l'intérieur d'un accessoire, à corriger avant de livrer :")
+        for body, mid, res in bad:
+            print(f"  {body:6} {mid:22} " + " | ".join(f"{n} {d:.0f} mm à t={t} s ({bone}, {cnt} sommets)" for n, d, t, bone, cnt in res))
+        print("!" * 100)
+    else:
+        print(f"  aucun mouvement ne dépasse {LIMIT_MM:.0f} mm.")
