@@ -1632,7 +1632,7 @@ def ham_body(hinge, ankle_L=None, pitch_L=None, lift=0.0):
 # cheville est réglée sur la peau : le talon touche le sol au niveau de la plante de l'autre pied.
 _hip = _seat["upperleg01.L"]; _foot_L, _foot_R = region(("foot", "toes"), "L"), region(("foot", "toes"), "R")
 HAM_ANKLE = np.array([float(_hip[0]), float(_seat["foot.R"][1]) + 0.05, 0.0])
-def foot_gap(pose):
+def heel_gap(pose):
     """Hauteur du pied gauche au-dessus de la plante du pied droit, posé."""
     v = posed_skin(pose)[0]
     return float(v[_foot_L, 1].min() - v[_foot_R, 1].min())
@@ -1641,7 +1641,7 @@ for _ in range(8):
     HAM_ANKLE[2] = _hip[2] + float(np.sqrt((LEG * HAM_REACH) ** 2 - _drop ** 2))
     HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * HAM_REACH))))) - 12   # perpendiculaire au tibia, puis fléchi
     _hp = ham_body(HAM_SIT, ankle_L=HAM_ANKLE)           # cheville imposée : le bassin ne recule pas pendant ce réglage
-    HAM_ANKLE[1] -= foot_gap(_hp)
+    HAM_ANKLE[1] -= heel_gap(_hp)
     _hip = joints(_hp)["upperleg01.L"]                   # hanche de la pose posée sur le matelas (bassin remonté)
 def hamstring(side, hinge):
     o = other(side)
@@ -1663,7 +1663,7 @@ def ham_way(f):
     lift = 0.02
     for _ in range(3):
         p = ham_body(HAM_SIT * f, ankle_L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f, pitch_L=HAM_PITCH * f, lift=lift)
-        lift += 0.012 - foot_gap(p)
+        lift += 0.012 - heel_gap(p)
     return p
 _hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12), ham_way(0.5), ham_way(0.93), ham_way(1.0))]   # la cuisse monte sous la main
 def ham_keys(t0, flip):
