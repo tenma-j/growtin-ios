@@ -90,7 +90,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      12 cm devant le bassin (`BED_EDGE`) : la cuisse d'une jambe tendue talon au sol passe devant lui. Quand la pose
      change ce qui est posé (jambe qui se tend, buste qui se penche et fait pivoter le bassin), `on_seat` remonte le
      bassin à chaque clé jusqu'à ce que la peau touche de nouveau le matelas, pieds et mains résolus ensuite
-     (étirement de l'arrière des cuisses) ;
+     (étirement de l'arrière des cuisses : le buste bascule d'un bloc depuis les hanches, de 10° à 46°, dos long ;
+     jambe tendue à 99,8 % de sa longueur, le bassin avance de 1 à 3 cm sur le matelas pour que le talon ne bouge
+     pas ; la jambe se tend en glissant, pied à 12 mm du sol) ;
+   - tempos des consignes de la relaxation : poings serrés 5 s puis 10 s de relâchement, épaules tenues 5 s, ventre
+     contracté 5 s buste droit (bas de la colonne à peine fléchi, haut redressé d'autant) puis relâché lentement ;
    - squat sur chaise (`chair_squat`) : debout devant la chaise, les hanches reculent, le buste se penche, les bras
      montent devant ; les fesses descendent jusqu'à effleurer l'assise (descente du bassin réglée sur la peau, 1 mm de
      jeu), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque verticaux, pieds résolus
