@@ -46,7 +46,16 @@ struct MotionTests {
             for region in motion.muscles { #expect(regions.contains(region), "\(id) : \(region)") }
             for prop in motion.props {
                 if let anchor = prop.anchor { #expect(bones.contains(anchor), "\(id) : ancre \(anchor)") }
-                #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow", "towel"].contains(prop.kind), "\(id) : \(prop.kind)")
+                #expect(["chair", "table", "wall", "mat", "door", "bed", "pillow", "towel", "glass"].contains(prop.kind), "\(id) : \(prop.kind)")
+                // Verre tenu : trois sommets de la peau (paume, côté de l'index, dos de la main), dimensions d'un verre.
+                if prop.kind == "glass" {
+                    #expect(prop.vertices?.count == 3 && Set(prop.vertices ?? []).count == 3 && prop.vertices?.allSatisfy({ $0 >= 0 }) == true,
+                            "\(id) : sommets du verre")
+                    let width = prop.width ?? HeldGlass.defaultWidth, height = prop.height ?? HeldGlass.defaultHeight
+                    #expect(width > 0.04 && width < 0.09 && height > 0.07 && height < 0.16, "\(id) : dimensions du verre")
+                    let depth = prop.depth ?? 0
+                    #expect(depth >= width / 2 && depth < width / 2 + 0.02, "\(id) : le verre est contre la paume, pas dedans")
+                }
                 // Serviette : trois sommets de la peau (main gauche, pied, main droite), deux points au sol de part et
                 // d'autre du pied (à quelques centimètres du sommet du pied, celui de la main gauche du côté gauche),
                 // bande plate.
@@ -276,5 +285,18 @@ struct MotionTests {
         #expect(TowelPath.grip(palm: left, back: left, depth: 0.009) == left)
         #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0.06, 0]], thickness: 0.006) == nil)
         #expect(TowelPath.segments(leftHand: left, foot: foot, rightHand: right, under: [[0, 0], [0, 0]], thickness: 0.006) == nil)
+    }
+
+    @Test("Verre tenu : posé contre la paume, debout du côté de l'index")
+    func heldGlass() throws {
+        // Main droite devant soi : paume vers la gauche (+X), index en haut.
+        let palm = Vec3(-0.2, 1.0, 0.3), back = Vec3(-0.225, 1.0, 0.3), index = Vec3(-0.19, 1.04, 0.31)
+        let glass = try #require(HeldGlass.placement(palm: palm, back: back, index: index, depth: 0.033))
+        #expect((glass.center - Vec3(-0.167, 1.0, 0.3)).length < 1e-12)
+        // Axe unitaire, perpendiculaire à la direction paume → verre, tourné vers le sommet de l'index.
+        #expect(abs(glass.axis.length - 1) < 1e-12 && abs(glass.axis.x) < 1e-12)
+        #expect(glass.axis.y > 0.9 && glass.axis.z > 0)
+        #expect(HeldGlass.placement(palm: palm, back: palm, index: index, depth: 0.033) == nil)
+        #expect(HeldGlass.placement(palm: palm, back: back, index: Vec3(-0.1, 1.0, 0.3), depth: 0.033) == nil)
     }
 }

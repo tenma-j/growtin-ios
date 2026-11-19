@@ -64,6 +64,14 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         let thickness: Double
     }
     private var towel: Towel?
+    /// Verre tenu dans une main : un cylindre replacé à chaque image d'après trois sommets de la peau déformée
+    /// (paume, côté de l'index, dos de la main) ; voir `HeldGlass`.
+    private struct Glass {
+        let node: SCNNode
+        let vertices: [Int]
+        let depth: Double
+    }
+    private var glass: Glass?
     /// Décor en place (accessoires et points d'ancrage) : gardé tel quel si le mouvement suivant demande le même.
     private var builtProps: (props: [MotionProp], anchors: [Vec3])?
     /// Le dernier cadrage était resserré sur une zone du corps : la caméra en revient aussi doucement qu'elle y va.
@@ -388,6 +396,24 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                     node.isHidden = false
                 }
             }
+            if let glass {
+                let p = deformer.positions
+                func point(_ i: Int) -> Vec3 { Vec3(Double(p[i * 3]), Double(p[i * 3 + 1]), Double(p[i * 3 + 2])) }
+                // Caché pendant la transition depuis le mouvement précédent : la main n'est pas encore refermée dessus.
+                if fromRotations == nil,
+                   let placed = HeldGlass.placement(palm: point(glass.vertices[0]), back: point(glass.vertices[2]),
+                                                    index: point(glass.vertices[1]), depth: glass.depth) {
+                    let y = SIMD3<Float>(Float(placed.axis.x), Float(placed.axis.y), Float(placed.axis.z))
+                    // Cylindre de révolution : n'importe quel repère perpendiculaire à l'axe convient.
+                    let helper: SIMD3<Float> = abs(y.x) < 0.9 ? SIMD3<Float>(1, 0, 0) : SIMD3<Float>(0, 0, 1)
+                    let x = simd_normalize(simd_cross(y, helper)), z = simd_cross(x, y)
+                    let c = SIMD3<Float>(Float(placed.center.x), Float(placed.center.y), Float(placed.center.z))
+                    glass.node.simdTransform = simd_float4x4(columns: (SIMD4<Float>(x, 0), SIMD4<Float>(y, 0), SIMD4<Float>(z, 0), SIMD4<Float>(c, 1)))
+                    glass.node.isHidden = false
+                } else {
+                    glass.node.isHidden = true
+                }
+            }
         } else {
             for (node, q) in zip(boneNodes, rotations) { node.simdOrientation = q }
             boneNodes.first?.simdPosition = root
@@ -518,6 +544,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         propsNode.childNodes.forEach { $0.removeFromParentNode() }
         lock.lock(); let oldTowel = towel; towel = nil; let canDeform = deformer != nil; lock.unlock()
         oldTowel?.bands.forEach { $0.removeFromParentNode() }
+        lock.lock(); let oldGlass = glass; glass = nil; lock.unlock()
+        oldGlass?.node.removeFromParentNode()
         guard let asset else { return }
         builtProps = (props: props, anchors: anchors)
         let wood = Self.pbr(UIColor(red: 0.62, green: 0.47, blue: 0.33, alpha: 1), roughness: 0.65)
@@ -614,6 +642,36 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 let held = Towel(bands: bands, vertices: ids, backs: backs, depth: prop.depth ?? 0, under: under,
                                  thickness: Double(flat.thickness))
                 lock.lock(); towel = held; lock.unlock()
+                continue
+            case "glass":
+                guard let ids = prop.vertices, ids.count == 3, canDeform,
+                      ids.allSatisfy({ $0 >= 0 && $0 < asset.file.surface.rest.count / 3 }) else { continue }
+                let radius = CGFloat(prop.width ?? HeldGlass.defaultWidth) / 2
+                let height = CGFloat(prop.height ?? HeldGlass.defaultHeight)
+                // Verre droit, légèrement bleuté, rempli d'eau aux deux tiers : lisible sur le fond clair du studio.
+                let shell = Self.pbr(UIColor(red: 0.80, green: 0.90, blue: 0.96, alpha: 1), roughness: 0.15)
+                shell.transparency = 0.45
+                shell.writesToDepthBuffer = false
+                let water = Self.pbr(UIColor(red: 0.36, green: 0.66, blue: 0.90, alpha: 1), roughness: 0.2)
+                water.transparency = 0.8
+                let outer = SCNCylinder(radius: radius, height: height)
+                outer.materials = [shell]
+                let inner = SCNCylinder(radius: radius - 0.003, height: height * 0.62)
+                inner.materials = [water]
+                let held = SCNNode()
+                let waterNode = SCNNode(geometry: inner)
+                waterNode.simdPosition = SIMD3<Float>(0, Float(-height * 0.19 + 0.003), 0)
+                waterNode.castsShadow = true
+                waterNode.renderingOrder = 1
+                let shellNode = SCNNode(geometry: outer)
+                shellNode.castsShadow = false
+                shellNode.renderingOrder = 2
+                held.addChildNode(waterNode)
+                held.addChildNode(shellNode)
+                held.isHidden = true
+                container.addChildNode(held)
+                let value = Glass(node: held, vertices: ids, depth: prop.depth ?? Double(radius))
+                lock.lock(); glass = value; lock.unlock()
                 continue
             default:
                 continue

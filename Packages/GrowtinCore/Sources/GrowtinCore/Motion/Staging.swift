@@ -125,3 +125,31 @@ public enum TowelPath {
         return [left, middle, right]
     }
 }
+
+/// Verre tenu dans une main : sa place suit trois sommets de la peau déformée de cette main. Calcul pur : l'app et
+/// les planches de contrôle (`glass_pose`, scripts/mannequin/motion_eval.py) posent le même cylindre.
+public enum HeldGlass {
+    public struct Placement: Equatable, Sendable {
+        /// Centre du verre (milieu de son axe).
+        public let center: Vec3
+        /// Axe du verre, du fond vers le bord (vecteur unitaire).
+        public let axis: Vec3
+    }
+
+    public static let defaultWidth = 0.062
+    public static let defaultHeight = 0.105
+
+    /// - `palm` : sommet au creux de la paume ; `back` : sommet du dos de la main, en face ; `index` : sommet au bord
+    ///   de la paume du côté de l'index (le haut du verre est de ce côté) ; `depth` : distance de la paume à l'axe du verre.
+    /// - Renvoie `nil` si les sommets sont confondus ou alignés.
+    public static func placement(palm: Vec3, back: Vec3, index: Vec3, depth: Double) -> Placement? {
+        let out = palm - back
+        guard out.length > 1e-6 else { return nil }
+        let n = out * (1 / out.length)
+        let toIndex = index - palm
+        let along = toIndex.x * n.x + toIndex.y * n.y + toIndex.z * n.z
+        let up = toIndex - n * along
+        guard up.length > 1e-6 else { return nil }
+        return Placement(center: palm + n * depth, axis: up * (1 / up.length))
+    }
+}
