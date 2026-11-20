@@ -124,8 +124,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      la verticale de son appui avant de partir vers le mollet (`tree_shift`) ; il glissait de 15 cm au sol ;
    - pas chassés : chaque pas est résolu en six clés (pied qui monte à la verticale, se déplace en l'air, se pose à la
      verticale ; pied d'appui replacé à chaque clé) : moins de 3 mm de glissement ;
-   - rowing serviette : bassin penché de 17°, buste (bassin → cou) à 22–24°, genoux à 140–150° ; chaque brin mesure
-     environ 0,9 m (la serviette fait donc 1,9 à 2 m : une grande serviette de plage) ;
+   - rowing serviette : bassin penché de 17°, buste (bassin → cou) à 23–24°, genoux à 134–147° ; chaque brin mesure
+     0,80 m (femme) ou 0,92 m (homme), constant à 2 mm près (la serviette fait donc 1,7 à 1,9 m : une serviette de plage) ;
    - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
      cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon

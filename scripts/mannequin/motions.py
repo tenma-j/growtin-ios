@@ -1175,7 +1175,7 @@ motion("glute-bridge", [K(0, bridge_rest)] + planted(0, 1.5, lambda s: bridge(BR
        + planted(3.5, 5.0, lambda s: bridge(BRIDGE_TOP * (1 - s))) + [K(5.6, bridge_rest)],
        muscles=("glutes", "hamstrings"), yaw=0, pitch=12, props=(MAT,))
 
-# Rowing serviette : debout, un pied un peu avancé, posé sur la serviette, talons au sol, genoux souples (145–150°), buste à peine
+# Rowing serviette : debout, un pied un peu avancé, posé sur la serviette, talons au sol, genoux souples (134–147°), buste à peine
 # incliné (une vingtaine de degrés, depuis les hanches), dos long, poitrine ouverte, regard devant soi. La serviette passe à plat sous la voûte du pied avant ; chaque poing en tient un bout.
 # Une serviette ne s'allonge pas : chaque poing reste à distance constante du point où son brin sort de sous le
 # pied (il se déplace sur une sphère centrée sur ce point), des bras tendus vers l'avant jusqu'aux côtes basses,
@@ -1359,7 +1359,7 @@ motion("knee-plank", [K(0, kplank), K(3, knee_plank(_kp, 1, _kw)), K(6, kplank)]
 # Mollets : montée sur la pointe des pieds. Les talons décollent en tournant autour de la base des orteils, qui restent
 # à plat au même endroit ; le corps monte d'autant, d'un bloc (genoux tendus, bassin au-dessus de l'avant des pieds).
 # Vu de près : des genoux au sol.
-CALF_RISE = 34.0                                         # talons levés (degrés) : environ 9 cm
+CALF_RISE = 34.0                                         # talons levés (degrés) : 8,2 cm (femme), 10,4 cm (homme)
 def calf_raise(u):
     deg = CALF_RISE * u; c, sn = np.cos(np.radians(deg)), np.sin(np.radians(deg)); kw = {}; move = np.zeros(3)
     for s in "LR":
