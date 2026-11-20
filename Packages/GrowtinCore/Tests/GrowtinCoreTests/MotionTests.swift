@@ -146,6 +146,28 @@ struct MotionTests {
         }
     }
 
+    @Test("Tempos écrits dans les consignes, étapes « Visage » cadrées de près", arguments: MotionLibrary.bodies)
+    func writtenTemposAndFaceSteps(body: String) throws {
+        let library = try MotionLibrary.bundled(body: body)
+        // Haussements : épaules tenues 3 secondes en haut.
+        let shrugs = try #require(library.motion("shrugs")).keys.map(\.t)
+        #expect(shrugs.count == 5 && abs(shrugs[2] - shrugs[1] - 3) < 1e-6)
+        #expect(abs((shrugs.last ?? 0) * 8 - 60) < 1e-6)                   // 8 fois dans l'étape de 60 secondes
+        // Regard au loin : inspire 5 secondes, expire 5 secondes.
+        let look = try #require(library.motion("look-far")).keys.map(\.t)
+        #expect(zip(look, look.dropFirst()).allSatisfy { abs($1 - $0 - 5) < 1e-6 })
+        // Relaxation progressive : l'étape « Visage » a son propre mouvement (contraction 5 s, détente), cadré sur la tête.
+        let relaxation = try #require(ExerciseLibrary.exercise(id: "relaxation-progressive"))
+        let face = try #require(relaxation.steps.first { $0.title == "Visage" })
+        #expect(face.motion == "chair-face")
+        let chairFace = try #require(library.motion("chair-face")).keys.map(\.t)
+        #expect(abs(chairFace[2] - chairFace[1] - 4) < 1e-6 && chairFace[1] <= 1 && abs(chairFace[2] - 5) < 1e-6)
+        for id in ["chair-face", "bed-scan-face", "bed-knees-chest"] {
+            let frame = try #require(library.motion(id)?.camera.frame, "\(id)")
+            #expect(frame.contains("head") && frame.allSatisfy { library.bones.contains($0) }, "\(id)")
+        }
+    }
+
     @Test("Pieds posés : squats, cercles de hanches et guerrier gardent les pieds au même endroit", arguments: MotionLibrary.bodies)
     func plantedFeet(body: String) throws {
         // Chaque corps a sa propre version des mouvements, calculée sur son squelette.

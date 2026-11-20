@@ -677,19 +677,55 @@ def ribs_in():
         kw.update({s: J[f"wrist.{s}"] + [0.012 * sg, 0.004, 0.0], f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": (sg, -0.3, -0.6)})
     return hands(p, **kw)
 motion("rib-breathing", [K(0, ribs), K(4, ribs_in()), K(10, ribs)], muscles=("chest", "abs"), yaw=20)
-motion("look-far", [K(0, P("stand", head=[-5, 0, 0])), K(3, P("stand", head=[-6, 12, 0], **BREATH_IN)),
-                    K(6, P("stand", head=[-5, 0, 0])), K(9, P("stand", head=[-6, -12, 0], **BREATH_IN)), K(12, P("stand", head=[-5, 0, 0]))], yaw=25)
+# Regard au loin : inspire 5 secondes (le regard part d'un côté), expire 5 secondes ; puis de l'autre côté.
+motion("look-far", [K(0, P("stand", head=[-5, 0, 0])), K(5, P("stand", head=[-6, 12, 0], **BREATH_IN)),
+                    K(10, P("stand", head=[-5, 0, 0])), K(15, P("stand", head=[-6, -12, 0], **BREATH_IN)), K(20, P("stand", head=[-5, 0, 0]))], yaw=25)
 motion("chair-breathe", breathe("chairSit"), yaw=30, props=(CHAIR,))
-# Méditation assise : dos des mains posé sur les genoux, paumes vers le ciel, doigts ouverts, coudes souples.
+# Méditation assise : dos droit, dos des mains posé sur les genoux, paumes vers le ciel, doigts ouverts, coudes souples.
+# Le bassin bascule vers l'avant (assis sur les ischions) : sans cela la pose de référence, cuisses repliées, se lit
+# comme un buste penché en arrière ; le cou rend la bascule, le regard reste horizontal. Les genoux descendent d'autant.
+# Jambes croisées posées : les fesses et l'arrière des cuisses reposent au sol, chaque pied est posé sur sa tranche
+# sous le tibia opposé (la jambe gauche devant). Chevilles placées par cinématique inverse ; leur hauteur est réglée
+# sur la peau pour que pieds et fesses touchent le sol ensemble (la pose de référence en tailleur laissait le bassin
+# 10 à 14 cm au-dessus du sol, assis sur les pieds).
+from rig import axis_angle as _aa  # noqa: E402
+SEATED_TILT = 9.0
+SEAT_CROSS = (0.13, 0.31, 0.19, 0.0)    # chevilles : vers le côté opposé, vers l'avant (gauche, droite), cheville gauche surélevée
+_seat_base = P(root={"rot": [["x", SEATED_TILT]]})
+_seat_skin = (region(("upperleg", "pelvis", "root", "spine05")), region(("foot", "toes")))
+def seat_legs(h):
+    H = joints(_seat_base); kw = {}
+    for s, sg, dz, up in (("L", 1, SEAT_CROSS[1], SEAT_CROSS[3]), ("R", -1, SEAT_CROSS[2], 0.0)):
+        hip = H[f"upperleg01.{s}"]
+        kw.update({s: [-sg * SEAT_CROSS[0], hip[1] - h + up, hip[2] + dz], f"pole_{s}": (sg, -0.15, 0.35),
+                   f"foot_rot_{s}": _aa([0, 1, 0], -sg * 100) @ _aa([0, 0, 1], -sg * 55)})
+    return legs(_seat_base, **kw)
+def _seat_gap(h):
+    v = posed_skin(seat_legs(h))[0]
+    return float(v[_seat_skin[1], 1].min() - v[_seat_skin[0], 1].min())
+_lo, _hi = 0.0, 0.3                               # les pieds descendent quand h augmente
+for _ in range(20):
+    _h = (_lo + _hi) / 2
+    if _seat_gap(_h) > 0: _lo = _h
+    else: _hi = _h
+_seat_legs = seat_legs(_lo)
+print("tailleur : chevilles", round(_lo, 3), "m sous les hanches, écart pieds / fesses", round(_seat_gap(_lo) * 1000, 1), "mm")
 def seated(breath=0.0):
-    p = P("crossLeggedLegs", spine01=[-3 * breath, 0, 0], spine02=[-2 * breath, 0, 0], neck01=[-breath, 0, 0], **open_hand(0.75))
+    p = P(_seat_legs, spine01=[-3 * breath, 0, 0], spine02=[-2 * breath, 0, 0],
+          neck01=[-SEATED_TILT * 0.6 - breath, 0, 0], head=[-SEATED_TILT * 0.4, 0, 0], **open_hand(0.75))
+    J = joints(_seat_legs)
     kw = {}
     for s, sg in (("L", 1), ("R", -1)):
-        hip, knee = _cl[f"upperleg01.{s}"], _cl[f"lowerleg01.{s}"]
-        kw.update({s: knee + 0.36 * (hip - knee) + [0.0, 0.04, 0.0], f"fingers_{s}": [0.75 * sg, -0.12, 1], f"palm_{s}": [0, 1, 0.1],
+        hip, knee = J[f"upperleg01.{s}"], J[f"lowerleg01.{s}"]
+        kw.update({s: knee + 0.22 * (hip - knee) + [0.0, 0.035, 0.0], f"fingers_{s}": [0.75 * sg, -0.12, 1], f"palm_{s}": [0, 1, 0.1],
                    f"pole_{s}": (sg, -0.5, -0.8)})
     return hands(p, **kw)
-motion("seated-breathe", [K(0, seated()), K(3, seated(1)), K(6, seated())], yaw=15, props=(MAT,))
+# Tapis centré sous le corps (fesses, genoux et pieds dessus).
+_sv = posed_skin(seated())[0]; _sr = joints(seated())["root"]
+_smid = (_sv.min(0) + _sv.max(0)) / 2 - _sr
+assert np.ptp(_sv[:, 2]) < 0.6 and np.ptp(_sv[:, 0]) < 1.85, "tailleur plus grand que le tapis"
+motion("seated-breathe", [K(0, seated()), K(3, seated(1)), K(6, seated())], yaw=15,
+       props=(prop("mat", "root", 0, (float(_smid[0]), 0, float(_smid[2])), floor=True),))
 
 # ─── Marche sur place, montées de genoux ───
 def knee_lift(side, hip, knee, arm, elbow, back_arm=18, twist=5):
@@ -1543,8 +1579,10 @@ for _mid in ("shoulder-rolls", "shoulder-rolls-both"):
     close_up(_mid, ("head", "upperarm01", "lowerarm01"), 0.12)
 
 shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 0])
-motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(3.2, P("stand", **shrug_up)),
-                  K(3.6, "stand", "out"), K(5, "stand")], muscles=("upperBack", "neck"), yaw=25)
+# Haussements : les épaules montent en inspirant, tenues 3 secondes, puis tombent en expirant ; 8 fois dans l'étape
+# de 60 secondes (boucle de 7,5 s).
+motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(4.2, P("stand", **shrug_up)),
+                  K(4.6, "stand", "out"), K(7.5, "stand")], muscles=("upperBack", "neck"), yaw=25)
 _chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22]), "chairSit")
 # Tempo de la consigne : épaules tenues 5 secondes vers les oreilles, puis elles tombent.
 motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(6.2, _chair_shrug),
@@ -1854,9 +1892,10 @@ QA = {s: _q[f"foot.{s}"].copy() for s in "LR"}
 _qr = ik.fk("quadruped")[0]
 QHAND = {s: hand_axes("quadruped", s) for s in "LR"}
 QARM = float(np.linalg.norm(_q["upperarm01.L"] - QW["L"]))
-def quad(curve, neck, head, clav):
-    """curve : flexion totale de la colonne (> 0 dos rond) ; clav : omoplates écartées (< 0) ou serrées (> 0)."""
-    sp = {f"spine0{5 - i}": [curve * w, 0, 0] for i, w in enumerate((0.24, 0.24, 0.22, 0.18, 0.12))}
+def quad(curve, neck, head, clav, share=(0.24, 0.24, 0.22, 0.18, 0.12)):
+    """curve : flexion totale de la colonne (> 0 dos rond) ; clav : omoplates écartées (< 0) ou serrées (> 0) ;
+    share : part de chaque étage, du bas du dos (spine05) au haut (spine01)."""
+    sp = {f"spine0{5 - i}": [curve * w, 0, 0] for i, w in enumerate(share)}
     def body(x):
         return P("quadruped", root={"rot": [["x", 78 + x[0]], ["y", 90]], "offset": [float(x[1]), float(x[2]), 0.0]}, **sp,
                  neck01=[-6 + neck, 0, 0], head=[head, 0, 0], clavicle=[0, clav, 0])
@@ -1874,9 +1913,15 @@ _knee = _v[region(("lowerleg", "upperleg")), 1].min()
 for s in "LR":
     QW[s][1] += _knee - _v[region(("finger", "wrist"), s), 1].min()
     QA[s][1] += _knee - _v[region(("foot", "toes"), s), 1].min()
+# Vache : le bassin bascule, le ventre descend (creux surtout lombaire), la poitrine avance ; le regard monte à peine,
+# la nuque prolonge la colonne (pas de tête renversée).
+COW_SHARE = (0.32, 0.27, 0.2, 0.13, 0.08)
 def catcow(u):
-    """u : −1 vache (dos creux, regard devant), 0 dos plat, 1 chat (dos rond, menton rentré)."""
-    return quad(72 * u, 24 * u, 22 * u, -12 * u) if u >= 0 else quad(46 * u, 28 * u, 16 * u, -8 * u)
+    """u : −1 vache (dos creux, regard un peu vers l'avant), 0 dos plat, 1 chat (dos rond, menton rentré)."""
+    if u >= 0:
+        return quad(72 * u, 24 * u, 22 * u, -12 * u)
+    return quad(COW_CURVE * u, COW_NECK * u, COW_HEAD * u, -8 * u, tuple(a + (b - a) * -u for a, b in zip((0.24, 0.24, 0.22, 0.18, 0.12), COW_SHARE)))
+COW_CURVE, COW_NECK, COW_HEAD = 62.0, 16.0, 10.0
 neutral, cat, cow = catcow(0), catcow(1), catcow(-1)
 motion("cat-cow", [K(0, neutral)] + planted(0, 2.5, lambda s: catcow(s)) + planted(2.5, 5, lambda s: catcow(1 - s))
        + planted(5, 7.5, lambda s: catcow(-s)) + planted(7.5, 10, lambda s: catcow(s - 1)),
@@ -2144,10 +2189,15 @@ scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BRE
 scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl=1.9, shrug=2.2)), K(7.5, scan_pose(curl=-0.5, shrug=-0.6)),
                               K(10, scan_rest)],
             frame=("neck01", "upperarm01", "wrist", "finger3-3"), margin=0.12, muscles=("hands", "forearms", "biceps", "triceps", "shoulders"))
-# Visage : le menton se relève à l'inspiration et la tête roule d'un côté, puis se dépose ; de l'autre côté ensuite.
-scan_motion("bed-scan-face", [K(0, scan_rest), K(4, scan_pose(breath=1.5, lift=8.0, turn=14.0)), K(10, scan_rest),
-                              K(14, scan_pose(breath=1.5, lift=8.0, turn=-14.0)), K(20, scan_rest)],
-            frame=("head", "neck01", "clavicle"), margin=0.24, muscles=("head", "neck"))
+# Visage : le mannequin n'a pas de visage ; le relâchement se lit sur la tête et les épaules, cadrées de près. À
+# l'inspiration le menton monte un peu et les épaules se décollent ; à l'expiration la tête s'alourdit (menton qui
+# redescend vers la poitrine, nuque qui s'allonge) en roulant doucement d'un côté, les épaules s'enfoncent dans le
+# matelas, et la pose est tenue ; de l'autre côté ensuite.
+_face_in = scan_pose(breath=1.5, lift=8.0, shrug=1.0)
+_face_out = {sd: scan_pose(lift=-9.0, shrug=-0.8, turn=12.0 * sd) for sd in (1, -1)}
+scan_motion("bed-scan-face", [K(0, scan_rest), K(3.5, _face_in), K(8, _face_out[1]), K(10, _face_out[1]), K(13.5, _face_in),
+                              K(18, _face_out[-1]), K(20, _face_out[-1]), K(22, scan_rest)],
+            frame=("head", "neck01", "clavicle"), margin=0.16, muscles=("head", "neck"))
 # Repos allongé (hors exercices) : la même pose, posée sur le matelas.
 motion("bed-rest", [K(0, scan_rest), K(3, scan_pose(breath=SCAN_BREATH * 0.6)), K(6, scan_rest)], yaw=8, pitch=30,
        props=(BED_SCAN, PILLOW_SCAN), support=BED_TOP)
@@ -2374,29 +2424,94 @@ motion("bed-twist", [K(0, _tw_rest)] + twist_keys(0, 1) + twist_keys(8.5, -1), m
 # Vu depuis le pied du lit, de haut : on voit les genoux tomber et la tête tourner ; cadré sur le corps, pas sur le lit.
 close_up("bed-twist", ("head", "wrist", "lowerleg01", "toes"), 0.08)
 
-# Genoux vers la poitrine : mains posées sur les genoux, par l'extérieur, coudes ouverts sur les côtés. Cuisses
-# repliées, le bassin ne cale plus le dos : le buste repose plus bas, la nuque garde sa courbure et l'oreiller est
-# placé sous le crâne tel qu'il se trouve (un cou réglé sur la hauteur du scan corporel rentrait le menton).
-KC_HAND = (0.050, 0.06, 0.05)                                      # main par rapport au genou : vers le plafond, le côté, les pieds
-KC_ARM = (1.0, 0.5, -0.3)                                          # coude (vers le plafond), paume et doigts (vers le côté)
+# Genoux vers la poitrine : sur le dos, genoux serrés ramenés vers la poitrine par les mains posées dessus (par
+# l'extérieur, coudes ouverts sur les côtés). Le bassin bascule (rétroversion : le bas du dos s'arrondit) jusqu'à ce que
+# le sacrum et le haut du dos touchent le matelas ensemble ; la colonne rend la bascule, le thorax reste à plat et la
+# tête posée sur l'oreiller. À l'expiration, les mains ramènent les genoux un peu plus près ; ils s'éloignent à peine à
+# l'inspiration. Vu de profil, cadré sur le corps.
+from rig import axis_angle as _kaa  # noqa: E402
+from ik import to_euler as _keu  # noqa: E402
+from motion_eval import AX as _KAX  # noqa: E402
+from scipy.spatial.transform import Rotation as _KRot  # noqa: E402
+KC_HAND = (0.03, 0.06, 0.03)   # main par rapport au genou : vers le plafond, le côté, les pieds
+KC_ARM = (0.7 if BODY == "male" else 0.6, 0.45, -0.2)   # coude (vers le plafond), paume et doigts (vers le côté)
+KC_ADDUCT = -14.0                                                   # genoux serrés
+KC_HIP, KC_PULL, KC_KNEE = 122.0, 16.0, 138.0                      # flexion des hanches (au repos, gain en serrant), des genoux
+KC_SPINE = dict(spine05=0.34, spine04=0.33, spine03=0.21, spine02=0.12)
+KC_SEAT = region(("root", "spine05", "pelvis"))                   # sacrum, bas du dos
+KC_BACK = region(("spine01", "spine02", "spine03"))                  # haut du dos (sans les épaules, que les bras soulèvent)
+_kc_flat = [["x", -90], ["y", 90]]
+_kc_ref = joints(P("supine", neck01=[16, 0, 0], head=[6, 0, 0]))
+def _kc_world(rot):
+    M = np.eye(3)
+    for axis, deg in rot: M = _kaa(_KAX[axis], deg) @ M
+    return M
+def kc_body(tilt, pull):
+    rot = _kc_flat + [["z", tilt]]
+    rv = _KRot.from_matrix(_kc_world(rot).T @ _kc_world(_kc_flat)).as_rotvec()
+    p = P("supine", root={"rot": rot}, **{k: _keu(_KRot.from_rotvec(rv * f).as_matrix()) for k, f in KC_SPINE.items()},
+          upperleg01=[-(KC_HIP + KC_PULL * pull), 0, -KC_ADDUCT], lowerleg01=[KC_KNEE, 0, 0], foot=[25, 0, 0],
+          neck01=[16, 0, 0], head=[6, 0, 0], **open_hand(0.7))
+    d = _kc_ref["neck01"] - joints(p)["neck01"]                     # le haut du buste ne bouge pas
+    return P(p, root={"rot": rot, "offset": [float(d[0]), float(d[1]), float(d[2])]})
+def kc_tilt(pull):
+    """Bascule du bassin pour laquelle sacrum et haut du dos touchent le matelas ensemble."""
+    lo, hi = -40.0, 40.0
+    f = lambda t: low_of(kc_body(t, pull), KC_BACK) - low_of(kc_body(t, pull), KC_SEAT)
+    s_lo = f(lo) > 0
+    for _ in range(16):
+        m = (lo + hi) / 2
+        if (f(m) > 0) == s_lo: lo = m
+        else: hi = m
+    return (lo + hi) / 2
 def knees_chest(pull, hand=None, arm=None):
     hand, arm = hand or KC_HAND, arm or KC_ARM
-    p = P("supine", upperleg01=[-128 - 10 * pull, 0, 10], lowerleg01=[138, 0, 0], foot=[25, 0, 0], neck01=[16, 0, 0], head=[6, 0, 0],
-          **open_hand(0.7))
-    R, J = ik.fk(p)
-    up = R["root"] @ np.array([0, 0, 1.0])               # « avant » du corps allongé : vers le plafond
-    toward_feet = R["root"] @ np.array([0, -1.0, 0])
-    kw = {}
+    p = kc_body(kc_tilt(pull), pull)
+    J = joints(p)
+    up, toward_feet = np.array([0, 1.0, 0]), np.array([1.0, 0, 0])   # tête vers −X
     for s_, sg in (("L", 1.0), ("R", -1.0)):
-        side = R["root"] @ np.array([sg, 0, 0])
-        kw.update({s_: J[f"lowerleg01.{s_}"] + up * hand[0] + side * hand[1] + toward_feet * hand[2],
-                   f"fingers_{s_}": toward_feet + arm[2] * side, f"palm_{s_}": -np.sqrt(1 - arm[1] ** 2) * up - arm[1] * side,
-                   f"pole_{s_}": tuple(side + arm[0] * up)})
-    return laid(hands(p, **kw))
+        side = _kc_world(_kc_flat) @ np.array([sg, 0, 0])
+        def place(h, s_=s_, side=side, q=p):
+            w = J[f"lowerleg01.{s_}"] + up * h + side * hand[1] + toward_feet * hand[2]
+            return fixed_hand(q, s_, w, toward_feet + arm[2] * side, -np.sqrt(1 - arm[1] ** 2) * up - arm[1] * side,
+                              tuple(side + arm[0] * up), flat=False)
+        # la paume se pose sur le genou : hauteur du poignet réglée sur la peau (CONTACT_GAP au point le plus proche)
+        lo, hi = -0.02, 0.10
+        for _ in range(14):
+            m = (lo + hi) / 2
+            pen, dist = kc_gap(place(m), s_)
+            if pen < -0.0015 or dist < CONTACT_GAP: lo = m
+            else: hi = m
+        p = place(hi)
+    return laid(p)
+KC_LEGS = region(("upperleg", "lowerleg"))
+KC_HANDS = {s: region(("wrist", "finger"), s) for s in "LR"}
+KC_FORE = {s: region(("lowerarm",), s) for s in "LR"}
+def kc_gap(p, s):
+    """Main et avant-bras face aux jambes : enfoncement (distance signée au sommet le plus proche, comme contact_scan)
+    et distance de la main à la peau."""
+    v, n = posed_skin(p)
+    arm = np.concatenate([KC_HANDS[s], KC_FORE[s]])
+    d, j = cKDTree(v[KC_LEGS]).query(v[arm])
+    side = np.einsum("ij,ij->i", v[arm] - v[KC_LEGS][j], n[KC_LEGS][j])
+    return float(np.where(d < 0.04, side, 1.0).min()), float(d[: len(KC_HANDS[s])].min())
 kc0, kc1 = knees_chest(0), knees_chest(1)
-motion("bed-knees-chest", [K(0, kc0)] + planted(0, 3, knees_chest) + planted(3, 6, lambda s: knees_chest(1 - s)),
-       muscles=("lowerBack", "glutes"), yaw=-28, pitch=24, props=(BED_LYING, bed_pillow(kc0, low_of(kc0, SCAN_HEAD))), support=BED_TOP)
+print("genoux vers la poitrine : bascule du bassin", round(kc_tilt(0), 1), "→", round(kc_tilt(1), 1), "degrés")
+motion("bed-knees-chest", [K(0, kc0)] + planted(0, 3, knees_chest) + [K(3.6, kc1)] + planted(3.6, 7, lambda s: knees_chest(1 - s)) + [K(7.6, kc0)],
+       muscles=("lowerBack", "glutes"), yaw=8, pitch=14, props=(BED_LYING, bed_pillow(kc0, low_of(kc0, SCAN_HEAD))), support=BED_TOP)
+close_up("bed-knees-chest", ("head", "upperarm01", "lowerleg01", "toes", "upperleg01"), 0.1)
 
+# ─── Visage ───
+# Relaxation progressive, étape « Visage », assis sur la chaise : le mannequin n'a pas de visage, la contraction se lit
+# sur la tête et les épaules, cadrées de près. 5 secondes de contraction (épaules qui montent, tête rentrée, menton
+# baissé : tout se crispe), puis le relâchement d'un coup et 10 secondes de détente (épaules plus basses qu'au repos,
+# tête qui s'incline doucement vers l'avant), avant de revenir au repos. Mains posées sur les cuisses.
+_face_tense = keep_hands(P("chairSit", clavicle=[0, -4, 13], neck01=[-6, 0, 0], neck02=[-4, 0, 0], head=[14, 0, 0]), "chairSit")
+_face_relax = keep_hands(P("chairSit", clavicle=[0, 2, -5], neck01=[10, 0, 0], neck02=[5, 0, 0], head=[6, 0, 0], spine01=[2, 0, 0]),
+                         "chairSit")
+motion("chair-face", [K(0, "chairSit"), K(1, _face_tense), K(5, _face_tense), K(5.6, _face_relax, "out"), K(13, _face_relax),
+                      K(15, "chairSit")], muscles=("head", "neck"), yaw=20, props=(CHAIR,))
+close_up("chair-face", ("head", "neck01", "upperarm01"), 0.14)
 # ─── Assis sur une chaise ───
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
 # Tempo de la consigne : contracter 5 secondes, relâcher d'un coup, observer 10 secondes.

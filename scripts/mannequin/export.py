@@ -56,6 +56,43 @@ def harmonize_weights(v, tris, bi, bw, free):
     tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
     return top.astype(np.uint16), tw.astype(np.float32)
 
+SPINE_KEEP = 0.75
+def smooth_arm_weights(tris, bi, bw, order, iterations=20, lam=0.5, rings=2):
+    """Poids du bras lissés après les articulations d'appoint (épaule, coude) et dans la torsion de l'avant-bras.
+
+    Une articulation d'appoint répartit la part de chaque sommet en deux moitiés : le poids du parent s'annule et celui
+    de l'appoint culmine sur la ligne où l'os pèse la moitié, avec une cassure de pente. Sur un maillage grossier
+    (triangles de 2 cm à l'épaule de l'homme), le skinning plie la surface le long de cette ligne et de chaque rangée de
+    sommets de l'avant-bras : arête vive bras en avant ou épaules haussées, que la lumière de l'app dessine en liseré ou
+    en plaque blanche sur le deltoïde, et en anneau sur l'avant-bras. Un lissage laplacien de ces zones (deux couronnes
+    autour, main et tête exclues) efface la cassure sans changer la répartition d'ensemble. La femme n'en a pas besoin :
+    son épaule est subdivisée et ses poids harmonisés le long de la brassière, qui la couvre."""
+    n = len(bi)
+    W = np.zeros((n, len(order)))
+    for k in range(bi.shape[1]):
+        np.add.at(W, (np.arange(n), bi[:, k].astype(int)), bw[:, k])
+    def cols(test):
+        return [i for i, name in enumerate(order) if test(name)]
+    halves = cols(lambda name: name.startswith(("upperarm01-half", "lowerarm01-half")))
+    twist = W[:, cols(lambda name: name.startswith("lowerarm02"))].sum(1)
+    hand = W[:, cols(lambda name: name.startswith(("wrist", "finger", "metacarpal")))].sum(1)
+    head = W[:, cols(lambda name: name.startswith("head"))].sum(1)
+    avg = adjacency(n, tris)
+    mask = (W[:, halves].sum(1) > 1e-4) | ((twist > 0.02) & (twist < 0.98))
+    for _ in range(rings):
+        mask = mask | ((avg @ mask.astype(float)) > 0)
+    spine = W[:, cols(lambda name: name.startswith("spine"))].sum(1)
+    # mains (contacts réglés sur la peau), tête et dos le long de la colonne (appui du corps allongé) : inchangés
+    mask &= (hand < 0.5) & (head < 0.5) & (spine < SPINE_KEEP)
+    m = mask[:, None].astype(float)
+    for _ in range(iterations):
+        W = W + lam * m * (avg @ W - W)
+    top = np.argsort(-W, axis=1)[:, :INFLUENCES]
+    tw = np.clip(np.take_along_axis(W, top, 1), 0, None)
+    tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
+    keep = ~mask                                            # sommets hors zone : poids d'origine à l'identique
+    return np.where(keep[:, None], bi, top).astype(np.uint16), np.where(keep[:, None], bw, tw).astype(np.float32)
+
 def taubin(v, avg, strength, iterations, lam=0.6, mu=-0.63):
     s = strength[:, None]
     for _ in range(iterations):
@@ -361,6 +398,8 @@ def build(data, sex):
     arm_cols = np.array([nme.startswith(("upperarm", "lowerarm")) for nme in order])
     arm_w = (bone_w * arm_cols[bone_idx.astype(int)]).sum(1)
     bone_idx, bone_w = harmonize_weights(v, tris, bone_idx, bone_w, (np.abs(f_cloth) < 0.03) & (arm_w > 0.02))
+    if sex == "male":
+        bone_idx, bone_w = smooth_arm_weights(tris, bone_idx, bone_w, order)
     def ramp(f, width):
         t = np.clip(f / width, 0, 1); return t * t * (3 - 2 * t)
     # épaisseur du tissu, en pente douce depuis le bord (sur plus d'un triangle : pas de marche visible) ;
