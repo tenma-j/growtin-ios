@@ -61,8 +61,9 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      cet axe) ; sa profondeur dans le poing et la fermeture de chaque doigt sont réglées sur la peau : la bande
      passe à 1,5 mm de la paume et des doigts qui l'entourent, sans les traverser ; le pied avant est surélevé de
      l'épaisseur de la bande ;
-     l'écart des mains est élargi jusqu'à ce que les brins passent à 6 mm au moins de la peau (`towel_clearance` :
-     pied avant, tibias, genoux, cuisses, bras) ;
+     les poings sont placés de part et d'autre du pied avant, et leur écart est élargi jusqu'à ce que les brins
+     passent à 6 mm au moins de la peau sur toute la course (`towel_clearance`, 11 positions : pied avant, tibias,
+     genoux, cuisses, bras ; le script s'arrête en erreur s'il n'y parvient pas) ;
    - scan corporel au lit (`bed-scan-*`) : le corps repose vraiment sur le matelas. La hanche s'étend jusqu'à ce que
      mollets et talons touchent, le dos des mains est posé (hauteur du poignet réglée à chaque clé). L'oreiller
      (`pillow_under`) est réglé sur la peau de chaque corps : son dessus au point le plus bas du crâne (la tête s'y
@@ -127,7 +128,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      après coup, et la chaise s'était retrouvée réglée sur une pose presque debout (assise à 77 cm) ;
    - porte (`"kind": "door"`) : bras en chandelier, coudes à hauteur d'épaule, avant-bras verticaux et paumes à plat
      sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
-     montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le buste avance ;
+     montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc
+     depuis les chevilles (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de trois quarts
+     arrière (110°) : les deux avant-bras et les deux mains se voient sur leur montant (de face, le montant proche
+     cachait le sien). Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus
+     petite marge (calcul de CameraFraming) qui montre le linteau (2,12 m) : 0,05 m pour l'homme, 0,2 m pour la femme ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
@@ -164,16 +169,34 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      allonge 0,997). Posture de l'arbre : le poids passe sur la jambe d'appui pieds posés, puis le pied se soulève à
      la verticale de son appui avant de partir vers le mollet (`tree_shift`) ; il glissait de 15 cm au sol ;
    - pas chassés : chaque pas est résolu en six clés (pied qui monte à la verticale, se déplace en l'air, se pose à la
-     verticale ; pied d'appui replacé à chaque clé) : moins de 3 mm de glissement ;
-   - rowing serviette : bassin penché de 17°, buste (bassin → cou) à 23–24°, genoux à 134–147° ; chaque brin mesure
-     0,80 m (femme) ou 0,92 m (homme), constant à 2 mm près (la serviette fait donc 1,7 à 1,9 m : une serviette de plage) ;
+     verticale ; pied d'appui replacé à chaque clé) : moins de 4 mm de glissement. Genoux fléchis à 140° environ pieds
+     posés (la consigne : « genoux légèrement fléchis »), bras détendus près du corps, coudes pliés, écartés de 23° au
+     plus (ils s'ouvraient à 40°, comme des jumping jacks que la consigne ne demande pas) ; vus de trois quarts (28°) ;
+   - rowing serviette : bassin penché de 17°, buste (bassin → cou) à 23–24°, genoux à 134–151° ; pied avant presque
+     sous le milieu du corps, pied arrière en retrait et sur le côté : les brins montent de part et d'autre du genou
+     avant, la cuisse arrière reste derrière eux (8 mm au moins de la peau à chaque image). Bande de 10 cm × 5 mm
+     (une serviette pliée en long) ; chaque brin mesure 0,80 m (femme) ou 0,91 m (homme), constant à 2 mm près ;
+   - boxe dans le vide : garde, poings devant le menton (7 à 10 cm du visage au plus près), placée dans le repère du
+     regard (dans celui du buste tourné, les deux poings partaient vers la joue droite) ; coups droits vers l'avant,
+     coude à peine plié au bout du coup (allonge 0,94). En garde, les coudes s'écartent un peu (`BOX_FLARE`) : serrés,
+     les avant-bras entraient dans la poitrine quand le buste tourne ; ils se rentrent pendant le coup ;
+   - squats partiels : bras placés par leur direction, en miroir, à chaque clé (`hs_dir`) : tendus en V au-dessus de
+     la tête le long des oreilles, en bas à l'horizontale devant soi, en passant un peu en diagonale ;
+   - grand étirement : inclinaison sur le côté répartie sur toute la colonne (`SIDE_SPLIT`), bassin et pieds
+     immobiles : le buste (hanches → base du cou) s'incline de 18 à 19° de chaque côté ;
    - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
      cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
      posé pointe en l'air au bord du lit, paume sur le sommet du crâne, mur au ras de la paume. Un pied qui quitte
      le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
      Étirement de la cuisse (retour au calme) : le talon se lève de 24°, orteils posés au même endroit, puis le pied
-     monte de 2 cm à la verticale avant de partir vers l'arrière ; il se repose de même (`quad_foot`).
+     monte de 2 cm à la verticale avant de partir vers l'arrière ; il se repose de même (`quad_foot`). Entre le pied
+     décollé et le talon haut, la cheville suit une droite, résolue en quatre clés, genou droit devant (`quad_lift`) :
+     interpolés directement, les angles faisaient passer le pied devant la jambe d'appui (jambes en ciseaux). Ouverture
+     de la poitrine : mains jointes paume contre paume derrière le dos, bras tendus 25° derrière la verticale,
+     omoplates serrées, haut du dos en extension et tête droite (`chest_clasp` ; écart des poignets réglé pour que les
+     paumes se touchent à 1–2 mm près sans se traverser). Vu presque de profil, un peu de l'arrière (105°) :
+     la main sur le cou-de-pied se voit des deux côtés, et la poitrine qui s'ouvre.
    - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement
      encadré pour tout mouvement dont la peau entre de plus de 5 mm dans un accessoire.
 3. `prop_scan.py` : peau dans les accessoires. Chaque mouvement à accessoires est rejoué pour les deux corps comme
@@ -204,7 +227,7 @@ centre de la boîte de ces articulations sur toutes les images clés, élargie d
 défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
 (et du matelas). Cercles de cheville (des genoux au sol, le mur au bord de l'image) et menton rentré (tête, cou et
 épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des genoux au sol) et ouverture de poitrine
-dans la porte (du bassin aux mains, de trois quarts avant) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+dans la porte (des orteils au bout des doigts, linteau compris, de trois quarts arrière) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
