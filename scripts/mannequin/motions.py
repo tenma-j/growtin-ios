@@ -686,6 +686,7 @@ motion("look-far", [K(0, P("stand", head=[-5, 0, 0])), K(5, P("stand", head=[-6,
 _chair_in = keep_hands(P("chairSit", spine01=[-6, 0, 0], spine02=[-4, 0, 0], spine03=[-2, 0, 0], clavicle=[0, 1, 5], neck01=[8, 0, 0],
                          head=[4, 0, 0]), "chairSit")
 motion("chair-breathe", [K(0, "chairSit"), K(4, _chair_in), K(10, "chairSit")], yaw=30, props=(CHAIR,))
+close_up("chair-breathe", ("head", "upperarm01", "upperleg01", "wrist"), 0.12)      # buste et cuisses : le souffle se voit
 # Méditation assise : dos droit, dos des mains posé sur les genoux, paumes vers le ciel, doigts ouverts, coudes souples.
 # Le bassin bascule vers l'avant (assis sur les ischions) : sans cela la pose de référence, cuisses repliées, se lit
 # comme un buste penché en arrière ; le cou rend la bascule, le regard reste horizontal.
@@ -2280,7 +2281,7 @@ scan_motion("bed-scan-rest", [K(0, scan_rest), K(3, scan_pose(breath=SCAN_BREATH
 scan_motion("bed-scan-whole", [K(0, scan_rest), K(4.5, scan_pose(breath=SCAN_BREATH * 0.6)), K(10, scan_rest)])
 # Respiration : 4 secondes d'inspiration, 6 d'expiration ; le haut du buste se soulève, les épaules suivent.
 scan_motion("bed-scan-breath", [K(0, scan_rest), K(4, scan_pose(breath=SCAN_BREATH * 1.4, peak="spine02", shrug=0.9)), K(10, scan_rest)],
-            frame=("head", "upperarm01", "spine05"), margin=0.22, muscles=("chest", "abs"))
+            frame=("neck01", "upperarm01", "spine04"), margin=0.1, muscles=("chest", "abs"))
 # Pieds et jambes : à l'inspiration les pieds se redressent, pointes ramenées vers soi, orteils relevés ; à l'expiration
 # les pointes retombent, plus loin qu'au repos, puis tout se dépose.
 # (Les jambes gardent leur rotation de repos : un « turn » passé ici tournait la tête de 34°, hors du cadre ; roulées
@@ -2290,7 +2291,7 @@ scan_motion("bed-scan-legs", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, poin
             frame=("upperleg01", "foot", "toes"), margin=0.2, muscles=("feet", "calves", "shins", "quads", "hamstrings"))
 # Ventre et poitrine : le ventre se soulève (environ 3 cm, ample pour se lire sur un téléphone) et redescend.
 scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BREATH * 1.6)), K(8, scan_rest)],
-            frame=("neck01", "upperarm01", "upperleg01"), margin=0.12, muscles=("abs", "chest"))
+            frame=("spine02", "spine05", "upperleg01"), margin=0.08, muscles=("abs", "chest"))
 # Mains, bras, épaules : à l'inspiration les mains se referment et les épaules se décollent, remontées vers les oreilles ;
 # à l'expiration les doigts se déplient, plus ouverts qu'au repos, et les épaules se déposent dans le matelas.
 scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl=1.9, shrug=2.2)), K(7.5, scan_pose(curl=-0.5, shrug=-0.6)),
