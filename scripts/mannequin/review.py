@@ -108,7 +108,7 @@ def props_mesh(body, lib, m, player):
         for center, half, Rb in boxes_for(pr, anchor):
             bv, bn, bt = box_mesh(center, np.array(half), Rb)
             vs.append(bv); ns.append(bn); ts.append(bt + base); base += len(bv)
-            col = {"mat": [0.45, 0.62, 0.52], "bed": [0.93, 0.93, 0.92], "pillow": [0.97, 0.97, 0.97]}.get(pr["kind"], [0.55, 0.42, 0.3])
+            col = {"mat": [0.45, 0.62, 0.52], "bed": [0.93, 0.93, 0.92], "pillow": [0.80, 0.85, 0.89]}.get(pr["kind"], [0.55, 0.42, 0.3])
             cs += [np.array(col)] * len(bt)
     return vs, ns, ts, cs
 
