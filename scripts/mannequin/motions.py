@@ -1106,25 +1106,27 @@ walking("walk", 1.2, 40, ("quads", "calves", "glutes"), stride=1.08, strike=14, 
 # Marche soutenue : cadence plus élevée, coudes pliés à 90°, bras qui balancent franchement d'avant en arrière
 # (le poing monte à hauteur de poitrine devant, revient à la hanche derrière), buste à peine penché.
 walking("walk-fast", 0.92, 36, ("quads", "calves", "glutes", "hamstrings"), stride=1.22, strike=18, push=42, clear=0.04, pelvis=8,
-        list=3.5, shoulders=7, lean=4, sway=0.016, load=0.009, extend=0.012, stance=0.60, arm_mid=4, arm=38, arm_in=8, arm_out=10, elbow=88, elbow_swing=4,
+        list=3.5, shoulders=7, lean=4, sway=0.016, load=0.009, extend=0.012, stance=0.60, arm_mid=14, arm=44, arm_in=8, arm_out=10, elbow=80, elbow_swing=12,
         hands=fist(0.75))
 
 # Boxe dans le vide : garde (pied gauche devant, genoux souples, poings au menton), direct du gauche, retour en garde,
 # direct du droit avec rotation du buste, retour. Les pieds restent posés.
 BOX_FEET = {"L": ankle("L", dx=0.03 * S_HIP, dz=0.17 * S_LEG), "R": ankle("R", dx=-0.06 * S_HIP, dz=-0.15 * S_LEG)}
-BOX_GUARD = {"L": (0.05, -0.12, 0.215), "R": (-0.085, -0.11, 0.20)}       # poignets en garde, depuis la tête (repère du regard)
-BOX_FLARE = {"L": 0.5, "R": 0.8}                         # écart des coudes en garde (pôle du coude, repère du buste)
+BOX_GUARD = {"L": (0.06, -0.12, 0.2), "R": (-0.11, -0.12, 0.17)}       # poignets en garde, depuis la tête (repère du regard)
+BOX_FLARE = {"L": 0.15, "R": 0.2}                        # écart des coudes en garde (pôle du coude, repère du buste)
+BOX_TURN_FLARE = 0.3                                     # … et quand l'autre bras frappe
+BOX_ELBOW_FWD = 0.35                                     # coudes en garde : un peu devant les côtes (pôle vers l'avant)
 BOX_REACH = 0.94                                         # coude pas complètement tendu au bout du coup
 def boxing(jab=0.0, cross=0.0):
-    yaw = -26 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
-    twist = -8 * jab + 30 * cross                    # rotation des épaules en plus de celle du bassin
+    yaw = -14 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
+    twist = -8 * jab + 26 * cross                    # rotation des épaules en plus de celle du bassin
     look = -(yaw + twist)
     p = P("stand", root={"rot": [["y", yaw]], "offset": [0, -0.06 * S_LEG, 0.02 * S_LEG * (jab + cross)]},
           spine04=[3, twist * 0.2, 0], spine03=[3, twist * 0.3, 0], spine02=[0, twist * 0.3, 0], spine01=[0, twist * 0.2, 0],
           neck01=[5, look * 0.35, 0], neck02=[0, look * 0.25, 0], head=[3, look * 0.4, 0], **fist(1.0))
     p = legs(p, L=BOX_FEET["L"], R=BOX_FEET["R"], pole_L=(0.1, 0, 1), pole_R=(-0.5, 0, 1), foot_yaw_L=-8, foot_yaw_R=-42)
     R, J = ik.fk(p); Rc = R["spine01"]; kw = {}
-    for s, sg, u in (("L", 1, jab), ("R", -1, cross)):
+    for s, sg, u, other_u in (("L", 1, jab, cross), ("R", -1, cross, jab)):
         sh = J[f"upperarm01.{s}"]
         # Garde : les deux poings devant le menton, 6 à 10 cm devant le visage, dans le repère du regard (la tête
         # regarde droit devant, +Z) : pris dans celui du buste tourné, ils partaient tous deux vers la joue droite.
@@ -1134,15 +1136,16 @@ def boxing(jab=0.0, cross=0.0):
         w = guard + (hit - guard) * u
         f = np.array([-0.15 * sg, 1, 0.25]); f = f / np.linalg.norm(f) * (1 - u) + (hit - sh) / reach * u
         n = np.array([-sg, 0, 0.2]); n = n / np.linalg.norm(n) * (1 - u) + np.array([-0.25 * sg, -1, 0]) * u
-        flare = BOX_FLARE[s] + (0.12 - BOX_FLARE[s]) * u              # coude écarté en garde (avant-bras devant la poitrine), rentré pendant le coup
-        kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [flare * sg, -1, -0.1])})
+        # coude bas en garde, un peu écarté quand l'autre bras frappe (le buste tourne vers l'avant-bras), rentré pendant le coup
+        flare = BOX_FLARE[s] + BOX_TURN_FLARE * other_u + (0.12 - BOX_FLARE[s]) * u
+        kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [flare * sg, -1, BOX_ELBOW_FWD * (1 - u) - 0.1 * u])})
     return grip_thumbs(hands(p, **kw))
 _guard = boxing()
 _jab, _cross = boxing(jab=1), boxing(cross=1)
 motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, lambda s: boxing(jab=s), n=4) + [K(0.37, _jab)]
        + planted(0.37, 0.7, lambda s: boxing(jab=1 - s), n=4) + [K(1.1, _guard)] + planted(1.1, 1.36, lambda s: boxing(cross=s), n=4)
        + [K(1.46, _cross)] + planted(1.46, 1.84, lambda s: boxing(cross=1 - s), n=4) + [K(2.2, _guard)],
-       muscles=("shoulders", "triceps", "abs"), yaw=50)
+       muscles=("shoulders", "triceps", "abs"), yaw=35)
 
 # Échauffement : marche sur place et grands cercles de bras vers l'arrière. Le bras monte par l'avant jusqu'à la
 # verticale, puis redescend par le côté, un peu en arrière du plan des épaules (là où l'épaule le permet : il ne passe
@@ -1580,7 +1583,7 @@ def calf_raise(u):
 _calf = calf_raise(1.0)
 motion("calf-raises", [K(0, "stand")] + planted(0, 1.0, calf_raise, n=6) + [K(1.4, _calf)] + planted(1.4, 4.0, lambda s: calf_raise(1 - s), n=8),
        muscles=("calves",), yaw=68, pitch=6)
-close_up("calf-raises", ("lowerleg01", "foot", "toes"), 0.16)
+close_up("calf-raises", ("wrist", "foot", "toes"), 0.02)
 
 # Fentes douces : un pied avance et se pose, les deux genoux plient, retour ; puis l'autre jambe.
 def lunge_keys(side, t0):
@@ -1602,12 +1605,14 @@ motion("gentle-lunge", _l + lunge_keys("R", 5.4)[1:], muscles=("quads", "glutes"
 # fesse, genoux côte à côte ; le pied d'appui reste posé, l'autre bras s'écarte un peu pour l'équilibre.
 CHEST_IN = dict(spine01=[-3, 0, 0], spine02=[-2, 0, 0])      # inspiration sans bouger le regard
 QUAD_HOLD = (0.28, 0.0)                                      # prise le long du pied (0 cheville, 1 orteils), décalage vers la pointe (m)
-def quad_stretch(knee=150.0, hip=6.0, foot=38.0, u=1.0, grab=True, off=0.0):
+def quad_stretch(knee=150.0, hip=6.0, foot=38.0, u=1.0, grab=True, off=0.0, leg=None):
     """Côté gauche. knee, hip, foot : genou plié, cuisse en arrière (> 0) ou en avant, pointe tendue ; grab : main sur le pied ;
     off : main écartée du pied de cette distance, vers l'extérieur (elle s'en approche ou le lâche par le côté : le pied,
-    qui redescend vers l'arrière, ne la rencontre pas)."""
+    qui redescend vers l'arrière, ne la rencontre pas) ; leg : angles de la jambe gauche à la place de knee, hip, foot."""
     p = P("stand", root={"offset": [-0.03 * S_HIP * u, 0, 0]}, upperleg01_L=[hip, 0, -3 * u], lowerleg01_L=[knee, 0, 0],
           foot_L=[foot, 0, 0], upperarm01_R=[0, 0, -14 * u], lowerarm01_R=[-10 * u, 0, 0], **open_hand(0.4, "R"))
+    if leg is not None:
+        p = P(p, **leg)
     p = legs(p, R=ankle("R"))
     if not grab:
         return P(p, upperarm01_L=[10 * u, 0, 20 * u], lowerarm01_L=[-12 * u, 0, 0])      # bras prêt, écarté du pied qui monte
@@ -1626,30 +1631,46 @@ def quad_foot(pitch, lift, u):
     toe = STAND["toes.L"]; a = ANK["L"] - toe; c, sn = np.cos(np.radians(pitch)), np.sin(np.radians(pitch))
     return legs(quad_stretch(0, 0, 0, u, False), L=toe + [a[0], a[1] * c - a[2] * sn + lift, a[1] * sn + a[2] * c],
                 foot_pitch_L=pitch, toes_L=-pitch)
-def quad_lift(w):
-    """Pied gauche entre « peel » (w = 0 : soulevé de 2 cm, talon levé) et « up » (w = 1 : cheville 17 cm plus haut et
-    10 cm en arrière) : la cheville suit la droite entre les deux, genou pointé droit devant (un peu vers l'extérieur).
-    Interpolés directement, les angles faisaient passer le genou et le pied devant la jambe d'appui (jambes en ciseaux)."""
-    toe = STAND["toes.L"]; a = ANK["L"] - toe; c, sn = np.cos(np.radians(QUAD_PEEL[0])), np.sin(np.radians(QUAD_PEEL[0]))
-    a0 = toe + [a[0], a[1] * c - a[2] * sn + QUAD_PEEL[1], a[1] * sn + a[2] * c]
-    a1 = ankle("L", lift=0.17 * S_LEG, dz=-0.10 * S_LEG)
-    return legs(quad_stretch(0, 0, 0, 0.7 + 0.3 * w, False), L=a0 + (a1 - a0) * w, foot_pitch_L=QUAD_PEEL[0] + (45 - QUAD_PEEL[0]) * w,
-                toes_L=-QUAD_PEEL[0] * (1 - w), pole_L=(0.12, 0, 1))
+QUAD_BUMP = 32.0                                             # genou avancé à mi-chemin (degrés de cuisse vers l'avant)
+QUAD_FLEX = 25.0                                             # pied moins tendu à mi-chemin (pas de pointe de « coup de pied »)
+QUAD_GRIP = (0.78, 0.9)                                      # main ouverte à côté du pied, puis posée dessus (avancée « w »)
+def quad_path(w):
+    """Pied gauche entre « peel » (w = 0 : soulevé de 2 cm, talon levé) et le talon contre la fesse (w = 1 : la prise).
+    Hanche, genou et pied passent d'une pose à l'autre, la cuisse avançant un peu en chemin (QUAD_BUMP) : le pied monte
+    sous le corps, genou un peu devant (le genou plie surtout en fin de montée), sans passer loin derrière le corps. La
+    main s'approche du cou-de-pied en fin de montée et le saisit ; au retour, elle le lâche près de la fesse et le pied
+    redescend lentement par le même chemin, jusqu'à côté de l'autre. Lâché du talon haut (jambe repliée à 118°, cheville 38 cm en arrière), il
+    décrivait un arc derrière le corps, comme un coup de pied, à 1,4 m/s ; entre deux clés éloignées, il passait
+    derrière la jambe d'appui (jambes en ciseaux, vues de trois quarts arrière)."""
+    g = lambda k: np.asarray(QUAD_FROM[k], float) * (1 - w) + np.asarray(QUAD_TO[k], float) * w
+    wk = w ** 1.6                                            # le genou plie surtout en fin de montée : le pied reste sous le corps
+    knee = np.asarray(QUAD_FROM["lowerleg01.L"], float) * (1 - wk) + np.asarray(QUAD_TO["lowerleg01.L"], float) * wk
+    leg = dict(upperleg01_L=list(g("upperleg01.L") - [QUAD_BUMP * np.sin(np.pi * w), 0, 0]), lowerleg01_L=list(knee),
+               foot_L=list(g("foot.L") - [QUAD_FLEX * np.sin(np.pi * w), 0, 0]), toes_L=list(g("toes.L")))
+    u = 0.7 + 0.3 * w
+    if w < QUAD_GRIP[0]:
+        return quad_stretch(0, 0, 0, u, False, leg=leg)
+    return quad_stretch(0, 0, 0, u, True, off=0.13 * max(0.0, (QUAD_GRIP[1] - w) / (QUAD_GRIP[1] - QUAD_GRIP[0])), leg=leg)
+_qf = flatten(quad_foot(QUAD_PEEL[0], QUAD_PEEL[1], 0.7))["bones"]
+QUAD_FROM = {k: _qf.get(k, [0.0, 0.0, 0.0]) for k in ("upperleg01.L", "lowerleg01.L", "foot.L", "toes.L")}
+QUAD_TO = {"upperleg01.L": [6.0, 0.0, -3.0], "lowerleg01.L": [150.0, 0.0, 0.0], "foot.L": [38.0, 0.0, 0.0], "toes.L": [0.0, 0.0, 0.0]}
+QUAD_PATH_N = 10
 def quad_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
-    # Le talon se lève à peine, orteils posés au même endroit ; le pied se soulève ensuite à la verticale, et ne part
-    # vers l'arrière qu'une fois en l'air (il ne traîne pas au sol) ; le talon monte, puis la main le saisit.
-    # Au retour, il redescend de même : à la verticale de son appui, orteils d'abord, puis le talon.
+    # Le talon se lève à peine, orteils posés au même endroit ; le pied se soulève ensuite à la verticale, puis monte
+    # en douceur jusqu'à la fesse, la main le saisissant en chemin (quad_path). Au retour, il redescend par le même
+    # chemin, tenu jusqu'à mi-hauteur, ralentit et se pose à la verticale de son appui, à côté de l'autre pied, orteils
+    # d'abord puis talon.
     half, heel = f(quad_foot(QUAD_PEEL[0] / 2, 0.0, 0.25)), f(quad_foot(QUAD_PEEL[0], 0.0, 0.5))
     peel = f(quad_foot(QUAD_PEEL[0], QUAD_PEEL[1], 0.7))
-    lift = [f(quad_lift(i / 4)) for i in range(1, 5)]                # montée : la cheville suit une droite
-    hold, high = f(_quad), f(quad_stretch(118, 0, 30, 1.0, False))
-    near = f(quad_stretch(off=0.13))                                 # main ouverte à côté du pied, avant de le saisir
-    # Le pied monte en une seconde et demie et redescend aussi calmement (il retombait d'un coup, à 5 m/s).
+    ws = [0.5 * u + 0.5 * u * u * (3 - 2 * u) for u in (i / QUAD_PATH_N for i in range(1, QUAD_PATH_N))]
+    path = [f(quad_path(w)) for w in ws]
+    hold = f(_quad)
+    # Montée en 2,6 s, descente en 2,6 s : le pied ne dépasse pas 0,6 m/s.
     return ([K(t0 + 0.2, half, "in"), K(t0 + 0.35, heel, "linear"), K(t0 + 0.5, peel, "linear")]
-            + [K(t0 + 0.5 + 0.15 * (i + 1), q, "linear") for i, q in enumerate(lift)]
-            + [K(t0 + 2.0, high, "out"), K(t0 + 2.5, near), K(t0 + 2.8, hold), K(t0 + 5.8, hold), K(t0 + 6.15, near), K(t0 + 6.7, high, "in")]
-            + [K(t0 + 7.6 + 0.1125 * i, q, "linear") for i, q in enumerate(lift[::-1])]
+            + [K(t0 + 0.5 + 2.6 * (i + 1) / QUAD_PATH_N, q, "linear") for i, q in enumerate(path)]
+            + [K(t0 + 3.1, hold, "out"), K(t0 + 5.3, hold)]
+            + [K(t0 + 5.3 + 2.6 * (i + 1) / QUAD_PATH_N, q, "in" if i == 0 else "linear") for i, q in enumerate(path[::-1])]
             + [K(t0 + 8.05, peel, "linear"), K(t0 + 8.2, heel, "linear"), K(t0 + 8.35, half, "linear"), K(t0 + 8.55, "stand", "out")])
 # Ouverture de la poitrine : omoplates serrées, bras tendus vers l'arrière et le bas, mains écartées paumes face à face
 # Mains jointes derrière le dos, paume contre paume, bras tendus vers l'arrière et le bas (25° derrière la verticale,
@@ -1770,10 +1791,12 @@ motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True
 # là où tombent les avant-bras (`width` : distance entre les axes des montants). Avant-bras et mains ne bougent plus ;
 # le corps avance d'un bloc depuis les chevilles, pieds posés : les épaules passent de l'arrière à l'avant des coudes,
 # les omoplates se serrent, la poitrine s'ouvre entre les montants (corps penché d'une dizaine de degrés en fin de
-# course). Vue de trois quarts arrière : les avant-bras sont posés sur la face des montants qui regarde le personnage,
-# de face le montant proche cachait le sien ; de derrière, les deux avant-bras et les deux mains se voient sur leur
-# montant, et l'inclinaison du corps se lit de biais. Même cadrage pour les deux corps : de la tête et du bout des
-# doigts jusqu'aux orteils.
+# course). Vue de face, un peu d'en haut : bras en chandelier (bras à l'horizontale, coudes à 90°, avant-bras
+# verticaux), poitrine ouverte face à la caméra, les deux avant-bras visibles. Les avant-bras sont posés sur le bord
+# intérieur de la face des montants qui regarde le personnage (`DOOR_EDGE`) : leur moitié côté passage dépasse du
+# montant et se voit de face ; de trois quarts avant, le montant proche (12 cm de profondeur) cachait tout l'avant-bras,
+# de profil les bras à l'horizontale, dirigés vers la caméra, se lisaient comme des bras levés à la verticale. Même
+# cadrage pour les deux corps : de la tête et du bout des doigts jusqu'aux orteils.
 UPPER_ARM = UPPER_ARM_LEN
 DOOR_IN = 0.20 * S_LEG                                       # avancée du bassin
 DOOR_RHYTHM = rhythm_amount(90.0)                            # bras à l'horizontale : la ceinture scapulaire suit un peu
@@ -1803,19 +1826,24 @@ def doorway(s, face=None):
         wrist = elbow + [0.0, float(np.sqrt(FOREARM ** 2 - dz ** 2)), dz]
         p = fixed_hand(p, side, wrist, [0, 1, 0], [0, 0, 1], tuple(elbow - joints(p)[f"upperarm01.{side}"]))
     return p
-# Avant-bras et paume réglés sur la peau : ils touchent la face du montant (1 mm de jeu), sans la traverser.
+# Montants : l'axe de l'avant-bras est 1,5 cm à l'intérieur du bord du montant (7 cm de large) : l'avant-bras s'appuie
+# sur le bord de la face par sa moitié extérieure, sa moitié intérieure dépasse dans le passage et se voit de face.
+DOOR_EDGE = 0.015
+DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.035 + DOOR_EDGE)
+# Avant-bras et paume réglés sur la peau : la partie posée sur le montant (au-delà de son bord intérieur) touche sa
+# face (1 mm de jeu), sans la traverser.
+_DOOR_IN = DOOR_WIDTH / 2 - 0.035
 DOOR_Z = float(DOOR_ELBOW[2]) + DOOR_DEPTH[0]
 for _ in range(5):
     _v = posed_skin(doorway(0.5))[0]
-    DOOR_DEPTH[0] += float(_v[_DOOR_ARM, 2].max()) - DOOR_Z + 0.001
-    DOOR_DEPTH[1] += float(_v[_DOOR_HAND, 2].max()) - DOOR_Z + 0.001
+    _on = _v[:, 0] > _DOOR_IN
+    DOOR_DEPTH[0] += float(_v[_DOOR_ARM[_on[_DOOR_ARM]], 2].max()) - DOOR_Z + 0.001
+    DOOR_DEPTH[1] += float(_v[_DOOR_HAND[_on[_DOOR_HAND]], 2].max()) - DOOR_Z + 0.001
     DOOR_Z = float(DOOR_ELBOW[2]) + DOOR_DEPTH[0]
-# Montants : l'avant-bras est posé sur leur moitié intérieure (le bras, qui recule quand le buste avance, passe à côté).
-DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.02)
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
        + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=110, pitch=10,
+       muscles=("chest", "shoulders"), yaw=0, pitch=12,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
 # Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des orteils au bout des doigts, pour les deux corps. Vu de
@@ -1942,9 +1970,24 @@ salute = joined_up(_up, 0.0, overhead_y(_up), OVER_Z, apart=OVER_APART)
 # Entre l'horizontale et le haut, les bras passent devant (bras à 135°, dans le plan des épaules) : interpolés directement,
 # ils s'ouvraient en V sur les côtés.
 arms_front_high = P(mountain, upperarm01=[-135, 0, 4], lowerarm01=[-3, 0, 0], **open_hand(1.0))
-motion("arm-raise", [K(0, mountain), K(2.4, arms_front_up), K(3.4, arms_front_high, "linear"), K(4.2, salute, "out"), K(5.6, salute),
-                     K(6.4, arms_front_high, "in"), K(7.4, arms_front_up, "linear"), K(9.4, mountain), K(10.4, mountain)],
-       muscles=("shoulders",), yaw=40, props=(MAT,))
+# Montée et descente : les deux bras tendus, parallèles, dans le plan de chaque épaule (direction placée à chaque clé,
+# `raise_arms`) ; interpolés en angles depuis les bras le long du corps, ils s'ouvraient en V et, vus de trois quarts,
+# le bras proche semblait plié, main devant la poitrine. Montée qui part doucement et arrive lancée à 135°, puis les
+# mains se joignent en haut ; descente symétrique, qui ralentit jusqu'aux bras le long du corps.
+RAISE_TOP = 135.0
+def raise_arms(theta):
+    """Bras tendus devant soi, parallèles : theta = 0 le long du corps, 90 à l'horizontale, 135 en haut devant."""
+    p = P(mountain, upperarm01=[-theta, 0, 5], lowerarm01=[-4, 0, 0], **open_hand(min(1.0, 0.7 + theta / 300)))
+    t = np.radians(theta)
+    for s, sg in (("L", 1), ("R", -1)):
+        p = reach_arm(p, s, [0.03 * sg, -np.cos(t), np.sin(t)], 0.985, (0.3 * sg, -1, -0.4))
+    return p
+_RAISE_N = 8
+_rise = [K(3.4 * i / _RAISE_N, raise_arms(RAISE_TOP * (1 - np.cos(np.pi / 2 * i / _RAISE_N))), "linear") for i in range(1, _RAISE_N + 1)]
+_lower = [K(6.4 + 3.0 * i / _RAISE_N, raise_arms(RAISE_TOP * (1 - np.sin(np.pi / 2 * i / _RAISE_N))), "linear") for i in range(_RAISE_N)]
+motion("arm-raise", [K(0, mountain)] + _rise + [K(4.2, salute, "out"), K(5.6, salute)] + [K(6.4, _lower[0].get("pose"), "in")] + _lower[1:]
+       + [K(9.4, mountain, "out"), K(10.4, mountain)],
+       muscles=("shoulders",), yaw=60, props=(MAT,))
 
 # Flexion avant douce, en enroulant le dos : le menton descend vers la poitrine, le haut du dos s'arrondit, puis le bas
 # du dos, et le bassin bascule en dernier (il recule un peu, genoux fléchis, pieds posés) ; tête et bras pendent,
@@ -1970,16 +2013,40 @@ motion("forward-fold", [K(0, mountain)] + [K(3.2 * i / 10, fold(i / 10), "linear
        muscles=("hamstrings", "lowerBack"), yaw=70, props=(MAT,))
 
 # Guerrier II : pieds très écartés, genou avant plié au-dessus de la cheville, bras à l'horizontale, regard sur la main avant.
+# Le bassin descend aussi bas que le permet la jambe arrière tendue (WAR_BACK de sa longueur) ; il se décale vers la
+# jambe avant jusqu'à ce que le genou avant soit au-dessus de la cheville (`war_root`). L'écart des pieds (WAR_STANCE)
+# règle alors la cuisse avant : 12 à 15° sous l'horizontale. La tête tourne de 87° vers la main avant.
+WAR_STANCE = 0.66                                            # demi-écart des chevilles (× S_LEG)
+WAR_BACK = min(0.997, LEG_STAND + 0.004)                     # jambe arrière tendue (part de sa longueur ; debout : LEG_STAND)
+WAR_LOOK = 87.0
+def war_legs(root_dx, root_dy, bend):
+    p = P("stand", root={"offset": [root_dx, root_dy, 0]},
+          upperarm01=[0, 0, 86 * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
+          neck01=[0, 0.35 * WAR_LOOK * bend, 0], neck02=[0, 0.25 * WAR_LOOK * bend, 0], head=[0, 0.4 * WAR_LOOK * bend, 0])
+    # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
+    front = np.array([WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["R"][2]])
+    return legs(p, L=front, R=back, pole_L=(1, 0, 0.25), pole_R=(0, 0, 1), foot_yaw_L=90 * min(1, bend * 1.6), foot_yaw_R=12)
+def war_root_dy(dx):
+    """Descente du bassin pour que la jambe arrière soit tendue à WAR_BACK de sa longueur."""
+    J = joints(P("stand", root={"offset": [dx, 0.0, 0]}))
+    back = np.array([-WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["R"][2]]); hip = J["upperleg01.R"]
+    h = np.sqrt((WAR_BACK * LEG_MAX) ** 2 - (hip[0] - back[0]) ** 2 - (hip[2] - back[2]) ** 2)
+    return float(back[1] + h - hip[1])
+def war_root():
+    """Décalage du bassin (x) qui met le genou avant au-dessus de la cheville, la jambe arrière restant tendue."""
+    lo, hi = 0.0, 0.3 * S_LEG
+    for _ in range(30):
+        dx = (lo + hi) / 2
+        J = joints(war_legs(dx, war_root_dy(dx), 1.0))
+        if J["lowerleg01.L"][0] < J["foot.L"][0]: lo = dx
+        else: hi = dx
+    return dx
+WAR_DX = war_root()
+print("guerrier II : jambe arrière", round(WAR_BACK, 4), "(debout", round(LEG_STAND, 4), ") bassin décalé de", round(WAR_DX, 3))
 def warrior(bend):
     """bend = 0 : jambes tendues, pieds écartés ; 1 : guerrier II (côté gauche devant)."""
-    root = P("stand", root={"offset": [0.1 * bend * S_LEG, (-0.14 - 0.09 * bend) * S_LEG, 0]},
-             upperarm01=[0, 0, 86 * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
-             neck01=[0, 26 * bend, 0], neck02=[0, 16 * bend, 0], head=[0, 26 * bend, 0])
-    # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
-    front = np.array([0.57 * S_LEG, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-0.57 * S_LEG, FLOOR_ANKLE, ANK["R"][2]])
-    p = legs(root, L=front, R=back, pole_L=(1, 0, 0.25), pole_R=(0, 0, 1),
-             foot_yaw_L=90 * min(1, bend * 1.6), foot_yaw_R=12)
-    return p
+    dx = WAR_DX * bend
+    return war_legs(dx, war_root_dy(dx), bend)
 wl = warrior(1.0); wt = warrior(0.45); w0 = warrior(0.0)
 wr, wrt, w0r = mirror_pose(wl), mirror_pose(wt), mirror_pose(w0)
 motion("warrior-two", [K(0, w0), K(1.6, wt), K(3.2, wl), K(5.2, P(wl, **CHEST_IN)), K(7.2, wl), K(8.6, wt), K(10.0, w0),
