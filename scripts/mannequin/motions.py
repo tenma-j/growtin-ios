@@ -1034,7 +1034,8 @@ walking("walk-fast", 0.92, 36, ("quads", "calves", "glutes", "hamstrings"), stri
 # Boxe dans le vide : garde (pied gauche devant, genoux souples, poings au menton), direct du gauche, retour en garde,
 # direct du droit avec rotation du buste, retour. Les pieds restent posés.
 BOX_FEET = {"L": ankle("L", dx=0.03 * S_HIP, dz=0.17 * S_LEG), "R": ankle("R", dx=-0.06 * S_HIP, dz=-0.15 * S_LEG)}
-BOX_GUARD, BOX_REACH = (0.075, -0.12, 0.26, 0.23), 0.94
+BOX_GUARD = {"L": (0.05, -0.12, 0.215), "R": (-0.075, -0.12, 0.18)}       # poignets en garde, depuis la tête (repère du regard)
+BOX_REACH = 0.94                                         # coude pas complètement tendu au bout du coup
 def boxing(jab=0.0, cross=0.0):
     yaw = -26 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
     twist = -8 * jab + 30 * cross                    # rotation des épaules en plus de celle du bassin
@@ -1046,14 +1047,14 @@ def boxing(jab=0.0, cross=0.0):
     R, J = ik.fk(p); Rc = R["spine01"]; kw = {}
     for s, sg, u in (("L", 1, jab), ("R", -1, cross)):
         sh = J[f"upperarm01.{s}"]
-        # garde : poings devant le menton, à quelques centimètres du visage (BOX_GUARD : écart, hauteur, avancée du
-        # poignet depuis la tête, dans le repère du buste), coudes basses
-        guard = J["head"] + Rc @ [sg * BOX_GUARD[0], BOX_GUARD[1], BOX_GUARD[2] if s == "L" else BOX_GUARD[3]]
-        reach = BOX_REACH * ARM                          # coude pas complètement tendu
+        # Garde : les deux poings devant le menton, 6 à 10 cm devant le visage, dans le repère du regard (la tête
+        # regarde droit devant, +Z) : pris dans celui du buste tourné, ils partaient tous deux vers la joue droite.
+        guard = J["head"] + BOX_GUARD[s]
+        reach = BOX_REACH * ARM
         hit = np.array([0.02 * sg, sh[1] + 0.01, sh[2] + np.sqrt(reach ** 2 - (sh[0] - 0.02 * sg) ** 2)])
         w = guard + (hit - guard) * u
-        f = Rc @ [-0.15 * sg, 1, 0.25]; f = f / np.linalg.norm(f) * (1 - u) + (hit - sh) / reach * u
-        n = Rc @ [-sg, 0, 0.2]; n = n / np.linalg.norm(n) * (1 - u) + np.array([-0.25 * sg, -1, 0]) * u
+        f = np.array([-0.15 * sg, 1, 0.25]); f = f / np.linalg.norm(f) * (1 - u) + (hit - sh) / reach * u
+        n = np.array([-sg, 0, 0.2]); n = n / np.linalg.norm(n) * (1 - u) + np.array([-0.25 * sg, -1, 0]) * u
         kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [0.12 * sg, -1, -0.1])})
     return grip_thumbs(hands(p, **kw))
 _guard = boxing()
@@ -1061,7 +1062,7 @@ _jab, _cross = boxing(jab=1), boxing(cross=1)
 motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, lambda s: boxing(jab=s), n=4) + [K(0.37, _jab)]
        + planted(0.37, 0.7, lambda s: boxing(jab=1 - s), n=4) + [K(1.1, _guard)] + planted(1.1, 1.36, lambda s: boxing(cross=s), n=4)
        + [K(1.46, _cross)] + planted(1.46, 1.84, lambda s: boxing(cross=1 - s), n=4) + [K(2.2, _guard)],
-       muscles=("shoulders", "triceps", "abs"), yaw=32)
+       muscles=("shoulders", "triceps", "abs"), yaw=50)
 
 # Échauffement : marche sur place et grands cercles de bras vers l'arrière. Le bras monte par l'avant jusqu'à la
 # verticale, puis redescend par le côté, un peu en arrière du plan des épaules (là où l'épaule le permet : il ne passe
@@ -1107,11 +1108,11 @@ def warmup(theta):
 motion("warmup-march", circle_keys(32, 3.2, warmup), muscles=("shoulders", "quads"), yaw=55)
 
 # Pas chassés (« deux pas à droite, deux pas à gauche, genoux légèrement fléchis ») : les pieds se posent vraiment, le
-# bassin suit, genoux fléchis tout du long (150–160°, un peu plus pieds écartés). Les bras restent détendus près du
+# bassin suit, genoux fléchis tout du long (140–145°, un peu plus pieds écartés ; vus de trois quarts). Les bras restent détendus près du
 # corps, coudes pliés : ils s'écartent à peine (une quinzaine de degrés) quand le pied s'écarte et reviennent quand
 # l'autre le rejoint ; le buste penche à peine du côté où l'on va.
 def side_steps():
-    step, lift, soft = 0.30 * S_LEG, 0.07 * S_LEG, -0.055 * S_LEG
+    step, lift, soft = 0.30 * S_LEG, 0.07 * S_LEG, -0.045 * S_LEG
     def pose(fl, fr, cx, lifted=None, wide=0.0, lean=0.0, h=0.0):
         """wide : 0 pieds joints, 1 pieds écartés (bras un peu écartés, genoux un peu plus pliés) ; lean : buste penché
         (degrés) ; h : hauteur du pied levé."""
@@ -1142,7 +1143,7 @@ def side_steps():
                                                  two(w_prev, w0, w1), two(lean_prev, lean_mid, lean_end), h), "linear"))
             feet[mover] = end; cx = cx1; t += 0.64; w_prev, lean_prev = w1, lean_end
     return keys
-motion("side-steps", side_steps(), muscles=("quads", "glutes", "calves"), yaw=8)
+motion("side-steps", side_steps(), muscles=("quads", "glutes", "calves"), yaw=28)
 
 # Squats partiels : on descend bras vers l'avant, on remonte en levant les bras au-dessus de la tête.
 # Demi-squat : les genoux plient à 120–130° (pas jusqu'à l'angle droit), talons au sol, genoux au-dessus des pieds, dos long.
@@ -1590,11 +1591,11 @@ def chest_clasp(breath=0.0):
     return p
 chest_open, _chest_in = chest_clasp(0.0), chest_clasp(1.0)
 _chest_way = P("stand", clavicle=[0, 8, 0], upperarm01=[12, 0, 32], lowerarm01=[-10, 0, 0], spine01=[-3, 0, 0])
-# Vu de trois quarts arrière, du côté gauche : le talon tenu contre la fesse se lit en entier des deux côtés (main sur le
+# Vu de trois quarts arrière (120°), du côté gauche : le talon tenu contre la fesse se lit en entier des deux côtés (main sur le
 # cou-de-pied), le profil montre la poitrine qui s'ouvre et les mains jointes derrière le dos.
 motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(8.55, True)
        + [K(18.0, _chest_way), K(18.8, chest_open), K(21.3, _chest_in), K(23.3, chest_open), K(24.1, _chest_way),
-          K(24.9, "stand")], muscles=("quads", "chest"), yaw=130)
+          K(24.9, "stand")], muscles=("quads", "chest"), yaw=120)
 
 # ─── Mobilité, épaules, nuque ───
 # Grands cercles d'épaules vers l'arrière : avant → haut → arrière → bas. Les bras restent pendants.
@@ -1670,18 +1671,20 @@ motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True
 # posés à plat avec les paumes sur la face des montants. La porte est à la mesure de chaque corps : ses montants sont
 # là où tombent les avant-bras (`width` : distance entre les axes des montants). Avant-bras et mains ne bougent plus ;
 # le corps avance d'un bloc depuis les chevilles, pieds posés : les épaules passent de l'arrière à l'avant des coudes,
-# les omoplates se serrent, la poitrine s'ouvre entre les montants. Vue de trois quarts avant, du bassin aux mains :
-# on voit la poitrine avancer entre les montants, les bras à l'horizontale et les mains posées dessus ; l'avant-bras du
-# côté de la caméra est en partie caché par son montant (il est posé sur la face qui regarde le personnage).
+# les omoplates se serrent, la poitrine s'ouvre entre les montants (corps penché d'une dizaine de degrés en fin de
+# course). Vue de trois quarts arrière : les avant-bras sont posés sur la face des montants qui regarde le personnage,
+# de face le montant proche cachait le sien ; de derrière, les deux avant-bras et les deux mains se voient sur leur
+# montant, et l'inclinaison du corps se lit de biais. Même cadrage pour les deux corps : de la tête et du bout des
+# doigts jusqu'aux orteils.
 UPPER_ARM = UPPER_ARM_LEN
-DOOR_IN = 0.16 * S_LEG                                       # avancée du bassin
+DOOR_IN = 0.20 * S_LEG                                       # avancée du bassin
 DOOR_RHYTHM = rhythm_amount(90.0)                            # bras à l'horizontale : la ceinture scapulaire suit un peu
 _DOOR_ARM, _DOOR_HAND = region(("lowerarm",), "L"), region(("wrist", "finger"), "L")
 def door_body(s):
     """s : 0 debout derrière la porte, 1 buste avancé ; épaules un peu enroulées au départ, omoplates serrées à la fin."""
     lean = DOOR_IN * s
     p = P("stand", root={"rot": [["x", 60 * lean]], "offset": [0, 0, lean]}, spine01=[-3 - lean * 40, 0, 0], clavicle=[0, -8 + 26 * s, 0],
-          neck01=[-60 * lean, 0, 0], head=[-3, 0, 0], **open_hand(1.0))
+          neck01=[-20 * lean, 0, 0], head=[-3, 0, 0], **open_hand(1.0))        # regard horizontal
     p = legs(p, L=ankle("L"), R=ankle("R"))
     for side in "LR":
         p = add_rhythm(p, side, DOOR_RHYTHM)
@@ -1714,10 +1717,14 @@ DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.02)
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
        + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=125, pitch=10,
+       muscles=("chest", "shoulders"), yaw=110, pitch=10,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
-close_up("doorway-stretch", ("head", "wrist", "toes"), 0.12)
+# Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des pieds au bout des doigts, pour les deux corps (la
+# marge autour des articulations est réglée sur la hauteur des doigts de chaque corps).
+DOOR_TOP = 2.12
+_door_tip = max(float(joints(doorway(s))[f"finger3-3.{x}"][1]) for s in (0.0, 1.0) for x in "LR")
+close_up("doorway-stretch", ("head", "finger3-3", "toes"), round(max(0.12, DOOR_TOP + 0.03 - _door_tip), 3))
 
 squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-20, 0, 0], spine01=[-5, 0, 0])
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
@@ -1780,7 +1787,7 @@ close_up("ankle-circles", ("foot", "toes"), 0.2)
 # Inclinaison sur le côté : toute la colonne se courbe (bas du dos compris), bassin et jambes immobiles, pieds posés ;
 # le buste (des hanches à la base du cou) s'incline d'environ 17° (SIDE_BEND : courbure totale de la colonne).
 SIDE_SPLIT = (("spine05", 0.14), ("spine04", 0.2), ("spine03", 0.24), ("spine02", 0.22), ("spine01", 0.2))
-SIDE_BEND = 30.0
+SIDE_BEND = 27.0
 side_bend = lambda a: P("stand", upperarm01=[0, 0, 168], lowerarm01=[-6, 0, 0], clavicle=[0, 0, 8], neck01=[0, 0, a * 0.08],
                         **{b: [0, 0, a * w] for b, w in SIDE_SPLIT}, **open_hand(0.9))
 motion("overhead-stretch", [K(0, "stand"), K(2, side_bend(0)), K(4, side_bend(SIDE_BEND)), K(6, side_bend(0)), K(8, side_bend(-SIDE_BEND)), K(10, side_bend(0)), K(12, "stand")],
