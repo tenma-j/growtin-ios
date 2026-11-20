@@ -306,7 +306,7 @@ public enum ExerciseLibrary {
                 ExerciseStep("Mains et bras", "Serre les poings et contracte les bras 5 secondes, puis relâche d'un coup et observe pendant 10 secondes. Deux fois.", seconds: 90, symbol: "hand.raised",
                              cues: ["Contracte à environ 70 % de ta force, pas au maximum."], motion: "fists-clench"),
                 ExerciseStep("Épaules", "Monte les épaules vers les oreilles, tiens 5 secondes, puis laisse-les tomber.", seconds: 90, symbol: "figure.arms.open", motion: "chair-shrugs"),
-                ExerciseStep("Visage", "Plisse le front, ferme fort les yeux, serre les lèvres, puis relâche tout le visage.", seconds: 90, symbol: "face.smiling", motion: "chair-breathe", focus: ["head", "neck"]),
+                ExerciseStep("Visage", "Plisse le front, ferme fort les yeux, serre les lèvres, puis relâche tout le visage.", seconds: 90, symbol: "face.smiling", motion: "chair-face", focus: ["head", "neck"]),
                 ExerciseStep("Ventre", "Contracte le ventre 5 secondes, puis relâche en expirant longuement.", seconds: 90, symbol: "figure.core.training", motion: "abs-contract"),
                 ExerciseStep("Jambes et pieds", "Tends les jambes et ramène les orteils vers toi, puis relâche.", seconds: 90, symbol: "figure.cooldown", motion: "legs-tense"),
                 ExerciseStep("Détente globale", "Parcours le corps : s'il reste une zone tendue, contracte-la une dernière fois puis relâche.", seconds: 90, symbol: "bed.double", motion: "chair-breathe", focus: [])

@@ -1744,10 +1744,15 @@ scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BRE
 scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl=1.9, shrug=2.2)), K(7.5, scan_pose(curl=-0.5, shrug=-0.6)),
                               K(10, scan_rest)],
             frame=("neck01", "upperarm01", "wrist", "finger3-3"), margin=0.12, muscles=("hands", "forearms", "biceps", "triceps", "shoulders"))
-# Visage : le menton se relève à l'inspiration et la tête roule d'un côté, puis se dépose ; de l'autre côté ensuite.
-scan_motion("bed-scan-face", [K(0, scan_rest), K(4, scan_pose(breath=1.5, lift=8.0, turn=14.0)), K(10, scan_rest),
-                              K(14, scan_pose(breath=1.5, lift=8.0, turn=-14.0)), K(20, scan_rest)],
-            frame=("head", "neck01", "clavicle"), margin=0.24, muscles=("head", "neck"))
+# Visage : le mannequin n'a pas de visage ; le relâchement se lit sur la tête et les épaules, cadrées de près. À
+# l'inspiration le menton monte un peu et les épaules se décollent ; à l'expiration la tête s'alourdit (menton qui
+# redescend vers la poitrine, nuque qui s'allonge) en roulant doucement d'un côté, les épaules s'enfoncent dans le
+# matelas, et la pose est tenue ; de l'autre côté ensuite.
+_face_in = scan_pose(breath=1.5, lift=6.0, shrug=0.7)
+_face_out = {sd: scan_pose(lift=-7.0, shrug=-0.7, turn=9.0 * sd) for sd in (1, -1)}
+scan_motion("bed-scan-face", [K(0, scan_rest), K(3.5, _face_in), K(8, _face_out[1]), K(10, _face_out[1]), K(13.5, _face_in),
+                              K(18, _face_out[-1]), K(20, _face_out[-1]), K(22, scan_rest)],
+            frame=("head", "neck01", "clavicle"), margin=0.1, muscles=("head", "neck"))
 # Repos allongé (hors exercices) : la même pose, posée sur le matelas.
 motion("bed-rest", [K(0, scan_rest), K(3, scan_pose(breath=SCAN_BREATH * 0.6)), K(6, scan_rest)], yaw=8, pitch=30,
        props=(BED_SCAN, PILLOW_SCAN), support=BED_TOP)
@@ -1983,8 +1988,8 @@ from rig import axis_angle as _kaa  # noqa: E402
 from ik import to_euler as _keu  # noqa: E402
 from motion_eval import AX as _KAX  # noqa: E402
 from scipy.spatial.transform import Rotation as _KRot  # noqa: E402
-KC_HAND = (0.03, 0.045, 0.03)                                      # main par rapport au genou : vers le plafond, le côté, les pieds
-KC_ARM = (1.4, 0.45, -0.2)                                         # coude (vers le plafond), paume et doigts (vers le côté)
+KC_HAND = (0.03, 0.06 if BODY == "male" else 0.045, 0.03)   # main par rapport au genou : vers le plafond, le côté, les pieds
+KC_ARM = (0.7 if BODY == "male" else 0.6, 0.45, -0.2)   # coude (vers le plafond), paume et doigts (vers le côté)
 KC_HIP, KC_PULL, KC_KNEE = 122.0, 16.0, 138.0                      # flexion des hanches (au repos, gain en serrant), des genoux
 KC_SPINE = dict(spine05=0.34, spine04=0.33, spine03=0.21, spine02=0.12)
 KC_SEAT = region(("root", "spine05", "pelvis"))                   # sacrum, bas du dos
@@ -2051,6 +2056,16 @@ motion("bed-knees-chest", [K(0, kc0)] + planted(0, 3, knees_chest) + [K(3.6, kc1
 close_up("bed-knees-chest", ("head", "upperarm01", "lowerleg01", "toes", "upperleg01"), 0.1)
 
 # ─── Visage ───
+# Relaxation progressive, étape « Visage », assis sur la chaise : le mannequin n'a pas de visage, la contraction se lit
+# sur la tête et les épaules, cadrées de près. 5 secondes de contraction (épaules qui montent, tête rentrée, menton
+# baissé : tout se crispe), puis le relâchement d'un coup et 10 secondes de détente (épaules plus basses qu'au repos,
+# tête qui s'incline doucement vers l'avant), avant de revenir au repos. Mains posées sur les cuisses.
+_face_tense = keep_hands(P("chairSit", clavicle=[0, -4, 13], neck01=[-6, 0, 0], neck02=[-4, 0, 0], head=[14, 0, 0]), "chairSit")
+_face_relax = keep_hands(P("chairSit", clavicle=[0, 2, -5], neck01=[10, 0, 0], neck02=[5, 0, 0], head=[6, 0, 0], spine01=[2, 0, 0]),
+                         "chairSit")
+motion("chair-face", [K(0, "chairSit"), K(1, _face_tense), K(5, _face_tense), K(5.6, _face_relax, "out"), K(13, _face_relax),
+                      K(15, "chairSit")], muscles=("head", "neck"), yaw=20, props=(CHAIR,))
+close_up("chair-face", ("head", "neck01", "upperarm01"), 0.14)
 # ─── Assis sur une chaise ───
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
 motion("fists-clench", [K(0, "chairSit"), K(1, clench), K(3, clench), K(3.5, "chairSit", "out"), K(6, "chairSit")],
