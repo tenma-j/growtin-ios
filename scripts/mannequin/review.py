@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation, Slerp
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, "../.."))
-from motion_eval import (Body, resolve, library_for, local_rotations, boxes_for, box_mesh, towel_segments, band_mesh,  # noqa: E402
+from motion_eval import (Body, resolve, library_for, local_rotations, boxes_for, box_mesh, towel_segments, band_mesh, glass_mesh,  # noqa: E402
                          camera_shot)
 from export import render, MATERIAL_COLORS  # noqa: E402
 
@@ -159,6 +159,10 @@ def strip(job):
         V.append(fv); N.append(fn); T.append(ft + off); C += [np.array([0.62, 0.62, 0.64])] * len(ft)
         off += len(fv)
         for pr in m.get("props", []):
+            if pr["kind"] == "glass":
+                # Verre tenu : cylindre posé contre la paume (même placement que l'app).
+                bv, bn, bt = glass_mesh(pr, v)
+                V.append(bv); N.append(bn); T.append(bt + off); off += len(bv); C += [np.array([0.45, 0.72, 0.92])] * len(bt)
             if pr["kind"] != "towel": continue
             # Serviette : brin gauche, passage à plat sous le pied, brin droit (mêmes tronçons que l'app).
             for seg in towel_segments(pr, v):

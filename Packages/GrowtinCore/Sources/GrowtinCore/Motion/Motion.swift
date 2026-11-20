@@ -110,7 +110,7 @@ public struct Keyframe: Decodable, Sendable {
     public let ease: String?
 }
 
-/// Accessoire de scène (chaise, table, mur, tapis), placé par rapport à une articulation d'une image clé.
+/// Accessoire de scène (chaise, table, mur, tapis, verre tenu en main), placé par rapport à une articulation d'une image clé.
 public struct MotionProp: Decodable, Sendable, Hashable {
     public let kind: String
     /// Articulation de référence (position après mise au sol) ; absente : origine du personnage.
@@ -136,6 +136,10 @@ public struct MotionProp: Decodable, Sendable, Hashable {
     public let depth: Double?
     /// Lit sans plaid replié au pied : quelqu'un y est allongé de tout son long, les jambes posées à cet endroit.
     public let bare: Bool?
+    /// Verre tenu dans une main (`"kind": "glass"`) : `vertices` donne trois sommets de la peau de cette main (creux de
+    /// la paume, bord de la paume du côté de l'index, dos de la main en face du premier), `depth` la distance de la
+    /// paume à l'axe du verre, `width` son diamètre et `height` sa hauteur, en mètres (voir `HeldGlass`).
+    public let height: Double?
 }
 
 /// Mouvement issu d'une capture réelle : rotations locales des os, image par image (quaternions x, y, z, w).
