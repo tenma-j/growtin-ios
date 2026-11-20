@@ -115,8 +115,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc
      depuis les chevilles (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de trois quarts
      arrière (110°) : les deux avant-bras et les deux mains se voient sur leur montant (de face, le montant proche
-     cachait le sien). Cadrage identique pour les deux corps : de la tête et du bout des doigts aux orteils, avec une
-     marge réglée sur la hauteur des doigts de chaque corps pour que le linteau (2,12 m) soit dans l'image ;
+     cachait le sien). Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus
+     petite marge (calcul de CameraFraming) qui montre le linteau (2,12 m) : 0,05 m pour l'homme, 0,2 m pour la femme ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
@@ -178,8 +178,9 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      décollé et le talon haut, la cheville suit une droite, résolue en quatre clés, genou droit devant (`quad_lift`) :
      interpolés directement, les angles faisaient passer le pied devant la jambe d'appui (jambes en ciseaux). Ouverture
      de la poitrine : mains jointes paume contre paume derrière le dos, bras tendus 25° derrière la verticale,
-     omoplates serrées, haut du dos en extension et tête droite (`chest_clasp`). Vu de trois quarts arrière (120°) :
-     la main sur le cou-de-pied se voit des deux côtés.
+     omoplates serrées, haut du dos en extension et tête droite (`chest_clasp` ; écart des poignets réglé pour que les
+     paumes se touchent à 1–2 mm près sans se traverser). Vu presque de profil, un peu de l'arrière (105°) :
+     la main sur le cou-de-pied se voit des deux côtés, et la poitrine qui s'ouvre.
    - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement
      encadré pour tout mouvement dont la peau entre de plus de 5 mm dans un accessoire.
 3. `prop_scan.py` : peau dans les accessoires. Chaque mouvement à accessoires est rejoué pour les deux corps comme

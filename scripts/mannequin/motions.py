@@ -1579,6 +1579,7 @@ def quad_keys(t0, flip):
 # droite : le cou rend l'extension du dos, le regard reste à l'horizontale. « breath » : inspiration, la poitrine monte
 # encore un peu, la tête ne bouge pas.
 CLASP_BACK = 25.0
+CLASP_APART = [0.0]                                              # écart ajouté entre les poignets, réglé sur la peau plus bas
 def chest_clasp(breath=0.0):
     ext = (3 + 2 * breath, 7 + 3 * breath)                           # extension du haut du dos (spine02, spine01)
     p = P("stand", clavicle=[0, 18, -3], spine02=[-ext[0], 0, 0], spine01=[-ext[1], 0, 0], neck01=[0.7 * sum(ext), 0, 0],
@@ -1587,17 +1588,34 @@ def chest_clasp(breath=0.0):
     a = np.radians(CLASP_BACK)
     l = np.sqrt((0.95 * ARM) ** 2 - float(J["upperarm01.L"][0]) ** 2)
     w = sh + l * np.array([0.0, -np.cos(a), -np.sin(a)])
-    p = hands(p, L=w + [PALM, 0, 0], R=w - [PALM, 0, 0], fingers_L=[0, -1, -0.3], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.3],
+    x = PALM + CLASP_APART[0]
+    p = hands(p, L=w + [x, 0, 0], R=w - [x, 0, 0], fingers_L=[0, -1, -0.3], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.3],
               palm_R=[1, 0, 0], pole_L=(0.8, -0.2, -0.6), pole_R=(-0.8, -0.2, -0.6))
     p = joined_hands(p); p["_pinned"] = ["L", "R"]
     return p
+def clasp_gap(p):
+    """Écart signé entre les deux mains (négatif : elles s'interpénètrent)."""
+    v, n = posed_skin(p)
+    d, j = cKDTree(v[HAND_VERTS["R"]]).query(v[HAND_VERTS["L"]])
+    sd = np.einsum("ij,ij->i", v[HAND_VERTS["L"]] - v[HAND_VERTS["R"]][j], n[HAND_VERTS["R"]][j])
+    return float(np.where(d < 0.02, sd, d).min())
+# Paumes l'une contre l'autre : écart des poignets réglé pour que les mains se touchent à 1 mm près, sans se traverser,
+# à l'expiration comme à l'inspiration (les mains, les doigts et les pouces diffèrent d'un corps à l'autre).
+_lo, _hi = -0.03, 0.04
+for _ in range(14):
+    CLASP_APART[0] = (_lo + _hi) / 2
+    if min(clasp_gap(chest_clasp(b)) for b in (0.0, 1.0)) < 0.001: _lo = CLASP_APART[0]
+    else: _hi = CLASP_APART[0]
+CLASP_APART[0] = _hi
 chest_open, _chest_in = chest_clasp(0.0), chest_clasp(1.0)
+print("mains jointes dans le dos : écart des poignets", round(CLASP_APART[0] * 1000, 1), "mm, écart des mains",
+      [round(clasp_gap(q) * 1000, 1) for q in (chest_open, _chest_in)], "mm")
 _chest_way = P("stand", clavicle=[0, 8, 0], upperarm01=[12, 0, 32], lowerarm01=[-10, 0, 0], spine01=[-3, 0, 0])
-# Vu de trois quarts arrière (120°), du côté gauche : le talon tenu contre la fesse se lit en entier des deux côtés (main sur le
+# Vu presque de profil, un peu de l'arrière (105°), du côté gauche : le talon tenu contre la fesse se lit en entier des deux côtés (main sur le
 # cou-de-pied), le profil montre la poitrine qui s'ouvre et les mains jointes derrière le dos.
 motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(8.55, True)
        + [K(18.0, _chest_way), K(18.8, chest_open), K(21.3, _chest_in), K(23.3, chest_open), K(24.1, _chest_way),
-          K(24.9, "stand")], muscles=("quads", "chest"), yaw=120)
+          K(24.9, "stand")], muscles=("quads", "chest"), yaw=105)
 
 # ─── Mobilité, épaules, nuque ───
 # Grands cercles d'épaules vers l'arrière : avant → haut → arrière → bas. Les bras restent pendants.
@@ -1722,11 +1740,21 @@ motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [
        muscles=("chest", "shoulders"), yaw=110, pitch=10,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
-# Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des pieds au bout des doigts, pour les deux corps (la
-# marge autour des articulations est réglée sur la hauteur des doigts de chaque corps).
+# Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des orteils au bout des doigts, pour les deux corps. Vu de
+# biais, le cadre de l'homme montre déjà le linteau à la marge minimale ; la marge de chaque corps est la plus petite
+# qui le montre aussi (même calcul que l'app, CameraFraming) : personnage le plus grand possible, mêmes éléments à l'image.
+from motion_eval import camera_shot  # noqa: E402
 DOOR_TOP = 2.12
-_door_tip = max(float(joints(doorway(s))[f"finger3-3.{x}"][1]) for s in (0.0, 1.0) for x in "LR")
-close_up("doorway-stretch", ("head", "finger3-3", "toes"), round(max(0.12, DOOR_TOP + 0.03 - _door_tip), 3))
+DOOR_FRAME = ("head", "finger3-3", "toes")
+_door_keys = [[joints(k["pose"])[n] for n in ik.names] for k in MOTIONS["doorway-stretch"]["keys"]]
+_door_ids = [ik.names.index(n) for j in DOOR_FRAME for n in (f"{j}.L", f"{j}.R") if n in ik.names] + \
+            [ik.names.index(j) for j in DOOR_FRAME if j in ik.names]
+_cam = MOTIONS["doorway-stretch"]["camera"]
+for _m in np.arange(0.05, 0.6, 0.005):
+    _c, _, _ext = camera_shot(_door_keys, _door_ids, _cam["yaw"], _cam["pitch"], _m)
+    if _c[1] + _ext / 2 >= DOOR_TOP + 0.03: break
+close_up("doorway-stretch", DOOR_FRAME, round(float(_m), 3))
+print("porte : marge du cadrage", round(float(_m), 3))
 
 squeeze = P("stand", clavicle=[0, 20, -2], upperarm01=[14, 14, 6], lowerarm01=[-20, 0, 0], spine01=[-5, 0, 0])
 motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "stand")], muscles=("upperBack",), yaw=155)
