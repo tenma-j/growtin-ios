@@ -2019,13 +2019,21 @@ motion("forward-fold", [K(0, mountain)] + [K(3.2 * i / 10, fold(i / 10), "linear
 WAR_STANCE = 0.66                                            # demi-écart des chevilles (× S_LEG)
 WAR_BACK = min(0.997, LEG_STAND + 0.004)                     # jambe arrière tendue (part de sa longueur ; debout : LEG_STAND)
 WAR_LOOK = 87.0
-def war_legs(root_dx, root_dy, bend):
+WAR_TOE_IN = 12.0                                            # pied arrière (et les deux pieds au départ) : pointe un peu en dedans
+WAR_ARM0 = 20.0                                              # bras écartés des cuisses jambes écartées (degrés)
+WAR_LIFT = 0.025                                             # le pied avant se soulève de 2,5 cm pour tourner
+def war_legs(root_dx, root_dy, bend, turn=None, lift=0.0):
+    """turn : pied avant tourné vers l'extérieur (0 : pointe en dedans comme l'autre, 1 : à 90°) ; lift : pied avant
+    soulevé (m) : il tourne en l'air, pas sur le sol."""
+    turn = min(1, bend * 1.6) if turn is None else turn
     p = P("stand", root={"offset": [root_dx, root_dy, 0]},
-          upperarm01=[0, 0, 86 * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
+          upperarm01=[0, 0, WAR_ARM0 + (86 - WAR_ARM0) * min(1, bend * 1.6)], lowerarm01=[-3, 0, 0], **open_hand(1.0),
           neck01=[0, 0.35 * WAR_LOOK * bend, 0], neck02=[0, 0.25 * WAR_LOOK * bend, 0], head=[0, 0.4 * WAR_LOOK * bend, 0])
     # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
     front = np.array([WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["R"][2]])
-    return legs(p, L=front, R=back, pole_L=(1, 0, 0.25), pole_R=(0, 0, 1), foot_yaw_L=90 * min(1, bend * 1.6), foot_yaw_R=12)
+    # genou avant tourné avec le pied (vers l'extérieur une fois le pied tourné, droit devant au départ)
+    return legs(p, L=front + [0, lift, 0], R=back, pole_L=(turn, 0, 1 - 0.75 * turn), pole_R=(0, 0, 1),
+                foot_yaw_L=-WAR_TOE_IN + (90 + WAR_TOE_IN) * turn, foot_yaw_R=WAR_TOE_IN)
 def war_root_dy(dx):
     """Descente du bassin pour que la jambe arrière soit tendue à WAR_BACK de sa longueur."""
     J = joints(P("stand", root={"offset": [dx, 0.0, 0]}))
@@ -2043,14 +2051,25 @@ def war_root():
     return dx
 WAR_DX = war_root()
 print("guerrier II : jambe arrière", round(WAR_BACK, 4), "(debout", round(LEG_STAND, 4), ") bassin décalé de", round(WAR_DX, 3))
-def warrior(bend):
+def warrior(bend, turn=None, lift=0.0):
     """bend = 0 : jambes tendues, pieds écartés ; 1 : guerrier II (côté gauche devant)."""
     dx = WAR_DX * bend
-    return war_legs(dx, war_root_dy(dx), bend)
+    return war_legs(dx, war_root_dy(dx), bend, turn, lift)
+def warrior_keys(t0, f):
+    """Un côté : le pied avant se soulève, tourne vers l'extérieur en l'air et se repose ; le genou plie, pieds posés
+    (clés rapprochées, `planted`) ; trois respirations ; retour dans l'ordre inverse. Le pied tournait auparavant sur le
+    sol (il glissait de 12 à 34 mm) et le côté gauche finissait pied droit tourné : la boucle ne se refermait pas."""
+    up = WAR_LIFT * S_LEG
+    turn = [K(t0 + 0.5, f(warrior(0, 0, up))), K(t0 + 0.9, f(warrior(0, 0.5, up)), "linear"), K(t0 + 1.3, f(warrior(0, 1, up))),
+            K(t0 + 1.7, f(warrior(0, 1, 0)))]
+    back = [K(t0 + 9.3, f(warrior(0, 1, up))), K(t0 + 9.7, f(warrior(0, 0.5, up)), "linear"), K(t0 + 10.1, f(warrior(0, 0, up))),
+            K(t0 + 10.5, w0)]                                   # pose de départ (bras du corps au repos, pas leur miroir) : la boucle se referme
+    return (turn + planted(t0 + 1.7, t0 + 3.6, lambda u: f(warrior(u, 1)), n=6)
+            + [K(t0 + 5.6, f(P(wl, **CHEST_IN))), K(t0 + 7.6, f(wl))]
+            + planted(t0 + 7.6, t0 + 9.3, lambda u: f(warrior(1 - u, 1)), n=6) + back)
 wl = warrior(1.0); wt = warrior(0.45); w0 = warrior(0.0)
 wr, wrt, w0r = mirror_pose(wl), mirror_pose(wt), mirror_pose(w0)
-motion("warrior-two", [K(0, w0), K(1.6, wt), K(3.2, wl), K(5.2, P(wl, **CHEST_IN)), K(7.2, wl), K(8.6, wt), K(10.0, w0),
-                       K(11.6, wrt), K(13.2, wr), K(15.2, P(wr, **CHEST_IN)), K(17.2, wr), K(18.6, wrt), K(20.0, w0r)],
+motion("warrior-two", [K(0, w0)] + warrior_keys(0, lambda q: q) + warrior_keys(10.5, mirror_pose),
        muscles=("quads", "glutes", "shoulders"), yaw=6, props=(MAT,))
 
 # Arbre : en équilibre sur la jambe gauche, plante du pied droit à plat contre l'intérieur du mollet, orteils vers le
