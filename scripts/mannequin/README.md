@@ -74,6 +74,13 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - torsion allongée, genoux vers la poitrine (`laid`, `bed_pillow`) : même principe, mais chaque clé est placée
      exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui échantillonne la
      peau, à quelques millimètres près) ; oreiller sous le crâne de chaque corps ;
+   - genoux vers la poitrine (`knees_chest`) : genoux serrés, bassin en rétroversion réglé pour que sacrum et haut du
+     dos touchent le matelas ensemble (la colonne rend la bascule, la tête reste sur l'oreiller), paumes posées sur les
+     genoux à la hauteur de la peau (main et avant-bras sans enfoncement), vu de profil et cadré sur le corps ;
+   - méditation assise : jambes croisées résolues par cinématique inverse, fesses et pieds au sol ensemble, bassin
+     basculé de 9° vers l'avant (dos droit), tapis centré sous le corps ;
+   - étapes « Visage » (`bed-scan-face`, `chair-face`) : le mannequin n'a pas de visage ; contraction et relâchement se
+     lisent sur la tête et les épaules, cadrées de près (relaxation : 5 s de contraction, 10 s de détente) ;
    - torsion allongée (`twist_pose`) : sur le dos, genoux pliés, pieds à plat sur le matelas (lit sans plaid), bras
      ouverts en V. Les genoux tombent ensemble d'un côté : le bassin roule de 45°, les hanches font le reste ; la jambe
      du dessous s'arrête quand son côté touche le matelas, celle du dessus quand elle touche l'autre (les jambes sont
@@ -141,6 +148,15 @@ certains sommets perdaient jusqu'à 28 % de leur poids et la peau se froissait e
 À moins de 3 cm des lignes de la tenue, là où le bras compte (emmanchure, bretelles), les poids sont remplacés par une
 solution harmonique (`harmonize_weights`) : les poids d'origine, linéaires par grand triangle, pliaient la surface à
 chaque arête bras levé et le bord de la brassière se dessinait en escalier sous l'aisselle.
+
+Corps masculin : l'épaule n'est pas subdivisée (pas de bretelle) et ses triangles font 2 cm. Après les articulations
+d'appoint, les poids du bras ont une cassure de pente sur la ligne où l'appoint culmine ; le skinning y pliait la
+surface en arête vive (liseré blanc à la clavicule épaules haussées, plaque blanche sur le deltoïde bras en avant,
+anneau sur l'avant-bras, visibles dans l'app). `smooth_arm_weights` lisse ces poids (20 passes laplaciennes) autour
+des appoints de l'épaule et du coude et dans la torsion de l'avant-bras, à deux couronnes près ; mains, tête et dos le
+long de la colonne gardent leurs poids (contacts des mains et appui allongé inchangés). Arêtes pliées de plus de 25°
+par la pose : 29 → 9 (haussement d'épaules), 27 → 13 (rowing), 10 → 3 (coude, étirement « 4 »), 7 → 2 (poignet,
+assis). Le corps féminin n'est pas touché.
 
 Dans l'app, la surface est déformée sur le processeur (`SurfaceDeformer`, GrowtinCore) : skinning linéaire, puis
 normales recalculées sur les triangles déformés (sommets dédoublés le long de la tenue soudés). Le skinning du GPU
