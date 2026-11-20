@@ -2641,7 +2641,7 @@ motion("fists-clench", [K(0, "chairSit"), K(1, clench), K(6, clench), K(6.5, "ch
 # reste droite. Cadré sur le buste, de profil : de face et en entier, le geste ne se voyait pas.
 _brace_in = keep_hands(P("chairSit", spine01=[-5, 0, 0], spine02=[-3, 0, 0], clavicle=[0, 1, 2], neck01=[6, 0, 0], head=[2, 0, 0]), "chairSit")
 _brace = keep_hands(P("chairSit", spine05=[6, 0, 0], spine04=[5, 0, 0], spine03=[2, 0, 0], spine02=[-2, 0, 0], spine01=[-1, 0, 0],
-                      neck01=[2, 0, 0], clavicle=[0, -2, -5]), "chairSit")
+                      neck01=[-8, 0, 0], head=[-2, 0, 0], clavicle=[0, -2, -5]), "chairSit")
 motion("abs-contract", [K(0, "chairSit"), K(1.0, _brace_in), K(2.0, _brace), K(7.0, _brace), K(10.0, "chairSit"), K(11.5, "chairSit")],
        muscles=("abs",), yaw=70, props=(CHAIR,))
 close_up("abs-contract", ("head", "spine03", "upperleg01", "upperarm01"), 0.14)
