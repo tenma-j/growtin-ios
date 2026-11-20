@@ -1584,7 +1584,7 @@ def calf_raise(u):
 _calf = calf_raise(1.0)
 motion("calf-raises", [K(0, "stand")] + planted(0, 1.0, calf_raise, n=6) + [K(1.4, _calf)] + planted(1.4, 4.0, lambda s: calf_raise(1 - s), n=8),
        muscles=("calves",), yaw=68, pitch=6)
-close_up("calf-raises", ("wrist", "foot", "toes"), 0.02)
+close_up("calf-raises", ("wrist", "foot", "toes"), 0.05)
 
 # Fentes douces : un pied avance et se pose, les deux genoux plient, retour ; puis l'autre jambe.
 def lunge_keys(side, t0):
@@ -2063,14 +2063,14 @@ def warrior_keys(t0, f):
     up = WAR_LIFT * S_LEG
     turn = [K(t0 + 0.5, f(warrior(0, 0, up))), K(t0 + 0.9, f(warrior(0, 0.5, up)), "linear"), K(t0 + 1.3, f(warrior(0, 1, up))),
             K(t0 + 1.7, f(warrior(0, 1, 0)))]
-    back = [K(t0 + 9.3, f(warrior(0, 1, up))), K(t0 + 9.7, f(warrior(0, 0.5, up)), "linear"), K(t0 + 10.1, f(warrior(0, 0, up))),
-            K(t0 + 10.5, w0)]                                   # pose de départ (bras du corps au repos, pas leur miroir) : la boucle se referme
+    back = [K(t0 + 9.6, f(warrior(0, 1, up))), K(t0 + 10.0, f(warrior(0, 0.5, up)), "linear"), K(t0 + 10.4, f(warrior(0, 0, up))),
+            K(t0 + 10.7, w0)]                                   # pose de départ (bras du corps au repos, pas leur miroir) : la boucle se referme
     return (turn + planted(t0 + 1.7, t0 + 3.6, lambda u: f(warrior(u, 1)), n=6)
             + [K(t0 + 5.6, f(P(wl, **CHEST_IN))), K(t0 + 7.6, f(wl))]
             + planted(t0 + 7.6, t0 + 9.3, lambda u: f(warrior(1 - u, 1)), n=6) + back)
 wl = warrior(1.0); wt = warrior(0.45); w0 = warrior(0.0)
 wr, wrt, w0r = mirror_pose(wl), mirror_pose(wt), mirror_pose(w0)
-motion("warrior-two", [K(0, w0)] + warrior_keys(0, lambda q: q) + warrior_keys(10.5, mirror_pose),
+motion("warrior-two", [K(0, w0)] + warrior_keys(0, lambda q: q) + warrior_keys(10.7, mirror_pose),
        muscles=("quads", "glutes", "shoulders"), yaw=6, props=(MAT,))
 
 # Arbre : en équilibre sur la jambe gauche, plante du pied droit à plat contre l'intérieur du mollet, orteils vers le

@@ -51,7 +51,9 @@ struct MannequinFileTests {
 
         let library = try MotionLibrary.bundled(body: body)
         let motion = try #require(library.motion("arm-raise"))
-        let pose = library.resolve(motion.keys[2].pose)
+        // Mains jointes au-dessus de la tête : première clé à partir de 4,2 s (la montée compte huit clés, bras tendus).
+        let top = try #require(motion.keys.first { $0.t >= 4.2 - 1e-6 })
+        let pose = library.resolve(top.pose)
         let rotations = skeleton.localRotations(pose).map { SIMD4(Float($0.x), Float($0.y), Float($0.z), Float($0.w)) }
         deformer.deform(rotations: rotations, root: rootPosition)
         #expect(deformer.positions.allSatisfy { $0.isFinite })
@@ -60,9 +62,9 @@ struct MannequinFileTests {
             #expect(abs(x * x + y * y + z * z - 1) < 1e-3, "sommet \(i)")
         }
         // Mains jointes au-dessus de la tête : les poignets sont plus hauts que le sommet du crâne au repos.
-        let top = stride(from: 1, to: file.surface.rest.count, by: 3).map { file.surface.rest[$0] }.max() ?? 0
+        let crown = stride(from: 1, to: file.surface.rest.count, by: 3).map { file.surface.rest[$0] }.max() ?? 0
         let raised = stride(from: 1, to: deformer.positions.count, by: 3).map { deformer.positions[$0] }.max() ?? 0
-        #expect(raised > top + 0.1)
+        #expect(raised > crown + 0.1)
     }
 
     @Test("Format GTM4 (4 influences) et fichier tronqué")
