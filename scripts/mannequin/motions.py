@@ -1571,10 +1571,11 @@ motion("knee-plank", [K(0, kplank), K(3, knee_plank(_kp, 1, _kw)), K(6, kplank)]
 # à plat au même endroit ; le corps monte d'autant, d'un bloc (genoux tendus, bassin au-dessus de l'avant des pieds).
 # Vu de près : des genoux au sol.
 CALF_RISE = 34.0                                         # talons levés (degrés) : 8,2 cm (femme), 10,4 cm (homme)
+CALF_PIVOT = 0.006 if BODY == "male" else 0.004          # pivot sous l'articulation des orteils, vers la peau de l'avant-pied (m)
 def calf_raise(u):
     deg = CALF_RISE * u; c, sn = np.cos(np.radians(deg)), np.sin(np.radians(deg)); kw = {}; move = np.zeros(3)
     for s in "LR":
-        toe = STAND[f"toes.{s}"]; a = ANK[s] - toe
+        toe = STAND[f"toes.{s}"] - [0, CALF_PIVOT, 0]; a = ANK[s] - toe
         t = toe + [a[0], a[1] * c - a[2] * sn + 0.005 * deg / MARCH_PEEL, a[1] * sn + a[2] * c]
         move = t - ANK[s]
         kw.update({s: t, f"foot_pitch_{s}": deg, f"toes_{s}": -deg})

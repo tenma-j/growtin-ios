@@ -169,7 +169,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      arrêt progressif, deux tours dans l'autre. Cercles de hanches : le bassin tourne au-dessus des pieds posés et la
      colonne se courbe à l'opposé, résolue pour que la tête ne bouge pas ; flexion avant : le dos s'enroule étage par
      étage (tête, haut du dos, bas du dos, bassin) et se déroule dans l'ordre inverse (`fold`) ; mollets : les talons
-     tournent autour de la base des orteils, qui ne glissent pas (`calf_raise`) ;
+     tournent autour d'un point pris 4 à 6 mm sous l'articulation des orteils (`CALF_PIVOT`, vers la peau de l'avant-pied) :
+     orteils et avant-pied posés glissent de 3 à 4 mm au plus (6,9 mm autour de l'articulation elle-même) (`calf_raise`) ;
    - salutation des bras : montée et descente bras tendus, parallèles, placés par leur direction à chaque clé
      (`raise_arms`, 8 clés de chaque côté, jusqu'à 135° devant soi : interpolés en angles, les bras s'ouvraient en V et,
      vus de trois quarts, le bras proche semblait plié, main devant la poitrine) ; vue presque de profil (60°) ; coudes à 165–169° mains jointes au-dessus de la tête (`overhead_y`,
