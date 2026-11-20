@@ -2178,7 +2178,7 @@ assert np.ptp(_cv[:, 0]) < 1.8, "posture de l'enfant plus longue que le tapis"
 # le dos qui respire ne se voyait pas.
 motion("child-pose", [K(0, child), K(3, child_pose(1)), K(6, child)], muscles=("lowerBack",), yaw=CHILD_YAW, pitch=CHILD_PITCH,
        props=(prop("mat", "root", 0, (_cx, 0, 0), floor=True),))
-close_up("child-pose", ("head", "wrist", "toes", "upperleg01", "spine03"), 0.1)
+close_up("child-pose", ("head", "wrist", "toes", "upperleg01", "spine03"), 0.05)
 
 # ─── Au lit : scan corporel et étirements du soir ───
 BED_TOP = 0.5
@@ -2675,6 +2675,7 @@ KC_THIGH = (125.0, 140.0)       # cuisse : angle depuis la direction des pieds, 
 KC_SHIN, KC_SHIN_GAIN = -12.0, 0.8   # tibia au repos (talon un peu plus bas que le genou) ; part de la traction qu'il suit
 KC_KNEE_W = 0.9                 # écart des genoux (part de l'écart des hanches)
 KC_FOOT = 12.0                  # pied détendu
+KC_OPEN = 0.85 if BODY == "male" else 0.7   # doigts : plus ouverts pour l'homme (fermés à 0,7, leurs bouts entraient de 4 mm dans le tibia)
 _kc_lt = float(np.linalg.norm(STAND["lowerleg01.L"] - STAND["upperleg01.L"]))
 _kc_ls = float(np.linalg.norm(STAND["foot.L"] - STAND["lowerleg01.L"]))
 KC_SPINE = dict(spine05=0.34, spine04=0.33, spine03=0.21, spine02=0.12)
@@ -2690,7 +2691,7 @@ def kc_body(tilt, pull):
     rot = _kc_flat + [["z", tilt]]
     rv = _KRot.from_matrix(_kc_world(rot).T @ _kc_world(_kc_flat)).as_rotvec()
     p = P("supine", root={"rot": rot}, **{k: _keu(_KRot.from_rotvec(rv * f).as_matrix()) for k, f in KC_SPINE.items()},
-          neck01=[16, 0, 0], head=[6, 0, 0], **open_hand(0.7))
+          neck01=[16, 0, 0], head=[6, 0, 0], **open_hand(KC_OPEN))
     d = _kc_ref["neck01"] - joints(p)["neck01"]                     # le haut du buste ne bouge pas
     p = P(p, root={"rot": rot, "offset": [float(d[0]), float(d[1]), float(d[2])]})
     J = joints(p)
@@ -2753,7 +2754,7 @@ KC_YAW, KC_PITCH = 10, 20
 print("genoux vers la poitrine : bascule du bassin", round(kc_tilt(0), 1), "→", round(kc_tilt(1), 1), "degrés")
 motion("bed-knees-chest", [K(0, kc0)] + planted(0, 3, knees_chest) + [K(3.6, kc1)] + planted(3.6, 7, lambda s: knees_chest(1 - s)) + [K(7.6, kc0)],
        muscles=("lowerBack", "glutes"), yaw=KC_YAW, pitch=KC_PITCH, props=(BED_LYING, pillow_under(kc0)[0]), support=BED_TOP)
-close_up("bed-knees-chest", ("head", "upperarm01", "lowerleg01", "toes", "upperleg01"), 0.1)
+close_up("bed-knees-chest", ("head", "upperarm01", "lowerleg01", "toes", "upperleg01"), 0.15)
 
 # ─── Visage ───
 # Relaxation progressive, étape « Visage », assis sur la chaise : le mannequin n'a pas de visage, la contraction se lit

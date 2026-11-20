@@ -82,16 +82,21 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui échantillonne la
      peau, à quelques millimètres près) ; oreiller sous le crâne de chaque corps (`pillow_under` pour les genoux vers la
      poitrine) ;
-   - genoux vers la poitrine (`knees_chest`) : genoux serrés, bassin en rétroversion réglé pour que sacrum et haut du
-     dos touchent le matelas ensemble (la colonne rend la bascule, la tête reste sur l'oreiller), paumes posées sur les
-     genoux à la hauteur de la peau (main et avant-bras sans enfoncement) ; les mains ramènent les genoux de 28° vers
-     la poitrine à l'expiration ; cadré sur le corps, vu de trois quarts d'en haut (de profil, au ras du matelas, les
-     membres se superposaient) ;
+   - genoux vers la poitrine (`knees_chest`) : cuisses ramenées sur le ventre (125° depuis la direction des pieds),
+     genoux pliés, tibias parallèles à peu près horizontaux (talons vers les fesses), genoux écartés de la largeur du
+     bassin ; jambes résolues par cinématique inverse (posées par des angles, les tibias s'écartaient en V et, vus d'en
+     haut, semblaient dressés vers le plafond). Bassin en rétroversion réglé pour que sacrum et haut du dos touchent le
+     matelas ensemble (la colonne rend la bascule, la tête reste sur l'oreiller) ; chaque main posée sur le devant de son
+     genou, à la hauteur de la peau (main et avant-bras sans enfoncement), bras qui ne se croisent pas ; les mains
+     ramènent les genoux de 15° vers la poitrine à l'expiration ; cadré sur le corps, presque de profil (10°), un peu
+     d'en haut (20°) : la silhouette jambes repliées se lit (de trois quarts d'en haut, bras et tibias s'emmêlaient) ;
    - méditation assise : jambes croisées, la gauche devant, résolues par cinématique inverse ; la hauteur de chaque
      cheville est réglée pour que le pied touche le sol au niveau des fesses et des cuisses ; les deux tibias restent
      distincts (`leg_overlap` : aucun sommet d'une jambe sous la peau de l'autre, 4 mm de jeu au moins ; la cheville
-     gauche avance s'il le faut). Dos des mains posé sur les genoux, paumes vers le ciel (hauteur du poignet réglée
-     sur la peau). Bassin basculé de 9° vers l'avant (dos droit), tapis centré sous le corps ;
+     gauche avance s'il le faut). Dos des mains posé sur la cuisse juste en retrait du genou, paumes vers le ciel
+     (hauteur du poignet réglée sur la peau), coudes souples près du corps, épaules basses (clavicules abaissées de 5°) ;
+     vu un peu d'en haut (22°) pour que les paumes posées se voient. Bassin basculé de 9° vers l'avant (dos droit),
+     tapis centré sous le corps ;
    - étapes « Visage » (`bed-scan-face`, `chair-face`) : le mannequin n'a pas de visage ; contraction et relâchement se
      lisent sur les épaules et la tête, cadrées de près, sans hochement (relaxation : épaules hautes et tête rentrée
      sans basculer, tenues 5 s, puis relâchement net et 10 s de respiration calme ; scan : épaules qui se déposent et
@@ -185,7 +190,12 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - grand étirement : inclinaison sur le côté répartie sur toute la colonne (`SIDE_SPLIT`), bassin et pieds
      immobiles : le buste (hanches → base du cou) s'incline de 18 à 19° de chaque côté ;
    - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
-     cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
+     cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau).
+     Retour au calme (`march-breathe`) : douze pas sans arrêt, une respiration profonde toutes les deux enjambées
+     (5,2 s) portée par le pas lui-même (poitrine qui s'ouvre, tête un peu relevée, bras à peine écartés) ;
+   - posture de l'enfant : la respiration soulève le milieu du dos d'environ 2,5 cm ; bas et haut du dos, cou et tête
+     rendent la courbure pour que le point du front posé au sol ne bouge pas, mains posées fixes (bras à 96 % de leur
+     longueur au repos, de quoi suivre le dos). Cadrée sur le corps, de trois quarts avant (−40°), un peu d'en haut ;
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
      posé pointe en l'air au bord du lit, paume sur le sommet du crâne, mur au ras de la paume. Un pied qui quitte
      le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
@@ -225,9 +235,9 @@ Cadrage : `camera` donne l'angle de vue (`yaw`, `pitch`). Sans autre champ, l'ap
 sur toutes les images clés. `camera.frame` (liste d'articulations) demande un cadrage resserré : la caméra vise le
 centre de la boîte de ces articulations sur toutes les images clés, élargie de `camera.margin` mètres (20 cm par
 défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
-(et du matelas). Cercles de cheville (des genoux au sol, le mur au bord de l'image) et menton rentré (tête, cou et
+(et du matelas). Menton rentré (tête, cou et
 épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des genoux au sol) et ouverture de poitrine
-dans la porte (des orteils au bout des doigts, linteau compris, de trois quarts arrière) sont cadrés ainsi (`close_up`). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+dans la porte (des orteils au bout des doigts, linteau compris, de trois quarts arrière) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, de trois quarts du côté du mur (35°), la main posée à plat sur le mur dans l'image. Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
