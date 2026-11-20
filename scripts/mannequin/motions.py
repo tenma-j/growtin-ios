@@ -2234,9 +2234,12 @@ def scan_head(pose, lift=0.0, turn=0.0):
     if abs(lift) < 1e-6 and abs(turn) < 1e-6:
         return pose
     return scan_solve(lambda x: P(pose, neck01=[16 - x, 0, 0], head=[6 - lift, turn, 0]), SCAN_SKULL, -8.0, 12.0, target=SCAN_PILLOW_TOP)
-def scan_pose(breath=0.0, peak="spine03", curl=0.0, shrug=0.0, lift=0.0, turn=0.0, **leg):
+def scan_pose(breath=0.0, peak="spine03", curl=0.0, shrug=0.0, lift=0.0, head_turn=0.0, **leg):
+    """leg : réglage des jambes (scan_legs : turn, point, toes, knee). head_turn : tête tournée sur l'oreiller (ce
+    paramètre s'appelait « turn », comme la rotation des jambes : l'étape « Pieds et jambes » tournait la tête de 34°
+    au lieu de rouler les jambes vers l'extérieur)."""
     p = scan_legs(scan_breath(SCAN_BASE, breath, peak), **leg)
-    return placed(scan_head(scan_hands(p, curl, shrug), lift, turn))
+    return placed(scan_head(scan_hands(p, curl, shrug), lift, head_turn))
 SCAN_PILLOW = low_of(SCAN_BASE, SCAN_HEAD)                         # point le plus bas de la tête et du cou au repos
 # Oreiller sous la tête : son dessus est réglé sur le point le plus bas du crâne (la tête y repose, enfoncée de
 # PILLOW_SINK : réglé sur le bas du cou, plus bas que le crâne, il laissait la tête 6 à 17 mm au-dessus) ; son bord
@@ -2279,9 +2282,11 @@ scan_motion("bed-scan-whole", [K(0, scan_rest), K(4.5, scan_pose(breath=SCAN_BRE
 scan_motion("bed-scan-breath", [K(0, scan_rest), K(4, scan_pose(breath=SCAN_BREATH * 1.4, peak="spine02", shrug=0.9)), K(10, scan_rest)],
             frame=("head", "upperarm01", "spine05"), margin=0.22, muscles=("chest", "abs"))
 # Pieds et jambes : à l'inspiration les pieds se redressent, pointes ramenées vers soi, orteils relevés ; à l'expiration
-# les jambes roulent vers l'extérieur et les pointes retombent, plus loin qu'au repos, puis tout se dépose.
-scan_motion("bed-scan-legs", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, turn=0.0, point=-8.0, toes=-16.0)),
-                              K(7.5, scan_pose(turn=34.0, point=26.0)), K(10, scan_rest)],
+# les pointes retombent, plus loin qu'au repos, puis tout se dépose.
+# (Les jambes gardent leur rotation de repos : un « turn » passé ici tournait la tête de 34°, hors du cadre ; roulées
+# de 0 à 34°, les talons s'enfonçaient de 6 mm dans le matelas entre deux clés.)
+scan_motion("bed-scan-legs", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, point=-8.0, toes=-16.0)),
+                              K(7.5, scan_pose(point=26.0)), K(10, scan_rest)],
             frame=("upperleg01", "foot", "toes"), margin=0.2, muscles=("feet", "calves", "shins", "quads", "hamstrings"))
 # Ventre et poitrine : le ventre se soulève (environ 3 cm, ample pour se lire sur un téléphone) et redescend.
 scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BREATH * 1.6)), K(8, scan_rest)],
@@ -2297,7 +2302,7 @@ scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl
 # déposent dans le matelas, plus bas qu'au repos, et la tête, devenue lourde, roule doucement sur le côté, l'arrière du
 # crâne toujours posé sur l'oreiller ; la pose est tenue, puis de l'autre côté.
 _face_in = scan_pose(breath=2.5, shrug=1.4)
-_face_out = {sd: scan_pose(shrug=-0.9, turn=11.0 * sd) for sd in (1, -1)}
+_face_out = {sd: scan_pose(shrug=-0.9, head_turn=11.0 * sd) for sd in (1, -1)}
 scan_motion("bed-scan-face", [K(0, scan_rest), K(3.5, _face_in), K(8, _face_out[1]), K(10, _face_out[1]), K(13.5, _face_in),
                               K(18, _face_out[-1]), K(20, _face_out[-1]), K(22, scan_rest)],
             frame=("head", "neck01", "clavicle"), margin=0.16, muscles=("head", "neck"))
@@ -2531,7 +2536,7 @@ close_up("bed-twist", ("head", "wrist", "lowerleg01", "toes"), 0.08)
 # l'extérieur, coudes ouverts sur les côtés). Le bassin bascule (rétroversion : le bas du dos s'arrondit) jusqu'à ce que
 # le sacrum et le haut du dos touchent le matelas ensemble ; la colonne rend la bascule, le thorax reste à plat et la
 # tête posée sur l'oreiller (oreiller réglé sur le crâne, comme au scan corporel). À l'expiration, les mains ramènent
-# nettement les genoux vers la poitrine (30° de flexion des hanches en plus) ; ils repartent à l'inspiration. Cadré sur
+# nettement les genoux vers la poitrine (28° de flexion des hanches en plus) ; ils repartent à l'inspiration. Cadré sur
 # le corps, vu de trois quarts d'en haut.
 from rig import axis_angle as _kaa  # noqa: E402
 from ik import to_euler as _keu  # noqa: E402
@@ -2540,7 +2545,7 @@ from scipy.spatial.transform import Rotation as _KRot  # noqa: E402
 KC_HAND = (0.03, 0.06, 0.03)   # main par rapport au genou : vers le plafond, le côté, les pieds
 KC_ARM = (0.7 if BODY == "male" else 0.6, 0.45, -0.2)   # coude (vers le plafond), paume et doigts (vers le côté)
 KC_ADDUCT = -14.0                                                   # genoux serrés
-KC_HIP, KC_PULL, KC_KNEE = 108.0, 30.0, 138.0                      # flexion des hanches (au repos, gain en serrant), des genoux
+KC_HIP, KC_PULL, KC_KNEE = 112.0, 28.0, 138.0                      # flexion des hanches (au repos, gain en serrant), des genoux
 KC_SPINE = dict(spine05=0.34, spine04=0.33, spine03=0.21, spine02=0.12)
 KC_SEAT = region(("root", "spine05", "pelvis"))                   # sacrum, bas du dos
 KC_BACK = region(("spine01", "spine02", "spine03"))                  # haut du dos (sans les épaules, que les bras soulèvent)

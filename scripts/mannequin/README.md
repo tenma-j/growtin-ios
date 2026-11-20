@@ -74,7 +74,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      La respiration soulève le milieu du buste par des rotations qui se compensent : bassin, épaules et tête ne bougent
      pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
      y sont posées) : seuls le geste et le cadrage changent. Gestes lents mais francs, lisibles sur un téléphone :
-     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève d'environ 3 cm, les mains se
+     les pointes des pieds se redressent puis retombent, le ventre se soulève d'environ 3 cm, les mains se
      referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller
      sans hochement ;
    - torsion allongée, genoux vers la poitrine (`laid`, `bed_pillow`) : même principe, mais chaque clé est placée
@@ -83,7 +83,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      poitrine) ;
    - genoux vers la poitrine (`knees_chest`) : genoux serrés, bassin en rétroversion réglé pour que sacrum et haut du
      dos touchent le matelas ensemble (la colonne rend la bascule, la tête reste sur l'oreiller), paumes posées sur les
-     genoux à la hauteur de la peau (main et avant-bras sans enfoncement) ; les mains ramènent les genoux de 30° vers
+     genoux à la hauteur de la peau (main et avant-bras sans enfoncement) ; les mains ramènent les genoux de 28° vers
      la poitrine à l'expiration ; cadré sur le corps, vu de trois quarts d'en haut (de profil, au ras du matelas, les
      membres se superposaient) ;
    - méditation assise : jambes croisées, la gauche devant, résolues par cinématique inverse ; la hauteur de chaque
