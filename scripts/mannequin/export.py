@@ -56,6 +56,7 @@ def harmonize_weights(v, tris, bi, bw, free):
     tw = tw / np.maximum(tw.sum(1, keepdims=True), 1e-9)
     return top.astype(np.uint16), tw.astype(np.float32)
 
+SPINE_KEEP = 0.75
 def smooth_arm_weights(tris, bi, bw, order, iterations=20, lam=0.5, rings=2):
     """Poids du bras lissés après les articulations d'appoint (épaule, coude) et dans la torsion de l'avant-bras.
 
@@ -80,7 +81,9 @@ def smooth_arm_weights(tris, bi, bw, order, iterations=20, lam=0.5, rings=2):
     mask = (W[:, halves].sum(1) > 1e-4) | ((twist > 0.02) & (twist < 0.98))
     for _ in range(rings):
         mask = mask | ((avg @ mask.astype(float)) > 0)
-    mask &= (hand < 0.5) & (head < 0.5)                    # mains (contacts réglés sur la peau) et tête : inchangées
+    spine = W[:, cols(lambda name: name.startswith("spine"))].sum(1)
+    # mains (contacts réglés sur la peau), tête et dos le long de la colonne (appui du corps allongé) : inchangés
+    mask &= (hand < 0.5) & (head < 0.5) & (spine < SPINE_KEEP)
     m = mask[:, None].astype(float)
     for _ in range(iterations):
         W = W + lam * m * (avg @ W - W)
