@@ -1034,7 +1034,8 @@ walking("walk-fast", 0.92, 36, ("quads", "calves", "glutes", "hamstrings"), stri
 # Boxe dans le vide : garde (pied gauche devant, genoux souples, poings au menton), direct du gauche, retour en garde,
 # direct du droit avec rotation du buste, retour. Les pieds restent posés.
 BOX_FEET = {"L": ankle("L", dx=0.03 * S_HIP, dz=0.17 * S_LEG), "R": ankle("R", dx=-0.06 * S_HIP, dz=-0.15 * S_LEG)}
-BOX_GUARD = {"L": (0.05, -0.12, 0.215), "R": (-0.075, -0.12, 0.18)}       # poignets en garde, depuis la tête (repère du regard)
+BOX_GUARD = {"L": (0.05, -0.12, 0.215), "R": (-0.085, -0.11, 0.20)}       # poignets en garde, depuis la tête (repère du regard)
+BOX_FLARE = {"L": 0.5, "R": 0.8}                         # écart des coudes en garde (pôle du coude, repère du buste)
 BOX_REACH = 0.94                                         # coude pas complètement tendu au bout du coup
 def boxing(jab=0.0, cross=0.0):
     yaw = -26 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
@@ -1055,7 +1056,8 @@ def boxing(jab=0.0, cross=0.0):
         w = guard + (hit - guard) * u
         f = np.array([-0.15 * sg, 1, 0.25]); f = f / np.linalg.norm(f) * (1 - u) + (hit - sh) / reach * u
         n = np.array([-sg, 0, 0.2]); n = n / np.linalg.norm(n) * (1 - u) + np.array([-0.25 * sg, -1, 0]) * u
-        kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [0.12 * sg, -1, -0.1])})
+        flare = BOX_FLARE[s] + (0.12 - BOX_FLARE[s]) * u              # coude écarté en garde (avant-bras devant la poitrine), rentré pendant le coup
+        kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [flare * sg, -1, -0.1])})
     return grip_thumbs(hands(p, **kw))
 _guard = boxing()
 _jab, _cross = boxing(jab=1), boxing(cross=1)

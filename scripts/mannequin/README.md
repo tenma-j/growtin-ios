@@ -160,9 +160,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      sous le milieu du corps, pied arrière en retrait et sur le côté : les brins montent de part et d'autre du genou
      avant, la cuisse arrière reste derrière eux (8 mm au moins de la peau à chaque image). Bande de 10 cm × 5 mm
      (une serviette pliée en long) ; chaque brin mesure 0,80 m (femme) ou 0,91 m (homme), constant à 2 mm près ;
-   - boxe dans le vide : garde, poings devant le menton (6 à 8 cm du visage au plus près), placée dans le repère du
+   - boxe dans le vide : garde, poings devant le menton (7 à 10 cm du visage au plus près), placée dans le repère du
      regard (dans celui du buste tourné, les deux poings partaient vers la joue droite) ; coups droits vers l'avant,
-     coude à peine plié au bout du coup (allonge 0,94), coudes vers le bas ;
+     coude à peine plié au bout du coup (allonge 0,94). En garde, les coudes s'écartent un peu (`BOX_FLARE`) : serrés,
+     les avant-bras entraient dans la poitrine quand le buste tourne ; ils se rentrent pendant le coup ;
    - squats partiels : bras placés par leur direction, en miroir, à chaque clé (`hs_dir`) : tendus en V au-dessus de
      la tête le long des oreilles, en bas à l'horizontale devant soi, en passant un peu en diagonale ;
    - grand étirement : inclinaison sur le côté répartie sur toute la colonne (`SIDE_SPLIT`), bassin et pieds
