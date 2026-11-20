@@ -1181,7 +1181,7 @@ motion("glute-bridge", [K(0, bridge_rest)] + planted(0, 1.5, lambda s: bridge(BR
 # pied (il se déplace sur une sphère centrée sur ce point), des bras tendus vers l'avant jusqu'aux côtes basses,
 # coudes en arrière, omoplates serrées.
 from motion_eval import towel_segments, towel_grip, band_distance, TOWEL_WIDTH  # noqa: E402
-ROW_LEAN = 22.0
+ROW_LEAN = 17.0                                          # bassin ; avec la colonne, le buste penche de 22–24°
 TOWEL_THICK = 0.005
 ROW_FEET = {"L": np.array([0.03 * S_HIP, FLOOR_ANKLE, ANK["L"][2] + 0.11 * S_LEG]),
             "R": np.array([-0.17 * S_HIP, FLOOR_ANKLE, ANK["R"][2] - 0.03 * S_LEG])}
@@ -1441,8 +1441,8 @@ chest_open = hands(P("stand", clavicle=[0, 16, 0], spine01=[-7, 0, 0], neck01=[-
                    fingers_L=[0, -1, -0.35], palm_L=[-1, 0, 0], fingers_R=[0, -1, -0.35], palm_R=[1, 0, 0],
                    pole_L=(0.8, -0.6, -0.4), pole_R=(-0.8, -0.6, -0.4))
 _chest_way = P("stand", clavicle=[0, 8, 0], upperarm01=[12, 0, 32], lowerarm01=[-10, 0, 0], spine01=[-3, 0, 0])
-# Vu de trois quarts avant, presque de profil : le talon qui monte vers la fesse se lit d'un côté comme de l'autre, et
-# l'on voit la poitrine s'ouvrir quand les bras partent en arrière.
+# Vu de trois quarts avant (40°) : on voit la poitrine s'ouvrir quand les bras partent en arrière ; le talon tenu contre
+# la fesse se lit en entier du côté de la caméra, de l'autre on voit le genou plié et la main derrière la cuisse.
 motion("cooldown-stretch", [K(0, "stand")] + quad_keys(0, False) + quad_keys(8.55, True)
        + [K(18.0, _chest_way), K(18.8, chest_open), K(21.3, P(chest_open, **CHEST_IN)), K(23.3, chest_open), K(24.1, _chest_way),
           K(24.9, "stand")], muscles=("quads", "chest"), yaw=40)
@@ -1519,7 +1519,8 @@ motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True
 # là où tombent les avant-bras (`width` : distance entre les axes des montants). Avant-bras et mains ne bougent plus ;
 # le corps avance d'un bloc depuis les chevilles, pieds posés : les épaules passent de l'arrière à l'avant des coudes,
 # les omoplates se serrent, la poitrine s'ouvre entre les montants. Vue de trois quarts avant, du bassin aux mains :
-# on voit la poitrine avancer entre les montants, les bras à l'horizontale et les mains posées dessus.
+# on voit la poitrine avancer entre les montants, les bras à l'horizontale et les mains posées dessus ; l'avant-bras du
+# côté de la caméra est en partie caché par son montant (il est posé sur la face qui regarde le personnage).
 UPPER_ARM = UPPER_ARM_LEN
 DOOR_IN = 0.11 * S_LEG                                       # avancée du bassin
 DOOR_RHYTHM = rhythm_amount(90.0)                            # bras à l'horizontale : la ceinture scapulaire suit un peu
@@ -1557,11 +1558,11 @@ for _ in range(5):
     DOOR_DEPTH[1] += float(_v[_DOOR_HAND, 2].max()) - DOOR_Z + 0.001
     DOOR_Z = float(DOOR_ELBOW[2]) + DOOR_DEPTH[0]
 # Montants : l'avant-bras est posé sur leur moitié intérieure (le bras, qui recule quand le buste avance, passe à côté).
-DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.03)          # l'axe de l'avant-bras à 3 cm du milieu du montant, vers l'ouverture
+DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.02)
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
        + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=30, pitch=14,
+       muscles=("chest", "shoulders"), yaw=34, pitch=12,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
 close_up("doorway-stretch", ("head", "wrist", "lowerarm01", "upperleg01"), 0.22)

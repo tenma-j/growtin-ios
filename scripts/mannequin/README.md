@@ -93,7 +93,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - marche et marche soutenue (`walk_foot`, `walk_pose`, `walking`) : écrites par objectifs, sur place, le sol défilant
      sous le corps à vitesse constante. Chaque pied suit le cycle réel (attaque du talon pointe relevée, pied à plat,
      talon qui se lève en roulant sur l'avant-pied, poussée, passage du pas) ; le pied d'appui est posé sur le sol
-     d'après sa peau. Le bassin est porté par la jambe d'appui presque tendue (genou à 167–175° au milieu de l'appui),
+     d'après sa peau. Le bassin est porté par la jambe d'appui presque tendue (genou à 170–172° au milieu de l'appui, 158–162° juste après la pose du talon, quand elle amortit),
      monte au passage à la verticale, redescend au double appui (le talon se pose à l'instant où la jambe arrière a
      amené le bassin à la même hauteur : `front` est résolu pour cela), se décale vers la jambe d'appui et tourne avec
      la jambe qui avance ; les épaules tournent à l'opposé, la tête reste de face. Promenade : un cycle en 1,2 s, bras
@@ -118,6 +118,14 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      colonne se courbe à l'opposé, résolue pour que la tête ne bouge pas ; flexion avant : le dos s'enroule étage par
      étage (tête, haut du dos, bas du dos, bassin) et se déroule dans l'ordre inverse (`fold`) ; mollets : les talons
      tournent autour de la base des orteils, qui ne glissent pas (`calf_raise`) ;
+   - salutation des bras : entre l'horizontale et le haut, une clé bras à 135° devant soi (interpolés directement, les
+     bras s'ouvraient en V sur les côtés) ; coudes à 165–169° mains jointes au-dessus de la tête (`overhead_y`,
+     allonge 0,997). Posture de l'arbre : le poids passe sur la jambe d'appui pieds posés, puis le pied se soulève à
+     la verticale de son appui avant de partir vers le mollet (`tree_shift`) ; il glissait de 15 cm au sol ;
+   - pas chassés : chaque pas est résolu en six clés (pied qui monte à la verticale, se déplace en l'air, se pose à la
+     verticale ; pied d'appui replacé à chaque clé) : moins de 3 mm de glissement ;
+   - rowing serviette : bassin penché de 17°, buste (bassin → cou) à 22–24°, genoux à 140–150° ; chaque brin mesure
+     environ 0,9 m (la serviette fait donc 1,9 à 2 m : une grande serviette de plage) ;
    - pas sur place lents (`slow_step`, `slow_steps`) : le pied monte et redescend à la verticale de son appui par
      cinématique inverse, sans glisser ; repris par la récupération, le retour au calme et la pause (gorgée d'eau) ;
    - appuis réglés sur la peau : gainage sur les genoux (genoux, avant-bras et paumes touchent le sol ensemble), talon
