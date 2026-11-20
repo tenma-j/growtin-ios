@@ -1913,6 +1913,7 @@ _wall = float(posed_skin(_a0)[0][HAND_VERTS["L"], 0].max() - joints(_a0)["wrist.
 # levée devant le corps. Cadrée des genoux au sol, l'image ne montrait ni la main ni le mur, qui semblait loin.
 motion("ankle-circles", [K(0, _a0)] + ankle_keys(0, "R") + ankle_keys(5.6, "L"), muscles=("calves", "shins"), yaw=35, pitch=8,
        props=(prop("wall", "wrist.L", 0, (_wall, 0, -0.02), floor=True),))
+close_up("ankle-circles", ("head", "wrist", "toes", "foot"), 0.12)          # de la tête aux orteils, main sur le mur comprise
 
 # Inclinaison sur le côté : toute la colonne se courbe (bas du dos compris), bassin et jambes immobiles, pieds posés ;
 # le buste (des hanches à la base du cou) s'incline d'environ 17° (SIDE_BEND : courbure totale de la colonne).
