@@ -1748,11 +1748,11 @@ scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl
 # l'inspiration le menton monte un peu et les épaules se décollent ; à l'expiration la tête s'alourdit (menton qui
 # redescend vers la poitrine, nuque qui s'allonge) en roulant doucement d'un côté, les épaules s'enfoncent dans le
 # matelas, et la pose est tenue ; de l'autre côté ensuite.
-_face_in = scan_pose(breath=1.5, lift=6.0, shrug=0.7)
-_face_out = {sd: scan_pose(lift=-7.0, shrug=-0.7, turn=9.0 * sd) for sd in (1, -1)}
+_face_in = scan_pose(breath=1.5, lift=8.0, shrug=1.0)
+_face_out = {sd: scan_pose(lift=-9.0, shrug=-0.8, turn=12.0 * sd) for sd in (1, -1)}
 scan_motion("bed-scan-face", [K(0, scan_rest), K(3.5, _face_in), K(8, _face_out[1]), K(10, _face_out[1]), K(13.5, _face_in),
                               K(18, _face_out[-1]), K(20, _face_out[-1]), K(22, scan_rest)],
-            frame=("head", "neck01", "clavicle"), margin=0.1, muscles=("head", "neck"))
+            frame=("head", "neck01", "clavicle"), margin=0.16, muscles=("head", "neck"))
 # Repos allongé (hors exercices) : la même pose, posée sur le matelas.
 motion("bed-rest", [K(0, scan_rest), K(3, scan_pose(breath=SCAN_BREATH * 0.6)), K(6, scan_rest)], yaw=8, pitch=30,
        props=(BED_SCAN, PILLOW_SCAN), support=BED_TOP)
