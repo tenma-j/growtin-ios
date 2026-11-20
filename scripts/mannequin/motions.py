@@ -2670,7 +2670,7 @@ from ik import to_euler as _keu  # noqa: E402
 from motion_eval import AX as _KAX  # noqa: E402
 from scipy.spatial.transform import Rotation as _KRot  # noqa: E402
 KC_HAND = (0.03, 0.03, -0.04)  # main par rapport au genou : vers le plafond, le côté, les pieds (négatif : vers la tête)
-KC_ARM = (0.2, 0.3, 0.0)        # coude (vers le plafond), paume et doigts (vers le côté)
+KC_ARM = (0.2, 0.3 if BODY == "male" else 0.5, 0.0)   # coude (vers le plafond), paume inclinée vers le genou (vers le côté)
 KC_THIGH = (125.0, 140.0)       # cuisse : angle depuis la direction des pieds, au repos → genoux ramenés (degrés)
 KC_SHIN, KC_SHIN_GAIN = -12.0, 0.8   # tibia au repos (talon un peu plus bas que le genou) ; part de la traction qu'il suit
 KC_KNEE_W = 0.9                 # écart des genoux (part de l'écart des hanches)
