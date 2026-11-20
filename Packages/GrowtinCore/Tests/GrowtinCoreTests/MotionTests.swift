@@ -143,6 +143,7 @@ struct MotionTests {
         // Haussements : épaules tenues 3 secondes en haut.
         let shrugs = try #require(library.motion("shrugs")).keys.map(\.t)
         #expect(shrugs.count == 5 && abs(shrugs[2] - shrugs[1] - 3) < 1e-6)
+        #expect(abs((shrugs.last ?? 0) * 8 - 60) < 1e-6)                   // 8 fois dans l'étape de 60 secondes
         // Regard au loin : inspire 5 secondes, expire 5 secondes.
         let look = try #require(library.motion("look-far")).keys.map(\.t)
         #expect(zip(look, look.dropFirst()).allSatisfy { abs($1 - $0 - 5) < 1e-6 })

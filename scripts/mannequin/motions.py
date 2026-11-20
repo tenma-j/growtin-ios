@@ -657,14 +657,14 @@ motion("chair-breathe", breathe("chairSit"), yaw=30, props=(CHAIR,))
 # 10 à 14 cm au-dessus du sol, assis sur les pieds).
 from rig import axis_angle as _aa  # noqa: E402
 SEATED_TILT = 9.0
-SEAT_CROSS = (0.13, 0.31, 0.19)                  # chevilles : vers le côté opposé, vers l'avant (gauche, droite)
+SEAT_CROSS = (0.13, 0.31, 0.19, 0.0)    # chevilles : vers le côté opposé, vers l'avant (gauche, droite), cheville gauche surélevée
 _seat_base = P(root={"rot": [["x", SEATED_TILT]]})
 _seat_skin = (region(("upperleg", "pelvis", "root", "spine05")), region(("foot", "toes")))
 def seat_legs(h):
     H = joints(_seat_base); kw = {}
-    for s, sg, dz in (("L", 1, SEAT_CROSS[1]), ("R", -1, SEAT_CROSS[2])):
+    for s, sg, dz, up in (("L", 1, SEAT_CROSS[1], SEAT_CROSS[3]), ("R", -1, SEAT_CROSS[2], 0.0)):
         hip = H[f"upperleg01.{s}"]
-        kw.update({s: [-sg * SEAT_CROSS[0], hip[1] - h, hip[2] + dz], f"pole_{s}": (sg, -0.15, 0.35),
+        kw.update({s: [-sg * SEAT_CROSS[0], hip[1] - h + up, hip[2] + dz], f"pole_{s}": (sg, -0.15, 0.35),
                    f"foot_rot_{s}": _aa([0, 1, 0], -sg * 100) @ _aa([0, 0, 1], -sg * 55)})
     return legs(_seat_base, **kw)
 def _seat_gap(h):
@@ -1218,9 +1218,10 @@ def roll(theta):
 motion("shoulder-rolls", circle_keys(12, 4.2, roll), muscles=("shoulders", "upperBack"), yaw=58)
 
 shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 0])
-# Haussements : les épaules montent en inspirant, tenues 3 secondes, puis tombent en expirant.
+# Haussements : les épaules montent en inspirant, tenues 3 secondes, puis tombent en expirant ; 8 fois dans l'étape
+# de 60 secondes (boucle de 7,5 s).
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(4.2, P("stand", **shrug_up)),
-                  K(4.6, "stand", "out"), K(6, "stand")], muscles=("upperBack", "neck"), yaw=25)
+                  K(4.6, "stand", "out"), K(7.5, "stand")], muscles=("upperBack", "neck"), yaw=25)
 _chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22]), "chairSit")
 motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(3.2, _chair_shrug),
                         K(3.6, "chairSit", "out"), K(5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
@@ -1988,8 +1989,9 @@ from rig import axis_angle as _kaa  # noqa: E402
 from ik import to_euler as _keu  # noqa: E402
 from motion_eval import AX as _KAX  # noqa: E402
 from scipy.spatial.transform import Rotation as _KRot  # noqa: E402
-KC_HAND = (0.03, 0.06 if BODY == "male" else 0.045, 0.03)   # main par rapport au genou : vers le plafond, le côté, les pieds
+KC_HAND = (0.03, 0.06, 0.03)   # main par rapport au genou : vers le plafond, le côté, les pieds
 KC_ARM = (0.7 if BODY == "male" else 0.6, 0.45, -0.2)   # coude (vers le plafond), paume et doigts (vers le côté)
+KC_ADDUCT = -14.0                                                   # genoux serrés
 KC_HIP, KC_PULL, KC_KNEE = 122.0, 16.0, 138.0                      # flexion des hanches (au repos, gain en serrant), des genoux
 KC_SPINE = dict(spine05=0.34, spine04=0.33, spine03=0.21, spine02=0.12)
 KC_SEAT = region(("root", "spine05", "pelvis"))                   # sacrum, bas du dos
@@ -2004,7 +2006,7 @@ def kc_body(tilt, pull):
     rot = _kc_flat + [["z", tilt]]
     rv = _KRot.from_matrix(_kc_world(rot).T @ _kc_world(_kc_flat)).as_rotvec()
     p = P("supine", root={"rot": rot}, **{k: _keu(_KRot.from_rotvec(rv * f).as_matrix()) for k, f in KC_SPINE.items()},
-          upperleg01=[-(KC_HIP + KC_PULL * pull), 0, -1.5], lowerleg01=[KC_KNEE, 0, 0], foot=[25, 0, 0],
+          upperleg01=[-(KC_HIP + KC_PULL * pull), 0, -KC_ADDUCT], lowerleg01=[KC_KNEE, 0, 0], foot=[25, 0, 0],
           neck01=[16, 0, 0], head=[6, 0, 0], **open_hand(0.7))
     d = _kc_ref["neck01"] - joints(p)["neck01"]                     # le haut du buste ne bouge pas
     return P(p, root={"rot": rot, "offset": [float(d[0]), float(d[1]), float(d[2])]})
