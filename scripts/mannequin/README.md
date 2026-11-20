@@ -64,23 +64,39 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      l'écart des mains est élargi jusqu'à ce que les brins passent à 6 mm au moins de la peau (`towel_clearance` :
      pied avant, tibias, genoux, cuisses, bras) ;
    - scan corporel au lit (`bed-scan-*`) : le corps repose vraiment sur le matelas. La hanche s'étend jusqu'à ce que
-     mollets et talons touchent, le dos des mains est posé (hauteur du poignet réglée à chaque clé), l'oreiller est
-     placé sous l'arrière du crâne de chaque corps et le cou se règle pour que la tête y reste posée (`scan_solve`).
+     mollets et talons touchent, le dos des mains est posé (hauteur du poignet réglée à chaque clé). L'oreiller
+     (`pillow_under`) est réglé sur la peau de chaque corps : son dessus au point le plus bas du crâne (la tête s'y
+     enfonce de 1 mm), son bord côté pieds juste avant la nuque (plus loin, le cou et les épaules y entreraient), sa
+     taille à la mesure d'une tête (`depth` 26 cm le long du lit, `width` 48 cm en travers ; 34 × 56 cm par défaut),
+     taie bleu-gris qui se détache du drap. Réglé auparavant sur le bas du cou et par un décalage fixe depuis
+     l'articulation de la tête, il laissait la tête 6 à 17 mm au-dessus (48 mm menton levé) et posée sur son bord. Le
+     cou se règle pour que le crâne reste posé quand la tête tourne (`scan_solve`).
      La respiration soulève le milieu du buste par des rotations qui se compensent : bassin, épaules et tête ne bougent
      pas. Toutes les étapes partent de la même pose, dans le même lit (sans plaid, `"bare": true`, puisque les jambes
      y sont posées) : seuls le geste et le cadrage changent. Gestes lents mais francs, lisibles sur un téléphone :
-     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève d'environ 2 cm, les mains se
-     referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller ;
+     les jambes roulent vers l'extérieur et les pointes retombent, le ventre se soulève d'environ 3 cm, les mains se
+     referment puis se déplient pendant que les épaules se décollent puis se déposent, la tête roule sur l'oreiller
+     sans hochement ;
    - torsion allongée, genoux vers la poitrine (`laid`, `bed_pillow`) : même principe, mais chaque clé est placée
      exactement sur le matelas d'après toute la peau, sans la mise au sol automatique de l'app (qui échantillonne la
-     peau, à quelques millimètres près) ; oreiller sous le crâne de chaque corps ;
+     peau, à quelques millimètres près) ; oreiller sous le crâne de chaque corps (`pillow_under` pour les genoux vers la
+     poitrine) ;
    - genoux vers la poitrine (`knees_chest`) : genoux serrés, bassin en rétroversion réglé pour que sacrum et haut du
      dos touchent le matelas ensemble (la colonne rend la bascule, la tête reste sur l'oreiller), paumes posées sur les
-     genoux à la hauteur de la peau (main et avant-bras sans enfoncement), vu de profil et cadré sur le corps ;
-   - méditation assise : jambes croisées résolues par cinématique inverse, fesses et pieds au sol ensemble, bassin
-     basculé de 9° vers l'avant (dos droit), tapis centré sous le corps ;
+     genoux à la hauteur de la peau (main et avant-bras sans enfoncement) ; les mains ramènent les genoux de 30° vers
+     la poitrine à l'expiration ; cadré sur le corps, vu de trois quarts d'en haut (de profil, au ras du matelas, les
+     membres se superposaient) ;
+   - méditation assise : jambes croisées, la gauche devant, résolues par cinématique inverse ; la hauteur de chaque
+     cheville est réglée pour que le pied touche le sol au niveau des fesses et des cuisses ; les deux tibias restent
+     distincts (`leg_overlap` : aucun sommet d'une jambe sous la peau de l'autre, 4 mm de jeu au moins ; la cheville
+     gauche avance s'il le faut). Dos des mains posé sur les genoux, paumes vers le ciel (hauteur du poignet réglée
+     sur la peau). Bassin basculé de 9° vers l'avant (dos droit), tapis centré sous le corps ;
    - étapes « Visage » (`bed-scan-face`, `chair-face`) : le mannequin n'a pas de visage ; contraction et relâchement se
-     lisent sur la tête et les épaules, cadrées de près (relaxation : 5 s de contraction, 10 s de détente) ;
+     lisent sur les épaules et la tête, cadrées de près, sans hochement (relaxation : épaules hautes et tête rentrée
+     sans basculer, tenues 5 s, puis relâchement net et 10 s de respiration calme ; scan : épaules qui se déposent et
+     tête qui roule sur l'oreiller) ;
+   - respirations assises (`chair-breathe`, `abs-contract`) : poitrine qui se soulève et épaules qui montent un peu,
+     tête droite ; ventre contracté : bas du dos arrondi, côtes basses vers le bassin, cadré sur le buste, de profil ;
    - torsion allongée (`twist_pose`) : sur le dos, genoux pliés, pieds à plat sur le matelas (lit sans plaid), bras
      ouverts en V. Les genoux tombent ensemble d'un côté : le bassin roule de 45°, les hanches font le reste ; la jambe
      du dessous s'arrête quand son côté touche le matelas, celle du dessus quand elle touche l'autre (les jambes sont

@@ -553,7 +553,7 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
         let wall = Self.pbr(UIColor(red: 0.90, green: 0.90, blue: 0.88, alpha: 1), roughness: 0.95)
         let mat = Self.pbr(UIColor(red: 0.35, green: 0.56, blue: 0.46, alpha: 1), roughness: 0.92)
         let linen = Self.pbr(UIColor(red: 0.93, green: 0.925, blue: 0.91, alpha: 1), roughness: 0.95)
-        let pillowCloth = Self.pbr(UIColor(red: 0.97, green: 0.965, blue: 0.95, alpha: 1), roughness: 0.95)
+        let pillowCloth = Self.pbr(UIColor(red: 0.80, green: 0.85, blue: 0.89, alpha: 1), roughness: 0.95)   // taie bleu-gris : se détache du drap
         let throwCloth = Self.pbr(UIColor(red: 0.55, green: 0.66, blue: 0.6, alpha: 1), roughness: 0.95)
 
         for prop in props {
@@ -608,7 +608,8 @@ final class MannequinStage: NSObject, SCNSceneRendererDelegate {
                 box(0.07, mattressTop + 0.45, 1.46, SIMD3(-1.03, (mattressTop + 0.45) / 2, 0), wood, chamfer: 0.025)
                 if prop.bare != true { box(0.42, 0.05, 1.38, SIMD3(0.7, mattressTop + 0.02, 0), throwCloth, chamfer: 0.025) }
             case "pillow":
-                box(0.34, 0.1, 0.56, SIMD3(0, top - 0.05, 0), pillowCloth, chamfer: 0.045)
+                // `depth` : profondeur le long du lit, `width` : largeur en travers, à la mesure de la tête (34 et 56 cm par défaut).
+                box(Float(prop.depth ?? 0.34), 0.1, Float(prop.width ?? 0.56), SIMD3(0, top - 0.05, 0), pillowCloth, chamfer: 0.045)
             case "door":
                 // Montants à la mesure du personnage : `width` donne la distance entre leurs axes (les avant-bras y sont
                 // posés). Sans ce champ : juste à l'extérieur des poignets.

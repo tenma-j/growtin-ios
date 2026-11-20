@@ -154,7 +154,8 @@ def boxes_for(prop, anchor):
         out += [((0, (top - 0.09) / 2, 0), (1.0, (top - 0.09) / 2, 0.73)), ((0, top - 0.1, 0), (0.98, 0.1, 0.71)),
                 ((-1.03, (top + 0.45) / 2, 0), (0.035, (top + 0.45) / 2, 0.73))]
     elif k == "pillow":
-        out.append(((0, a[1] - 0.05, 0), (0.17, 0.05, 0.28)))
+        # « depth » : profondeur le long du lit, « width » : largeur en travers (34 et 56 cm par défaut)
+        out.append(((0, a[1] - 0.05, 0), ((prop.get("depth") or 0.34) / 2, 0.05, (prop.get("width") or 0.56) / 2)))
     elif k == "door":
         half = (prop.get("width") or 1.0) / 2                # distance entre les axes des montants : à la mesure du corps
         for x in (-half, half):
