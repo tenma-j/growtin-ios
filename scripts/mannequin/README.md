@@ -84,6 +84,24 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      répartit entre ses étages la rotation qui le sépare du thorax, resté à plat : épaules et mains ne bougent pas.
      La tête tourne à l'opposé des genoux, le cou réglé pour que le crâne reste à la hauteur de l'oreiller. Clés
      rapprochées (12 par descente), cadrage resserré sur le corps, vu de haut depuis le pied du lit ;
+   - assises (chaise, bord du lit) : la peau touche le dessus de l'assise sans s'y enfoncer. Sa hauteur est lue sur
+     la peau de chaque corps dans la pose assise (`SEAT_TOP`, `SEAT_DROP` : fesses et cuisses plus ou moins épaisses ;
+     0,5 mm de jeu) ; chaise et lit sont posés à cette hauteur sous le bassin. Au bord du lit, le matelas s'arrête
+     12 cm devant le bassin (`BED_EDGE`) : la cuisse d'une jambe tendue talon au sol passe devant lui. Quand la pose
+     change ce qui est posé (jambe qui se tend, buste qui se penche et fait pivoter le bassin), `on_seat` remonte le
+     bassin à chaque clé jusqu'à ce que la peau touche de nouveau le matelas, pieds et mains résolus ensuite
+     (étirement de l'arrière des cuisses : le buste bascule d'un bloc depuis les hanches, de 10° à 46°, dos long ;
+     jambe tendue à 99,8 % de sa longueur, le bassin avance de 1 à 3 cm sur le matelas pour que le talon ne bouge
+     pas ; la jambe se tend en glissant, pied à 12 mm du sol) ;
+   - tempos des consignes de la relaxation : poings serrés 5 s puis 10 s de relâchement, épaules tenues 5 s, ventre
+     contracté 5 s buste droit (bas de la colonne à peine fléchi, haut redressé d'autant) puis relâché lentement ;
+   - squat sur chaise (`chair_squat`) : debout devant la chaise, les hanches reculent, le buste se penche, les bras
+     montent devant ; les fesses descendent jusqu'à effleurer l'assise (descente du bassin réglée sur la peau, 1 mm de
+     jeu), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque verticaux, pieds résolus
+     à chaque clé. La chaise (assise à 46 cm) est placée d'après chaque corps (45 cm pour la femme), en coordonnées du sol (sans ancre) :
+     son milieu sous les hanches en bas du squat, son bord avant au moins 1 cm derrière les mollets du personnage
+     debout. Une ancre sur une image clé numérotée ne convient pas ici : des clés intermédiaires sont ajoutées
+     après coup, et la chaise s'était retrouvée réglée sur une pose presque debout (assise à 77 cm) ;
    - porte (`"kind": "door"`) : bras en chandelier, coudes à hauteur d'épaule, avant-bras verticaux et paumes à plat
      sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
      montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le buste avance ;
@@ -102,15 +120,23 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
      Étirement de la cuisse (retour au calme) : le talon se lève de 24°, orteils posés au même endroit, puis le pied
      monte de 2 cm à la verticale avant de partir vers l'arrière ; il se repose de même (`quad_foot`).
-3. `review.py <dossier> [N] [exercices…]` : planches de contrôle de chaque étape d'exercice pour les deux corps, N
+   - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement
+     encadré pour tout mouvement dont la peau entre de plus de 5 mm dans un accessoire.
+3. `prop_scan.py` : peau dans les accessoires. Chaque mouvement à accessoires est rejoué pour les deux corps comme
+   dans l'app (`FPS` images par seconde, 15 par défaut, clés interpolées comprises) ; pour chaque pavé de l'accessoire
+   (mêmes dimensions que l'app : `boxes_for`, `motion_eval.py`), profondeur maximale de peau à l'intérieur, instant,
+   os et nombre de sommets. Au-delà de 5 mm (`LIMIT_MM`) le mouvement est signalé et le script sort en erreur. La
+   profondeur plafonne à la demi-épaisseur du pavé (20 mm pour une assise). Il ne mesure que l'enfoncement : un corps
+   qui flotte au-dessus de son assise se voit sur les planches de `review.py`.
+4. `review.py <dossier> [N] [exercices…]` : planches de contrôle de chaque étape d'exercice pour les deux corps, N
    images réparties sur la boucle, interpolées comme dans l'app, avec le sol, les accessoires (serviette comprise),
    la consigne et le cadrage resserré des mouvements qui en ont un. `SIZE` : taille d'une image ; `MOTIONS_JSON` :
    autre fichier de mouvements.
-4. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :
+5. `motion_eval.py <motions.json> <corps.npz> <planche.png> [ids]` : planche d'aperçu (même calcul que l'app :
    cinématique directe, skinning linéaire, mise au sol, décalages mis à l'échelle du corps). `MAXK=n` limite le
    nombre d'images par mouvement.
-5. `solve_poses.py <corps.npz>` : outil d'auteur des poses au sol (à quatre pattes, tailleur, papillon, enfant).
-6. `mocap_preview.py` : aperçu d'un extrait de capture avant de l'ajouter.
+6. `solve_poses.py <corps.npz>` : outil d'auteur des poses au sol (à quatre pattes, tailleur, papillon, enfant).
+7. `mocap_preview.py` : aperçu d'un extrait de capture avant de l'ajouter.
 
 `motions.json` (format 3) contient une version de chaque mouvement par corps (`bodies.male`, `bodies.female`) :
 le script est rejoué pour chaque squelette, si bien que les mains jointes se touchent et que les pieds restent posés

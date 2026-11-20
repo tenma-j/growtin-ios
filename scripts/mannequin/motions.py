@@ -416,6 +416,38 @@ POSES["chairSit"] = hands(P("chairLegs"),
                           fingers_L=[-0.15, -0.15, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.15, 1], palm_R=[0, -1, 0],
                           pole_L=(0.5, -0.3, -1), pole_R=(-0.5, -0.3, -1))
 
+# ─── Assises : la peau touche le dessus de la chaise ou du matelas, sans s'y enfoncer ───
+# La hauteur de l'assise est lue sur la peau de chaque corps (fesses et cuisses plus ou moins épaisses) : avec un
+# écart fixe sous le bassin, la femme s'enfonçait de 13 mm dans la chaise et l'homme flottait à 13 mm.
+SEAT_GAP = 0.0005                                       # jeu entre la peau et l'assise (m)
+def seat_low(pose, front, back=None):
+    """Hauteur au-dessus du sol du point le plus bas de la peau posée sur une assise : en arrière de « front » (z du
+    bord avant), au-dessus des mollets. Le sol est celui de l'app (point le plus bas de son échantillon de peau)."""
+    v = posed_skin(pose)[0]
+    ground = float(v[MESH.sample, 1].min())
+    on = (v[:, 2] < front) & (v[:, 1] > ground + 0.2)
+    if back is not None: on &= v[:, 2] > back
+    return float(v[on, 1].min()) - ground
+
+def root_height(pose):
+    """Hauteur du bassin (articulation racine) au-dessus du sol de l'app."""
+    return float(joints(pose)["root"][1] - posed_skin(pose)[0][MESH.sample, 1].min())
+
+def on_seat(build, front, top, lo=-0.03, hi=0.09):
+    """Pose assise posée sur son assise : build(dy) construit la pose avec le bassin monté de dy ; dy est réglé pour
+    que la peau touche le dessus de l'assise (hauteur « top », bord avant en z = « front »)."""
+    for _ in range(18):
+        dy = (lo + hi) / 2
+        if seat_low(build(dy), front) > top + SEAT_GAP: hi = dy
+        else: lo = dy
+    return build(hi)
+
+SEAT_Z = float(_ch["root"][2])                           # bassin assis (z) : repère des bords d'assise
+CHAIR_BACK = 0.06                                        # centre de la chaise derrière le bassin (assise de 42 cm)
+BED_EDGE = 0.12                                          # bord du matelas devant le bassin : assis au bord du lit
+SEAT_TOP = seat_low("chairSit", SEAT_Z - CHAIR_BACK + 0.21) - SEAT_GAP      # dessus de l'assise, au-dessus du sol
+SEAT_DROP = root_height("chairSit") - SEAT_TOP           # … et sous le bassin (ancre des accessoires)
+
 MOTIONS = {}
 def root_rotations(M):
     """Rotation de la racine en rotations successives autour des axes du monde, dans l'ordre d'axes le plus éloigné
@@ -591,7 +623,7 @@ def close_up(mid, frame, margin=None):
 def prop(kind, anchor=None, key=0, offset=(0, 0, 0), yaw=0, floor=False):
     return {"kind": kind, "anchor": anchor, "key": key, "offset": [float(x) for x in offset], "yaw": float(yaw), "floor": floor}
 
-CHAIR = prop("chair", "root", 0, (0, -0.105, -0.06))
+CHAIR = prop("chair", "root", 0, (0, -SEAT_DROP, -CHAIR_BACK))
 MAT = prop("mat", "root", 0, (0, 0, 0), floor=True)
 
 def breathe(base, cycle=5.0, extra=None):
@@ -834,9 +866,44 @@ motion("half-squat-arms", [K(0, top), K(1.8, squat(0.2, 0.09, 24, arms_front)), 
        muscles=("quads", "glutes", "shoulders"), yaw=60)
 
 # Squat sur chaise : s'asseoir en 3 secondes, se relever en 1, sans les mains.
-seat = squat(0.4, 0.2, 34, dict(upperarm01=[-78, 0, 6], lowerarm01=[-4, 0, 0], **open_hand(0.6)))
-motion("chair-squat", [K(0, "stand"), K(3, seat), K(3.3, seat), K(4.3, "stand", "out"), K(5.2, "stand")],
-       muscles=("quads", "glutes"), yaw=70, props=(prop("chair", "root", 1, (0, -0.075, -0.17)),))
+# Debout devant la chaise, pieds largeur de bassin. Les hanches partent vers l'arrière, le buste se penche, les bras
+# montent devant pour l'équilibre ; les fesses descendent jusqu'à effleurer le dessus de l'assise (hauteur du bassin
+# réglée sur la peau de chaque corps), bassin au-dessus du milieu de l'assise, cuisses au-dessus d'elle, tibias presque
+# verticaux (genoux au-dessus des pieds). La chaise est posée d'après le corps : assise à 45 ou 46 cm, son milieu sous les
+# hanches en bas du squat, son bord avant derrière les mollets du personnage debout. Pieds résolus à chaque clé.
+SQUAT_SEAT = 0.46 if BODY == "male" else 0.45              # hauteur de l'assise (m) : chaise à la taille du corps
+SQUAT_BACK, SQUAT_LEAN = 0.31 * S_LEG, 30.0                  # recul du bassin, inclinaison du buste en bas du squat
+def chair_squat(s, depth=0.3 * S_LEG):
+    """s : 0 debout, 1 fesses sur l'assise ; depth : descente du bassin en bas du squat."""
+    a = s ** 0.8                                             # hanches en arrière et buste penché d'abord, puis on descend
+    p = P("stand", root={"rot": [["x", SQUAT_LEAN * a]], "offset": [0, -depth * s ** 1.25, -SQUAT_BACK * a]},
+          spine04=[4 * a, 0, 0], neck01=[-SQUAT_LEAN * 0.45 * a, 0, 0],
+          upperarm01=[-78 * a, 0, 6 * a], lowerarm01=[-4 * a, 0, 0], **open_hand(0.6 * a))
+    return legs(p, L=ankle("L"), R=ankle("R"), pole_L=(0.15, 0, 1), pole_R=(-0.15, 0, 1))
+_sv = posed_skin("stand")[0]
+_calf = float(_sv[(_sv[:, 1] > _sv[:, 1].min() + 0.05) & (_sv[:, 1] < _sv[:, 1].min() + SQUAT_SEAT + 0.01), 2].min())
+# Bord avant de l'assise : milieu de l'assise sous les hanches, et au moins 1 cm derrière les mollets debout. Hanches
+# plus hautes que les genoux, les cuisses descendent vers l'avant : si elles touchent le bord avant alors que les
+# fesses restent en l'air (plus de 4 mm), la chaise recule centimètre par centimètre (les hanches restent à 10 cm au
+# moins derrière le bord). La descente du bassin est réglée sur la peau à chaque essai : 1 mm au-dessus de l'assise.
+_hip_z = float(joints(chair_squat(1))["upperleg01.L"][2])
+SQUAT_FRONT = min(_hip_z + 0.21, _calf - 0.01)
+while True:
+    _lo, _hi = 0.15 * S_LEG, 0.6 * S_LEG
+    for _ in range(20):
+        SQUAT_DEPTH = (_lo + _hi) / 2
+        if seat_low(chair_squat(1, SQUAT_DEPTH), SQUAT_FRONT, SQUAT_FRONT - 0.42) > SQUAT_SEAT + 2 * SEAT_GAP: _lo = SQUAT_DEPTH
+        else: _hi = SQUAT_DEPTH
+    SQUAT_DEPTH = _lo
+    _buttocks = seat_low(chair_squat(1, SQUAT_DEPTH), _hip_z + 0.03, SQUAT_FRONT - 0.42) - SQUAT_SEAT
+    if _buttocks <= 0.004 or SQUAT_FRONT - 0.01 < _hip_z + 0.10: break
+    SQUAT_FRONT -= 0.01
+print("squat sur chaise : assise", SQUAT_SEAT, "bord avant", round(SQUAT_FRONT, 3), "hanches", round(_hip_z, 3),
+      "fesses à", round(_buttocks * 1000, 1), "mm de l'assise")
+seat = chair_squat(1, SQUAT_DEPTH)
+motion("chair-squat", [K(0, "stand")] + planted(0, 3, lambda s: chair_squat(s, SQUAT_DEPTH), n=12) + [K(3.3, seat)]
+       + planted(3.3, 4.3, lambda s: chair_squat(1 - s, SQUAT_DEPTH), n=10) + [K(5.2, "stand")],
+       muscles=("quads", "glutes"), yaw=70, props=(prop("chair", None, 0, (0, SQUAT_SEAT, SQUAT_FRONT - 0.21)),))
 
 # ─── Renforcement ───
 # Pompes inclinées : le corps, planche rigide, pivote sur l'avant des pieds ; les mains restent posées au bord du plateau.
@@ -1185,8 +1252,9 @@ shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(3.2, P("stand", **shrug_up)),
                   K(3.6, "stand", "out"), K(5, "stand")], muscles=("upperBack", "neck"), yaw=25)
 _chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22]), "chairSit")
-motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(3.2, _chair_shrug),
-                        K(3.6, "chairSit", "out"), K(5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
+# Tempo de la consigne : épaules tenues 5 secondes vers les oreilles, puis elles tombent.
+motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(6.2, _chair_shrug),
+                        K(6.6, "chairSit", "out"), K(9.5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
 
 def neck_tilt(base):
     tilt = lambda a: P(base, neck01=[0, 0, a * 0.35], neck02=[0, 0, a * 0.25], neck03=[0, 0, a * 0.2], head=[0, 0, a * 0.2])
@@ -1527,31 +1595,57 @@ motion("child-pose", [K(0, child), K(3, child_pose(1)), K(6, child)], muscles=("
 # ─── Au lit : scan corporel et étirements du soir ───
 BED_TOP = 0.5
 BED_LYING = prop("bed", "root", 0, (-0.05, 0, 0), floor=True)            # allongé dans la longueur, tête vers −X
-BED_SIT = prop("bed", "root", 0, (0, -0.105, -0.55))                      # assis au bord, le lit derrière soi
+BED_SIT = prop("bed", "root", 0, (0, -SEAT_DROP, BED_EDGE - 0.71))        # assis au bord, le lit derrière soi
 HEAD_ON_PILLOW = dict(neck01=[16, 0, 0], head=[6, 0, 0])
 
 motion("bed-sit-breathe", breathe("chairSit"), yaw=28, pitch=10, props=(BED_SIT,))
 motion("bed-neck", neck_tilt("chairSit"), muscles=("neck", "upperBack"), yaw=12, pitch=10, props=(BED_SIT,))
 
 # Arrière des cuisses : au bord du lit, une jambe tendue talon au sol, buste penché en avant dos long.
+# Le bassin reste posé sur le matelas : la jambe qui se tend descend la cuisse au bord du lit, et le buste qui se penche
+# fait pivoter le bassin autour de l'articulation racine (les hanches, devant elle, descendraient de 4 cm dans le
+# matelas). À chaque clé, le bassin est donc remonté jusqu'à ce que la peau touche le dessus du matelas (`on_seat`) :
+# on roule sur les fesses, pieds et mains résolus ensuite.
 _seat = joints("chairSit")
+BED_FRONT = SEAT_Z + BED_EDGE                            # bord avant du matelas (z)
 LEG = float(np.linalg.norm(STAND["lowerleg01.L"] - STAND["upperleg01.L"]) + np.linalg.norm(STAND["foot.L"] - STAND["lowerleg01.L"]))
+HAM_SIT, HAM_LEAN, HAM_REACH = 10.0, 46.0, 0.998         # buste jambe tendue, puis penché (degrés) ; jambe tendue à 99,8 %
+def ham_body(hinge, ankle_L=None, pitch_L=None, lift=0.0):
+    """Assis au bord du lit, buste basculé de « hinge » degrés depuis les hanches, dos long (le haut du dos se redresse
+    un peu, la tête reste dans le prolongement), jambe gauche tendue talon au sol (ou cheville en « ankle_L »).
+    Jambe tendue, le bassin qui roule vers l'avant éloignerait la hanche du talon, qui ne bouge pas : il recule de
+    quelques millimètres sur le matelas pour que la jambe garde la même longueur, sans plier ni décoller le talon."""
+    def build(dy):
+        def body(dz):
+            return P("chairSit", root={"rot": [["x", hinge]], "offset": [0, dy, dz]}, spine04=[-hinge * 0.1, 0, 0],
+                     spine03=[-hinge * 0.12, 0, 0], spine02=[-hinge * 0.2, 0, 0], spine01=[-hinge * 0.08, 0, 0],
+                     neck01=[-hinge * 0.2, 0, 0], **open_hand(0.6))
+        dz = 0.0
+        if ankle_L is None:
+            h = joints(body(0.0))["upperleg01.L"]; a = HAM_ANKLE
+            dz = float(a[2] - np.sqrt(max((LEG * HAM_REACH) ** 2 - (h[1] - a[1]) ** 2 - (h[0] - a[0]) ** 2, 1e-6)) - h[2])
+        q = legs(body(dz), L=(HAM_ANKLE if ankle_L is None else ankle_L) + np.array([0, lift, 0]),
+                 foot_pitch_L=HAM_PITCH if pitch_L is None else pitch_L)
+        return legs(q, R=_seat["foot.R"])
+    return on_seat(build, BED_FRONT, SEAT_TOP, hi=0.13)
 # Jambe tendue : seul le talon est posé, pointe du pied vers le haut (cheville fléchie de 12° vers soi). La hauteur de la
 # cheville est réglée sur la peau : le talon touche le sol au niveau de la plante de l'autre pied.
 _hip = _seat["upperleg01.L"]; _foot_L, _foot_R = region(("foot", "toes"), "L"), region(("foot", "toes"), "R")
 HAM_ANKLE = np.array([float(_hip[0]), float(_seat["foot.R"][1]) + 0.05, 0.0])
-for _ in range(6):
+def heel_gap(pose):
+    """Hauteur du pied gauche au-dessus de la plante du pied droit, posé."""
+    v = posed_skin(pose)[0]
+    return float(v[_foot_L, 1].min() - v[_foot_R, 1].min())
+for _ in range(8):
     _drop = _hip[1] - HAM_ANKLE[1]
-    HAM_ANKLE[2] = _hip[2] + float(np.sqrt(LEG ** 2 - _drop ** 2)) * 0.985
-    HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * 0.985))))) - 12       # perpendiculaire au tibia, puis fléchi
-    _hp = legs(legs(P("chairSit"), L=HAM_ANKLE, foot_pitch_L=HAM_PITCH), R=_seat["foot.R"])
-    _hv = posed_skin(_hp)[0]
-    HAM_ANKLE[1] -= float(_hv[_foot_L, 1].min() - _hv[_foot_R, 1].min())
+    HAM_ANKLE[2] = _hip[2] + float(np.sqrt((LEG * HAM_REACH) ** 2 - _drop ** 2))
+    HAM_PITCH = -(90 - float(np.degrees(np.arcsin(_drop / (LEG * HAM_REACH))))) - 12   # perpendiculaire au tibia, puis fléchi
+    _hp = ham_body(HAM_SIT, ankle_L=HAM_ANKLE)           # cheville imposée : le bassin ne recule pas pendant ce réglage
+    HAM_ANKLE[1] -= heel_gap(_hp)
+    _hip = joints(_hp)["upperleg01.L"]                   # hanche de la pose posée sur le matelas (bassin remonté)
 def hamstring(side, hinge):
     o = other(side)
-    p = P("chairSit", root={"rot": [["x", hinge]]}, spine04=[-hinge * 0.15, 0, 0], neck01=[-hinge * 0.4, 0, 0], **open_hand(0.6))
-    p = legs(p, **{side: HAM_ANKLE}, **{f"foot_pitch_{side}": HAM_PITCH})
-    p = legs(p, **{o: _seat[f"foot.{o}"]})
+    p = ham_body(hinge)
     J = joints(p)
     knee = J[f"lowerleg01.{side}"]; thigh = (J[f"upperleg01.{side}"] + knee) / 2
     hand_on = knee * 0.7 + thigh * 0.3 + [0, 0.055, 0]
@@ -1562,18 +1656,22 @@ def hamstring(side, hinge):
     return hands(p, L=hand_on, R=rest_o,
                  fingers_L=[0, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.15, -0.3, 1], palm_R=[0, -1, 0],
                  pole_L=(1, -0.6, -0.3), pole_R=(-0.5, -0.3, -1))
-hL0, hL1 = hamstring("L", 0), hamstring("L", 30)
-# La jambe se tend pied décollé du sol, puis le talon se pose.
-def ham_way(f, lift):
-    p = legs(P("chairSit"), L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f + [0, lift, 0], foot_pitch_L=HAM_PITCH * f)
-    return legs(p, R=_seat["foot.R"])
-_hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12, 0.04), ham_way(0.5, 0.075), ham_way(0.93, 0.05))]   # la cuisse monte sous la main
+hL0, hL1 = hamstring("L", HAM_SIT), hamstring("L", HAM_LEAN)
+# La jambe se tend en glissant vers l'avant, pied juste décollé du sol (12 mm sous le point le plus bas du pied, réglé
+# sur la peau : le pied bascule sur le talon en avançant), puis le talon se pose. Le buste s'incline à peine.
+def ham_way(f):
+    lift = 0.02
+    for _ in range(3):
+        p = ham_body(HAM_SIT * f, ankle_L=_seat["foot.L"] + (HAM_ANKLE - _seat["foot.L"]) * f, pitch_L=HAM_PITCH * f, lift=lift)
+        lift += 0.012 - heel_gap(p)
+    return p
+_hway = [settle_hands(p, gap=0.006) for p in (ham_way(0.12), ham_way(0.5), ham_way(0.93), ham_way(1.0))]   # la cuisse monte sous la main
 def ham_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
     w = [f(p) for p in _hway]; h0, h1 = f(hL0), f(hL1)
-    lean = lambda s: f(hamstring("L", 30 * s))           # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
-    # entre la jambe presque tendue et le talon posé, la main suit la cuisse (clé intermédiaire remise en contact)
-    mid = settle_hands(blend(w[2], h0, 0.5), gap=0.006)
+    # mains résolues sur les cuisses à chaque clé : elles ne s'y enfoncent pas
+    lean = lambda s: f(hamstring("L", HAM_SIT + (HAM_LEAN - HAM_SIT) * s))
+    mid = w[3]                                           # jambe tendue, talon à 12 mm du sol, juste avant de le poser
     return ([K(t0 + 0.3, w[0]), K(t0 + 0.8, w[1], "linear"), K(t0 + 1.3, w[2], "linear"), K(t0 + 1.55, mid, "linear"), K(t0 + 1.8, h0, "out")]
             + planted(t0 + 1.8, t0 + 3.6, lean, n=5) + [K(t0 + 7.6, h1)] + planted(t0 + 7.6, t0 + 9.2, lambda s: lean(1 - s), n=5)
             + [K(t0 + 9.45, mid, "in"), K(t0 + 9.7, w[2], "linear"), K(t0 + 10.2, w[1], "linear"), K(t0 + 10.7, w[0], "linear"), K(t0 + 11.0, "chairSit", "out")])
@@ -1581,29 +1679,33 @@ motion("bed-hamstring", [K(0, "chairSit")] + ham_keys(0, False) + ham_keys(11.0,
        muscles=("hamstrings", "calves"), yaw=62, pitch=8, props=(BED_SIT,))
 
 # Hanches (« 4 ») : cheville droite posée sur le genou gauche, genou droit ouvert, léger penché en avant.
+F4_OUT, F4_FWD = 0.03, -0.01                             # cheville par rapport au genou d'appui : vers l'extérieur, vers l'avant
 def figure4(lean, hover=0.0, cross=1.0):
     """hover : mains levées de cette hauteur au-dessus de leur appui ; cross : 0 pied encore au sol, 1 cheville sur le genou."""
     p = P("chairSit", spine04=[lean * 0.4, 0, 0], spine03=[lean * 0.3, 0, 0], spine02=[lean * 0.2, 0, 0], neck01=[-lean * 0.3, 0, 0],
           **open_hand(0.6))
     knee_L = joints(p)["lowerleg01.L"]
-    p = legs(p, R=knee_L + [0.0, 0.1, -0.06], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
+    # Cheville posée sur le genou, un peu au-delà de lui : le genou croisé reste ouvert (plié à l'excès, mollet et
+    # cuisse se fondaient en boule).
+    p = legs(p, R=knee_L + [F4_OUT, 0.1, F4_FWD], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
     J = joints(p)
     if cross < 1:                                        # la jambe n'est pas encore croisée (pied juste décollé) : les mains attendent
         p = legs(P("chairSit", **open_hand(0.6)), R=_seat["foot.R"] + [0, 0.045, 0], foot_pitch_R=12)
     # Main sur le genou ouvert : doigts vers l'intérieur, dans le prolongement de l'avant-bras (poignet sans inclinaison).
     return hands(p, L=J["foot.R"] + [0.0, 0.068 + hover, 0.02 + 0.15 * hover], R=J["lowerleg01.R"] + [0.03, 0.07 + hover, -0.02 - 0.3 * hover],
                  fingers_L=[-0.4, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.8, -0.3, 1], palm_R=[0, -1, 0],
-                 pole_L=(1, -0.5, -0.3), pole_R=(-1, -0.5, -0.3))
+                 pole_L=(1, -0.5, -0.3), pole_R=(-0.45, -1, -0.5))     # coude du genou ouvert : vers le bas, près du corps
 f0, f1 = figure4(0), figure4(16)
 # Les mains quittent les cuisses et attendent au-dessus pendant que la jambe se croise (elle passait à travers la main),
 # puis se posent sur la cheville et le genou ; même chemin au retour. Penché : mains replacées à chaque clé.
 _f4_up, _f4_over = figure4(0, hover=0.14, cross=0.0), figure4(0, hover=0.09)
 def figure4_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
-    return ([K(t0 + 0.5, f(_f4_up)), K(t0 + 1.4, f(_f4_over)), K(t0 + 1.8, f(f0))] + planted(t0 + 1.8, t0 + 3.4, lambda s: f(figure4(16 * s)), n=4)
-            + [K(t0 + 7.4, f(f1))] + planted(t0 + 7.4, t0 + 8.8, lambda s: f(figure4(16 * (1 - s))), n=4)
-            + [K(t0 + 9.1, f(_f4_over)), K(t0 + 9.9, f(_f4_up)), K(t0 + 10.4, "chairSit")])
-motion("bed-figure4", [K(0, "chairSit")] + figure4_keys(0, False) + figure4_keys(10.4, True),
+    # La jambe se croise et se décroise posément (1,3 s puis 1,5 s : elle retombait en 0,8 s).
+    return ([K(t0 + 0.5, f(_f4_up)), K(t0 + 1.8, f(_f4_over)), K(t0 + 2.2, f(f0))] + planted(t0 + 2.2, t0 + 3.8, lambda s: f(figure4(16 * s)), n=4)
+            + [K(t0 + 7.8, f(f1))] + planted(t0 + 7.8, t0 + 9.2, lambda s: f(figure4(16 * (1 - s))), n=4)
+            + [K(t0 + 9.5, f(_f4_over)), K(t0 + 11.0, f(_f4_up)), K(t0 + 11.6, "chairSit")])
+motion("bed-figure4", [K(0, "chairSit")] + figure4_keys(0, False) + figure4_keys(11.6, True),
        muscles=("glutes", "lowerBack"), yaw=22, pitch=12, props=(BED_SIT,))
 
 # Scan corporel : le corps repose vraiment sur le matelas (dos, bassin, mollets, talons, dos des mains), la tête sur
@@ -1955,10 +2057,15 @@ motion("bed-knees-chest", [K(0, kc0)] + planted(0, 3, knees_chest) + planted(3, 
 
 # ─── Assis sur une chaise ───
 clench = P("chairSit", upperarm01=[-24, 0, 6], lowerarm01=[-80, 0, 0], lowerarm02=[0, 0, 0], wrist=[0, 0, 0], **fist(1))
-motion("fists-clench", [K(0, "chairSit"), K(1, clench), K(3, clench), K(3.5, "chairSit", "out"), K(6, "chairSit")],
+# Tempo de la consigne : contracter 5 secondes, relâcher d'un coup, observer 10 secondes.
+motion("fists-clench", [K(0, "chairSit"), K(1, clench), K(6, clench), K(6.5, "chairSit", "out"), K(16.5, "chairSit")],
        muscles=("forearms", "biceps", "hands"), yaw=35, props=(CHAIR,))
-_curl = keep_hands(P("chairSit", spine04=[8, 0, 0], spine03=[8, 0, 0], spine02=[4, 0, 0]), "chairSit")
-motion("abs-contract", [K(0, "chairSit"), K(1.5, _curl), K(3, _curl), K(4.5, "chairSit")],
+# Ventre contracté : on reste assis droit, tête haute. Le ventre rentre et les côtes basses descendent (le bas de la
+# colonne se fléchit à peine, le haut se redresse d'autant : ni les épaules ni la tête n'avancent) ; tenu 5 secondes,
+# puis relâché lentement, le temps d'une longue expiration.
+_brace = keep_hands(P("chairSit", spine05=[4, 0, 0], spine04=[4, 0, 0], spine02=[-4, 0, 0], spine01=[-3, 0, 0], neck01=[-1, 0, 0],
+                      clavicle=[0, 0, -3]), "chairSit")
+motion("abs-contract", [K(0, "chairSit"), K(1.0, _brace), K(6.0, _brace), K(9.0, "chairSit"), K(10.5, "chairSit")],
        muscles=("abs",), yaw=60, props=(CHAIR,))
 legs_out = P("chairSit", ground=False, lowerleg01=[12, 0, 0], foot=[-22, 0, 0])
 motion("legs-tense", [K(0, "chairSit"), K(1.5, legs_out), K(3, legs_out), K(4.5, "chairSit")], muscles=("quads", "shins", "calves"),
@@ -2063,3 +2170,16 @@ if __name__ == "__main__":
     json.dump({"version": 3, "bones": bones, "regions": REGIONS, "bodies": bodies},
               open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
     print("→", OUT, os.path.getsize(OUT) // 1024, "Ko")
+    # Contrôle des accessoires sur le fichier écrit, tel que l'app le joue (15 images/s) : aucune peau à plus de 5 mm
+    # à l'intérieur d'une chaise, d'un lit, d'une table, d'un mur ou d'une porte.
+    from prop_scan import scan, LIMIT_MM
+    print("Peau dans les accessoires (prop_scan.py)…")
+    bad = scan(show=False)
+    if bad:
+        print("!" * 100)
+        print(f"ATTENTION : peau à plus de {LIMIT_MM:.0f} mm à l'intérieur d'un accessoire, à corriger avant de livrer :")
+        for body, mid, res in bad:
+            print(f"  {body:6} {mid:22} " + " | ".join(f"{n} {d:.0f} mm à t={t} s ({bone}, {cnt} sommets)" for n, d, t, bone, cnt in res))
+        print("!" * 100)
+    else:
+        print(f"  aucun mouvement ne dépasse {LIMIT_MM:.0f} mm.")
