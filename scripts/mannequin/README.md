@@ -131,13 +131,18 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      son milieu sous les hanches en bas du squat, son bord avant au moins 1 cm derrière les mollets du personnage
      debout. Une ancre sur une image clé numérotée ne convient pas ici : des clés intermédiaires sont ajoutées
      après coup, et la chaise s'était retrouvée réglée sur une pose presque debout (assise à 77 cm) ;
-   - porte (`"kind": "door"`) : bras en chandelier, coudes à hauteur d'épaule, avant-bras verticaux et paumes à plat
-     sur la face des montants (réglés sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des
-     montants, à la mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc
-     depuis les chevilles (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de trois quarts
-     arrière (110°) : les deux avant-bras et les deux mains se voient sur leur montant (de face, le montant proche
-     cachait le sien). Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus
-     petite marge (calcul de CameraFraming) qui montre le linteau (2,12 m) : 0,05 m pour l'homme, 0,2 m pour la femme ;
+   - porte (`"kind": "door"`) : bras en chandelier (bras à l'horizontale, coudes à 83–89°, avant-bras verticaux à 9° près),
+     avant-bras et paumes posés sur le bord intérieur de la face des montants qui regarde le personnage : l'axe de
+     l'avant-bras est 1,5 cm à l'intérieur du bord (`DOOR_EDGE`), sa moitié côté passage dépasse ; la partie posée
+     touche la face (réglée sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des montants, à la
+     mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc depuis les chevilles
+     (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de face, d'en haut (pitch 24°) : poitrine
+     ouverte face à la caméra, les deux avant-bras visibles, le buste qui avance se lit par la tête qui descend dans
+     l'image (à 12°, elle ne bougeait que de 4 cm). Vus de trois quarts avant, le montant proche
+     (12 cm de profondeur) cache tout son avant-bras, quelle que soit la largeur de la porte ; de profil ou de trois
+     quarts arrière (110°), les bras à l'horizontale, dirigés vers la caméra, se lisaient comme des bras levés à la
+     verticale. Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus petite
+     marge (calcul de CameraFraming) qui montre le linteau (2,12 m) ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
@@ -148,8 +153,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      monte au passage à la verticale, redescend au double appui (le talon se pose à l'instant où la jambe arrière a
      amené le bassin à la même hauteur : `front` est résolu pour cela), se décale vers la jambe d'appui et tourne avec
      la jambe qui avance ; les épaules tournent à l'opposé, la tête reste de face. Promenade : un cycle en 1,2 s, bras
-     souples à l'opposé des jambes ; marche soutenue : un cycle en 0,92 s, coudes à 90°, poings qui montent à hauteur
-     de poitrine. 40 et 36 clés par cycle ;
+     souples à l'opposé des jambes ; marche soutenue : un cycle en 0,92 s, coudes à 90° environ (81–93°), poings qui
+     montent à hauteur de poitrine ; en arrière, le bras monte franchement derrière le corps et le coude s'ouvre un peu :
+     le poing passe derrière la hanche, à 5 cm au moins de la peau (il se posait sur la hanche vu de côté). 40 et 36
+     clés par cycle ;
    - captures reciblées (`mocap.py`, liste `MOCAP`, vide aujourd'hui) : rotations « monde » de chaque articulation
      depuis la pose en T, boucle choisie automatiquement puis fondue. Dossier des fichiers BVH : variable `CMU_BVH` ;
    - bras levés (`reach_arm`, `overhead_y`, `joined_up`) : la main est visée depuis l'épaule une fois montée avec le
@@ -168,9 +175,11 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      arrêt progressif, deux tours dans l'autre. Cercles de hanches : le bassin tourne au-dessus des pieds posés et la
      colonne se courbe à l'opposé, résolue pour que la tête ne bouge pas ; flexion avant : le dos s'enroule étage par
      étage (tête, haut du dos, bas du dos, bassin) et se déroule dans l'ordre inverse (`fold`) ; mollets : les talons
-     tournent autour de la base des orteils, qui ne glissent pas (`calf_raise`) ;
-   - salutation des bras : entre l'horizontale et le haut, une clé bras à 135° devant soi (interpolés directement, les
-     bras s'ouvraient en V sur les côtés) ; coudes à 165–169° mains jointes au-dessus de la tête (`overhead_y`,
+     tournent autour d'un point pris 4 à 6 mm sous l'articulation des orteils (`CALF_PIVOT`, vers la peau de l'avant-pied) :
+     orteils et avant-pied posés glissent de 3 à 4 mm au plus (6,9 mm autour de l'articulation elle-même) (`calf_raise`) ;
+   - salutation des bras : montée et descente bras tendus, parallèles, placés par leur direction à chaque clé
+     (`raise_arms`, allonge 0,995, coudes à 166°, 8 clés de chaque côté, jusqu'à 135° devant soi : interpolés en angles, les bras s'ouvraient en V et,
+     vus de trois quarts, le bras proche semblait plié, main devant la poitrine) ; vue presque de profil (60°) ; coudes à 165–169° mains jointes au-dessus de la tête (`overhead_y`,
      allonge 0,997). Posture de l'arbre : le poids passe sur la jambe d'appui pieds posés, puis le pied se soulève à
      la verticale de son appui avant de partir vers le mollet (`tree_shift`) ; il glissait de 15 cm au sol ;
    - pas chassés : chaque pas est résolu en six clés (pied qui monte à la verticale, se déplace en l'air, se pose à la
@@ -181,10 +190,13 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      sous le milieu du corps, pied arrière en retrait et sur le côté : les brins montent de part et d'autre du genou
      avant, la cuisse arrière reste derrière eux (8 mm au moins de la peau à chaque image). Bande de 10 cm × 5 mm
      (une serviette pliée en long) ; chaque brin mesure 0,80 m (femme) ou 0,91 m (homme), constant à 2 mm près ;
-   - boxe dans le vide : garde, poings devant le menton (7 à 10 cm du visage au plus près), placée dans le repère du
-     regard (dans celui du buste tourné, les deux poings partaient vers la joue droite) ; coups droits vers l'avant,
-     coude à peine plié au bout du coup (allonge 0,94). En garde, les coudes s'écartent un peu (`BOX_FLARE`) : serrés,
-     les avant-bras entraient dans la poitrine quand le buste tourne ; ils se rentrent pendant le coup ;
+   - boxe dans le vide : garde, poings devant le menton, chacun de son côté (7 à 10 cm du menton, 5 à 7 cm du visage au plus près), placée
+     dans le repère du regard (dans celui du buste tourné, les deux poings partaient vers la joue droite) ; coudes bas,
+     devant les côtes (`BOX_FLARE`, `BOX_ELBOW_FWD`), avant-bras presque verticaux ; bassin tourné de 14° seulement en
+     garde (à 26°, le poing arrière ne rejoignait le menton qu'avec l'avant-bras en travers de la poitrine, coude haut).
+     Quand un bras frappe, le coude de l'autre s'écarte un peu (`BOX_TURN_FLARE`) : le buste tourne vers lui, et
+     l'avant-bras resté serré entrait dans la poitrine. Coups droits vers l'avant, coude à peine plié au bout du coup
+     (allonge 0,94) ; vue de trois quarts (35°) ;
    - squats partiels : bras placés par leur direction, en miroir, à chaque clé (`hs_dir`) : tendus en V au-dessus de
      la tête le long des oreilles, en bas à l'horizontale devant soi, en passant un peu en diagonale ;
    - grand étirement : inclinaison sur le côté répartie sur toute la colonne (`SIDE_SPLIT`), bassin et pieds
@@ -201,12 +213,22 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      le sol ou s'y pose passe par des clés intermédiaires (talon levé pointe posée, pied décollé) : il ne traîne pas.
      Étirement de la cuisse (retour au calme) : le talon se lève de 24°, orteils posés au même endroit, puis le pied
      monte de 2 cm à la verticale avant de partir vers l'arrière ; il se repose de même (`quad_foot`). Entre le pied
-     décollé et le talon haut, la cheville suit une droite, résolue en quatre clés, genou droit devant (`quad_lift`) :
-     interpolés directement, les angles faisaient passer le pied devant la jambe d'appui (jambes en ciseaux). Ouverture
+     décollé et le talon contre la fesse, neuf clés (`quad_path`) : hanche, genou et pied passent d'une pose à l'autre,
+     la cuisse avance un peu à mi-chemin (genou devant, pied moins tendu), le genou plie surtout en fin de montée, la
+     main s'approche du cou-de-pied et le saisit. Au retour, le pied redescend par le même chemin, en 2,6 s, jusqu'à
+     côté de l'autre (0,8 m/s au plus) : lâché du talon haut, il décrivait un arc derrière le corps à 1,4 m/s, comme
+     un coup de pied. Les jambes restent écartées de 17 cm au moins (chevilles). Ouverture
      de la poitrine : mains jointes paume contre paume derrière le dos, bras tendus 25° derrière la verticale,
      omoplates serrées, haut du dos en extension et tête droite (`chest_clasp` ; écart des poignets réglé pour que les
      paumes se touchent à 1–2 mm près sans se traverser). Vu presque de profil, un peu de l'arrière (105°) :
      la main sur le cou-de-pied se voit des deux côtés, et la poitrine qui s'ouvre.
+   - guerrier II (`warrior`, `warrior_keys`) : le pied avant se soulève de 2,5 cm, tourne en l'air de la pointe en
+     dedans (12°, comme l'autre pied) à 90° et se repose ; le genou plie ensuite, pieds posés (clés rapprochées) :
+     bassin aussi bas que le permet la jambe arrière tendue (genou à 171–172°, comme debout), décalé jusqu'à ce que
+     le genou avant soit au-dessus de la cheville (genou dans l'axe du pied tourné) ; avec des chevilles écartées de 2 × 0,66 jambe, la cuisse avant est
+     à 2° (femme) et 10° (homme) de l'horizontale, genou à 92–100°. Bras à l'horizontale, tête tournée de 87° vers la
+     main avant. Le pied tournait auparavant sur le sol (12 à 34 mm de glissement) et le second côté finissait pied
+     droit tourné (boucle ouverte de 11 cm) ;
    - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement
      encadré pour tout mouvement dont la peau entre de plus de 5 mm dans un accessoire.
 3. `prop_scan.py` : peau dans les accessoires. Chaque mouvement à accessoires est rejoué pour les deux corps comme
@@ -236,8 +258,9 @@ sur toutes les images clés. `camera.frame` (liste d'articulations) demande un c
 centre de la boîte de ces articulations sur toutes les images clés, élargie de `camera.margin` mètres (20 cm par
 défaut), et s'en approche sans descendre sous 1 m ; elle garde la même élévation, donc reste au-dessus de la zone
 (et du matelas). Menton rentré (tête, cou et
-épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des genoux au sol) et ouverture de poitrine
-dans la porte (des orteils au bout des doigts, linteau compris, de trois quarts arrière) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, de trois quarts du côté du mur (35°), la main posée à plat sur le mur dans l'image. Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des poignets au sol : les mains entières,
+pas des morceaux de doigts en haut de l'image) et ouverture de poitrine dans la porte (des orteils au bout des
+doigts, linteau compris, de face) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, de trois quarts du côté du mur (35°), la main posée à plat sur le mur dans l'image. Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
