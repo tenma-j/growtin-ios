@@ -1139,7 +1139,7 @@ BOX_FLARE = {"L": 0.15, "R": 0.2}                        # écart des coudes en 
 BOX_TURN_FLARE = 0.3                                     # … et quand l'autre bras frappe
 BOX_ELBOW_FWD = 0.35                                     # coudes en garde : un peu devant les côtes (pôle vers l'avant)
 BOX_HIT_X = 0.55
-BOX_REACH = 1.0                                         # coude pas complètement tendu au bout du coup
+BOX_REACH = 0.996                                         # bras presque tendu au bout du coup (coude à 170° environ)
 def boxing(jab=0.0, cross=0.0):
     yaw = -14 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
     twist = -14 * jab + 32 * cross                    # rotation des épaules en plus de celle du bassin
@@ -1148,9 +1148,12 @@ def boxing(jab=0.0, cross=0.0):
           spine04=[3, twist * 0.2, 0], spine03=[3, twist * 0.3, 0], spine02=[0, twist * 0.3, 0], spine01=[0, twist * 0.2, 0],
           neck01=[5, look * 0.35, 0], neck02=[0, look * 0.25, 0], head=[3, look * 0.4, 0], **fist(1.0))
     p = legs(p, L=BOX_FEET["L"], R=BOX_FEET["R"], pole_L=(0.1, 0, 1), pole_R=(-0.5, 0, 1), foot_yaw_L=-8, foot_yaw_R=-42)
-    R, J = ik.fk(p); Rc = R["spine01"]; kw = {}
+    R, J = ik.fk(p); Rc = R["spine01"]
+    return _box_arms(p, R, J, Rc, jab, cross, {s: J[f"upperarm01.{s}"] for s in "LR"})
+def _box_arms(p, R, J, Rc, jab, cross, shoulders, again=True):
+    kw = {}
     for s, sg, u, other_u in (("L", 1, jab, cross), ("R", -1, cross, jab)):
-        sh = J[f"upperarm01.{s}"]
+        sh = shoulders[s]
         # Garde : les deux poings devant le menton, 6 à 10 cm devant le visage, dans le repère du regard (la tête
         # regarde droit devant, +Z) : pris dans celui du buste tourné, ils partaient tous deux vers la joue droite.
         guard = J["head"] + BOX_GUARD[s]
@@ -1162,7 +1165,12 @@ def boxing(jab=0.0, cross=0.0):
         # coude bas en garde, un peu écarté quand l'autre bras frappe (le buste tourne vers l'avant-bras), rentré pendant le coup
         flare = BOX_FLARE[s] + BOX_TURN_FLARE * other_u + (0.12 - BOX_FLARE[s]) * u
         kw.update({s: w, f"fingers_{s}": f, f"palm_{s}": n, f"pole_{s}": tuple(Rc @ [flare * sg, -1, BOX_ELBOW_FWD * (1 - u) - 0.1 * u])})
-    return grip_thumbs(hands(p, **kw))
+    out = grip_thumbs(hands(p, **kw))
+    if again and jab + cross > 1e-6:
+        # La ceinture scapulaire suit le bras (rythme scapulo-huméral) : l'épaule avance après coup et le coude restait
+        # plié à 164° ; le coup est re-visé depuis l'épaule déplacée.
+        return _box_arms(p, R, J, Rc, jab, cross, {s: joints(out)[f"upperarm01.{s}"] for s in "LR"}, again=False)
+    return out
 _guard = boxing()
 _jab, _cross = boxing(jab=1), boxing(cross=1)
 motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, lambda s: boxing(jab=s), n=4) + [K(0.37, _jab)]
@@ -1897,17 +1905,19 @@ _door_keys = [[joints(k["pose"])[n] for n in ik.names] for k in MOTIONS["doorway
 _door_ids = [ik.names.index(n) for j in DOOR_FRAME for n in (f"{j}.L", f"{j}.R") if n in ik.names] + \
             [ik.names.index(j) for j in DOOR_FRAME if j in ik.names]
 _cam = MOTIONS["doorway-stretch"]["camera"]
-# Vue plongeante : on projette les coins du linteau dans le plan de l'image (repère de la caméra tourné de yaw,
-# incliné de pitch) ; il doit y entrer avec 6 cm de marge.
+# Vue plongeante : les coins du linteau sont projetés comme dans l'app (caméra en perspective, champ vertical de 30°,
+# placée à la distance calculée par camera_shot) ; ils doivent entrer dans l'image à 6 % du bord. Une projection sans
+# perspective (planches) les plaçait trop près du centre : vu d'en haut, le linteau est plus près de la caméra que le corps.
 from motion_eval import VIEW_ASPECT  # noqa: E402
 _ya, _pa = np.radians(_cam["yaw"]), np.radians(_cam["pitch"])
 _Ry = np.array([[np.cos(_ya), 0, np.sin(_ya)], [0, 1, 0], [-np.sin(_ya), 0, np.cos(_ya)]])
-_up = np.array([0.0, np.cos(_pa), -np.sin(_pa)])
+_up, _fw = np.array([0.0, np.cos(_pa), -np.sin(_pa)]), np.array([0.0, -np.sin(_pa), -np.cos(_pa)])
 _lintel = [np.array([x * (DOOR_WIDTH / 2 + 0.035), DOOR_TOP, DOOR_Z + 0.06 + z * 0.06]) for x in (-1, 1) for z in (-1, 1)]
+_tan = np.tan(np.radians(15.0)) * 0.94
 for _m in np.arange(0.05, 0.6, 0.005):
-    _c, _, _ext = camera_shot(_door_keys, _door_ids, _cam["yaw"], _cam["pitch"], _m)
-    _d = [_Ry @ (q - _c) for q in _lintel]
-    if all(abs(d @ _up) <= _ext / 2 - 0.06 and abs(d[0]) <= _ext * VIEW_ASPECT / 2 - 0.06 for d in _d): break
+    _c, _dist, _ = camera_shot(_door_keys, _door_ids, _cam["yaw"], _cam["pitch"], _m)
+    _d = [_Ry @ (q - _c) + _dist * _fw for q in _lintel]                # depuis la caméra
+    if all(abs(d @ _up) <= _tan * (d @ _fw) and abs(d[0]) <= _tan * VIEW_ASPECT * (d @ _fw) for d in _d): break
 close_up("doorway-stretch", DOOR_FRAME, round(float(_m), 3))
 print("porte : marge du cadrage", round(float(_m), 3))
 
@@ -1936,7 +1946,10 @@ def hip_circle(theta):
 motion("hip-circles", both_ways(4.8, 2, 12, hip_circle), muscles=("lowerBack", "abs", "glutes"), yaw=35)
 
 # Cercles de cheville : main gauche à plat contre le mur, genou droit levé, la cheville dessine des cercles.
-_ank_base = hands(P("stand", **open_hand(1.0, "L")), L=[float(SH[0] + 0.415), float(SH[1] - 0.02), -0.02], fingers_L=[0, 1, 0.1], palm_L=[1, 0, 0], pole_L=(0.2, -1, -0.4))
+# Main à 97,5 % de la longueur du bras depuis l'épaule : coude un peu plié (à 0,415 m fixes, le coude de l'homme, au
+# bras plus long, était plié à 107°, celui de la femme à 136°).
+ANK_REACH = 0.975 * ARM
+_ank_base = hands(P("stand", **open_hand(1.0, "L")), L=[float(SH[0] + np.sqrt(ANK_REACH ** 2 - 0.02 ** 2 - (0.02 + SH[2]) ** 2)), float(SH[1] - 0.02), -0.02], fingers_L=[0, 1, 0.1], palm_L=[1, 0, 0], pole_L=(0.2, -1, -0.4))
 # La main reste à plat sur le mur. Un pied décolle (genou levé devant), la pointe dessine deux grands cercles, le pied
 # se repose ; puis l'autre cheville. Le bassin se décale au-dessus du pied d'appui, qui ne bouge pas.
 _aw = joints(_ank_base)["wrist.L"]; _af, _, _an = hand_axes(_ank_base, "L")
@@ -2381,15 +2394,25 @@ motion("bed-hamstring", [K(0, "chairSit")] + ham_keys(0, False) + ham_keys(11.0,
        muscles=("hamstrings", "calves"), yaw=62, pitch=8, props=(BED_SIT,))
 
 # Hanches (« 4 ») : cheville droite posée sur le genou gauche, genou droit ouvert, léger penché en avant.
+F4_HINGE = 0.5                                           # part de l'inclinaison prise aux hanches
 F4_OUT, F4_FWD = 0.03, -0.01                             # cheville par rapport au genou d'appui : vers l'extérieur, vers l'avant
 def figure4(lean, hover=0.0, cross=1.0):
     """hover : mains levées de cette hauteur au-dessus de leur appui ; cross : 0 pied encore au sol, 1 cheville sur le genou."""
-    p = P("chairSit", spine04=[lean * 0.4, 0, 0], spine03=[lean * 0.3, 0, 0], spine02=[lean * 0.2, 0, 0], neck01=[-lean * 0.3, 0, 0],
-          **open_hand(0.6))
-    knee_L = joints(p)["lowerleg01.L"]
-    # Cheville posée sur le genou, un peu au-delà de lui : le genou croisé reste ouvert (plié à l'excès, mollet et
-    # cuisse se fondaient en boule).
-    p = legs(p, R=knee_L + [F4_OUT, 0.1, F4_FWD], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
+    # Penché « dos long » : la moitié de l'inclinaison vient des hanches (le bassin bascule sur le matelas, remonté
+    # jusqu'à ce que la peau y touche, `on_seat` ; pied d'appui replacé), le reste de la colonne. Toute dans la colonne,
+    # vue de face, elle se lisait comme un dos voûté.
+    hinge = F4_HINGE * lean
+    def build(dy):
+        q = P("chairSit", root={"rot": [["x", hinge]], "offset": [0, dy, 0]} if hinge else None,
+              spine04=[lean * 0.4 * (1 - F4_HINGE), 0, 0], spine03=[lean * 0.3 * (1 - F4_HINGE), 0, 0],
+              spine02=[lean * 0.2 * (1 - F4_HINGE), 0, 0], neck01=[-lean * 0.3, 0, 0], **open_hand(0.6))
+        if hinge:
+            q = legs(q, L=_seat["foot.L"])
+        knee_L = joints(q)["lowerleg01.L"]
+        # Cheville posée sur le genou, un peu au-delà de lui : le genou croisé reste ouvert (plié à l'excès, mollet et
+        # cuisse se fondaient en boule).
+        return legs(q, R=knee_L + [F4_OUT, 0.1, F4_FWD], pole_R=(-1, 0.25, 0.35), foot_yaw_R=70, foot_pitch_R=15)
+    p = on_seat(build, BED_FRONT, SEAT_TOP) if hinge else build(0.0)
     J = joints(p)
     if cross < 1:                                        # la jambe n'est pas encore croisée (pied juste décollé) : les mains attendent
         p = legs(P("chairSit", **open_hand(0.6)), R=_seat["foot.R"] + [0, 0.045, 0], foot_pitch_R=12)

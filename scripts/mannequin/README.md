@@ -149,7 +149,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      images se ressemblaient toutes ; de trois quarts avant, le montant proche, 12 cm de profondeur, cache tout son
      avant-bras ; à 110°, peu plongeante, les bras à l'horizontale se lisaient comme des bras levés). Même cadrage pour
      les deux corps : de la tête et du bout des doigts aux orteils, avec la plus petite marge (calcul de CameraFraming)
-     qui fait entrer les coins du linteau (2,12 m), projetés dans l'image, à 6 cm du bord ;
+     qui fait entrer les coins du linteau (2,12 m) dans l'image, projetés comme dans l'app (perspective, champ de 30°),
+     à 6 % du bord ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
@@ -204,7 +205,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      garde (à 26°, le poing arrière ne rejoignait le menton qu'avec l'avant-bras en travers de la poitrine, coude haut).
      Quand un bras frappe, le coude de l'autre s'écarte un peu (`BOX_TURN_FLARE`) : le buste tourne vers lui, et
      l'avant-bras resté serré entrait dans la poitrine. Coups droits vers l'avant, coude à peine plié au bout du coup
-     (allonge 1,0, coude à 164–166° : à 0,94 il restait à 138°), dans l'axe de l'épaule (cible à 55 % de l'écart de
+     (allonge 0,996, visée depuis l'épaule une fois avancée avec le bras : coude à 171–172° ; à 0,94 il restait à 138°), dans l'axe de l'épaule (cible à 55 % de l'écart de
      l'épaule au milieu du corps, 6 à 7° vers l'intérieur : visée au milieu, le bras partait de 11 à 16° en travers),
      épaules tournées de 33° (direct du gauche) et 36° (direct du droit) ; vue de trois quarts à 60°, un peu d'en haut
      (10°) : le bras tendu se lit devant le corps (à 35°, raccourci, il semblait frapper sur le côté) ;
@@ -242,8 +243,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      droit tourné (boucle ouverte de 11 cm) ;
    - étirement « 4 » au bord du lit : le second côté est la pose du premier en miroir (`mirror_pose`, articulations
      symétriques au millimètre) ; vu de trois quarts (22°), le second côté semblait différent (genou haut, tibia
-     raide, pied devant l'autre cuisse) : la caméra est donc de face (pitch 16°). Buste penché de 14° (femme) et 18°
-     (homme) depuis les hanches jusqu'au cou (9 et 13° avant), la tête avance de 5,5 cm de plus ;
+     raide, pied devant l'autre cuisse) : la caméra est donc de face (pitch 16°). Penché dos long : la moitié de
+     l'inclinaison vient des hanches (`F4_HINGE`, bassin qui bascule sur le matelas, remonté jusqu'à ce que la peau le
+     touche, `on_seat` ; pied d'appui replacé), le reste de la colonne ; buste (hanches → cou) à 18° (femme) et 22°
+     (homme), 9 et 13° avant (penché par la colonne seule, il se lisait de face comme un dos voûté) ;
    - haussements d'épaules : élévation des clavicules de 24° pour l'homme, 38° pour la femme (`SHRUG`) : sa clavicule
      est plus courte et, à 24°, le sommet de ses épaules ne montait que de 29 mm (52 mm pour l'homme ; 56 mm
      aujourd'hui debout, 44 mm assise contre 49) ;
@@ -281,7 +284,8 @@ pas des morceaux de doigts en haut de l'image) et ouverture de poitrine dans la 
 doigts, linteau compris, de face) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, presque de face (8°, du côté du corps : de plus loin du côté du mur, la
 caméra serait derrière lui), un peu d'en haut (14°) ; le mur se voit presque par la tranche, la main posée à plat contre
 lui (paume parallèle au mur, 3,5 mm d'appui des coussinets ; de trois quarts, on voyait le dos de la main dressée
-devant le mur, lue comme une paume tournée vers la caméra). La pointe du pied décrit un cercle d'une dizaine de
+devant le mur, lue comme une paume tournée vers la caméra), main à 97,5 % de la longueur du bras depuis l'épaule :
+coude un peu plié, 156° pour les deux corps (à 0,415 m fixes : 107° pour l'homme, 136° pour la femme). La pointe du pied décrit un cercle d'une dizaine de
 centimètres (10 × 9 cm pour la femme, 12,5 × 11 cm pour l'homme ; 8 × 7,5 et 10 × 9 cm avant). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
