@@ -2372,18 +2372,19 @@ def figure4(lean, hover=0.0, cross=1.0):
     return hands(p, L=J["foot.R"] + [0.0, 0.068 + hover, 0.02 + 0.15 * hover], R=J["lowerleg01.R"] + [0.03, 0.07 + hover, -0.02 - 0.3 * hover],
                  fingers_L=[-0.4, -0.3, 1], palm_L=[0, -1, 0], fingers_R=[0.8, -0.3, 1], palm_R=[0, -1, 0],
                  pole_L=(1, -0.5, -0.3), pole_R=(-0.45, -1, -0.5))     # coude du genou ouvert : vers le bas, près du corps
-f0, f1 = figure4(0), figure4(16)
+F4_LEAN = 24
+f0, f1 = figure4(0), figure4(F4_LEAN)
 # Les mains quittent les cuisses et attendent au-dessus pendant que la jambe se croise (elle passait à travers la main),
 # puis se posent sur la cheville et le genou ; même chemin au retour. Penché : mains replacées à chaque clé.
 _f4_up, _f4_over = figure4(0, hover=0.14, cross=0.0), figure4(0, hover=0.09)
 def figure4_keys(t0, flip):
     f = mirror_pose if flip else (lambda p: p)
     # La jambe se croise et se décroise posément (1,3 s puis 1,5 s : elle retombait en 0,8 s).
-    return ([K(t0 + 0.5, f(_f4_up)), K(t0 + 1.8, f(_f4_over)), K(t0 + 2.2, f(f0))] + planted(t0 + 2.2, t0 + 3.8, lambda s: f(figure4(16 * s)), n=4)
-            + [K(t0 + 7.8, f(f1))] + planted(t0 + 7.8, t0 + 9.2, lambda s: f(figure4(16 * (1 - s))), n=4)
+    return ([K(t0 + 0.5, f(_f4_up)), K(t0 + 1.8, f(_f4_over)), K(t0 + 2.2, f(f0))] + planted(t0 + 2.2, t0 + 3.8, lambda s: f(figure4(F4_LEAN * s)), n=4)
+            + [K(t0 + 7.8, f(f1))] + planted(t0 + 7.8, t0 + 9.2, lambda s: f(figure4(F4_LEAN * (1 - s))), n=4)
             + [K(t0 + 9.5, f(_f4_over)), K(t0 + 11.0, f(_f4_up)), K(t0 + 11.6, "chairSit")])
 motion("bed-figure4", [K(0, "chairSit")] + figure4_keys(0, False) + figure4_keys(11.6, True),
-       muscles=("glutes", "lowerBack"), yaw=22, pitch=12, props=(BED_SIT,))
+       muscles=("glutes", "lowerBack"), yaw=0, pitch=16, props=(BED_SIT,))
 
 # Scan corporel : le corps repose vraiment sur le matelas (dos, bassin, mollets, talons, dos des mains), la tête sur
 # l'oreiller. Chaque étape a son geste, discret et lent, et son cadrage (`camera.frame`) : la caméra s'approche de la
@@ -2428,17 +2429,41 @@ def scan_legs(pose, turn=18.0, point=14.0, toes=0.0, knee=3.0):
 _sj = joints(SCAN_BASE)
 SCAN_WRIST = {s: np.array([_sj[f"upperarm01.{s}"][0] + 0.93 * ARM * np.cos(np.radians(16)), 0.0,
                            _sj[f"upperarm01.{s}"][2] + (1 if s == "R" else -1) * 0.93 * ARM * np.sin(np.radians(16))]) for s in "LR"}
+SCAN_FORE = {s: region(("lowerarm",), s) for s in "LR"}
+SCAN_ARM_DOWN = {s: np.concatenate([SCAN_HAND[s], SCAN_FORE[s]]) for s in "LR"}
+SCAN_THUMB = (0.6, 0.7, 0.25)                                      # pouce : le long de l'index, vers le matelas
+SCAN_HAND_PITCH, SCAN_HAND_OPEN = 0.25, 0.5                        # doigts un peu relevés, à demi dépliés
 def scan_hands(pose, curl=0.0, shrug=0.0):
-    """Bras le long du corps, dos des mains posé sur le matelas, paumes vers le plafond, doigts naturellement
-    recourbés (curl : doigts refermés, ou dépliés si < 0 ; shrug : épaules décollées du matelas et remontées vers les
-    oreilles, ou abaissées vers les pieds si < 0)."""
-    p = P(pose, clavicle=[0, -6 * max(shrug, 0.0), 4 * shrug], **{k: [0, 0, v[2] * 0.5 * curl] for k, v in fist(1.0).items()})
+    """Bras le long du corps, mains posées paume vers le matelas, doigts détendus (curl : doigts refermés, ou dépliés
+    si < 0 ; shrug : épaules décollées du matelas et remontées vers les oreilles, ou abaissées vers les pieds si < 0).
+    Paume, bout des doigts et avant-bras touchent le matelas ensemble ; le pouce repose le long de l'index. Posées sur
+    le dos (paumes vers le plafond), la torsion de l'avant-bras plafonnait à 100° : la main restait sur la tranche,
+    pouce et doigts dressés vers le plafond au-dessus de la hanche."""
+    op = open_hand(SCAN_HAND_OPEN)
+    p = P(pose, clavicle=[0, -6 * max(shrug, 0.0), 4 * shrug],
+          **{k: [0, 0, op.get(k, [0, 0, 0])[2] + v[2] * 0.5 * curl] for k, v in fist(1.0).items()})
     for s in "LR":
         out = 1 if s == "R" else -1
-        def build(drop, s=s, out=out, p=p):
+        def build(drop, pitch, s=s, out=out, p=p):
             w = SCAN_WRIST[s] + [0, SCAN_Y + 0.09 - drop, 0]
-            return fixed_hand(p, s, w, [1, 0, 0.12 * out], [0, 1, 0], (0, -0.25, out), flat=False)
-        p = scan_solve(build, SCAN_HAND[s], 0.0, 0.085)
+            q = fixed_hand(p, s, w, [1, pitch, 0.12 * out], [0, -1, 0], (0, -0.25, out), flat=False)
+            fingers, across, palm = hand_axes(q, s)
+            want = SCAN_THUMB[0] * fingers + SCAN_THUMB[1] * across + SCAN_THUMB[2] * palm
+            for bone, child in (("finger1-1", "finger1-2"), ("finger1-2", "finger1-3")):
+                q = aim_bone(q, s, bone, child, want / np.linalg.norm(want))
+            return q
+        q = scan_solve(lambda d: build(d, SCAN_HAND_PITCH), SCAN_ARM_DOWN[s], -0.04, 0.085)
+        if curl > 0:
+            # Main qui se referme : les doigts repliés soulèveraient le poignet et l'avant-bras ; le poignet se relève
+            # (doigts vers le plafond) juste assez pour que l'avant-bras reste posé.
+            lo, hi = SCAN_HAND_PITCH, 1.6
+            for _ in range(7):
+                m = (lo + hi) / 2
+                q = scan_solve(lambda d: build(d, m), SCAN_ARM_DOWN[s], -0.04, 0.085)
+                if low_of(q, SCAN_FORE[s]) > SCAN_Y + SCAN_GAP + 0.0015: lo = m
+                else: hi = m
+            q = scan_solve(lambda d: build(d, hi), SCAN_ARM_DOWN[s], -0.04, 0.085)
+        p = q
     return p
 def scan_head(pose, lift=0.0, turn=0.0):
     """Tête posée sur l'oreiller : le cou se règle pour que l'arrière du crâne (le crâne seul : le bas du cou passe
@@ -2506,8 +2531,13 @@ scan_motion("bed-scan-belly", [K(0, scan_rest), K(3.5, scan_pose(breath=SCAN_BRE
             frame=("spine02", "spine05", "upperleg01"), margin=0.08, muscles=("abs", "chest"))
 # Mains, bras, épaules : à l'inspiration les mains se referment et les épaules se décollent, remontées vers les oreilles ;
 # à l'expiration les doigts se déplient, plus ouverts qu'au repos, et les épaules se déposent dans le matelas.
-scan_motion("bed-scan-arms", [K(0, scan_rest), K(3.5, scan_pose(breath=1.5, curl=1.9, shrug=2.2)), K(7.5, scan_pose(curl=-0.5, shrug=-0.6)),
-                              K(10, scan_rest)],
+# Clés rapprochées : interpolée en angles entre deux clés éloignées, la main fermée paume vers le matelas décollait
+# l'avant-bras de 3 cm.
+_arm_in = lambda s: scan_pose(breath=1.5 * s, curl=1.9 * s, shrug=2.2 * s)
+_arm_out = lambda s: scan_pose(breath=1.5 * (1 - s), curl=1.9 - 2.4 * s, shrug=2.2 - 2.8 * s)
+_arm_back = lambda s: scan_pose(curl=-0.5 * (1 - s), shrug=-0.6 * (1 - s))
+scan_motion("bed-scan-arms", [K(0, scan_rest)] + planted(0, 3.5, _arm_in, n=4) + planted(3.5, 7.5, _arm_out, n=4)
+            + planted(7.5, 10, _arm_back, n=3)[:-1] + [K(10, scan_rest, "linear")],
             frame=("neck01", "upperarm01", "wrist", "finger3-3"), margin=0.12, muscles=("hands", "forearms", "biceps", "triceps", "shoulders"))
 # Visage : le mannequin n'a pas de visage ; le relâchement se lit sur les épaules et la tête, cadrées de près, sans
 # hochement (la tête ne bascule ni vers l'avant ni vers l'arrière : un menton qui monte et descend se lisait comme un
