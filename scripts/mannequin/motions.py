@@ -2394,6 +2394,8 @@ motion("bed-hamstring", [K(0, "chairSit")] + ham_keys(0, False) + ham_keys(11.0,
        muscles=("hamstrings", "calves"), yaw=62, pitch=8, props=(BED_SIT,))
 
 # Hanches (« 4 ») : cheville droite posée sur le genou gauche, genou droit ouvert, léger penché en avant.
+_F4_FOOT = ik.fk(P("chairSit"))[0]["foot.L"]
+_F4_KNEE = tuple(_seat["lowerleg01.L"] - _seat["upperleg01.L"])
 F4_HINGE = 0.5                                           # part de l'inclinaison prise aux hanches
 F4_OUT, F4_FWD = 0.03, -0.01                             # cheville par rapport au genou d'appui : vers l'extérieur, vers l'avant
 def figure4(lean, hover=0.0, cross=1.0):
@@ -2407,7 +2409,7 @@ def figure4(lean, hover=0.0, cross=1.0):
               spine04=[lean * 0.4 * (1 - F4_HINGE), 0, 0], spine03=[lean * 0.3 * (1 - F4_HINGE), 0, 0],
               spine02=[lean * 0.2 * (1 - F4_HINGE), 0, 0], neck01=[-lean * 0.3, 0, 0], **open_hand(0.6))
         if hinge:
-            q = legs(q, L=_seat["foot.L"])
+            q = legs(q, L=_seat["foot.L"], foot_rot_L=_F4_FOOT, pole_L=_F4_KNEE)   # pied d'appui à la même place, même orientation
         knee_L = joints(q)["lowerleg01.L"]
         # Cheville posée sur le genou, un peu au-delà de lui : le genou croisé reste ouvert (plié à l'excès, mollet et
         # cuisse se fondaient en boule).
