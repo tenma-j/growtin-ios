@@ -1937,7 +1937,7 @@ def ankle_pose(side, up, theta=None):
     p = P("stand", root={"offset": [-sg * 0.035 * S_HIP * up, 0, 0]}, **open_hand(1.0, "L"))
     p = legs(p, **{other(side): ankle(other(side))})
     if up > 0.99:
-        foot = [14, 0, 0] if theta is None else [14 + 24 * np.cos(theta), 30 * np.sin(theta), -12 * np.sin(theta)]
+        foot = [14, 0, 0] if theta is None else [14 + 30 * np.cos(theta), 38 * np.sin(theta), -15 * np.sin(theta)]
         p = P(p, **{S("upperleg01", side): sided(side, [-42, 0, 2]), S("lowerleg01", side): [58, 0, 0], S("foot", side): sided(side, foot)})
     else:
         # le pied décolle à la verticale puis avance : il ne glisse pas au sol
@@ -1951,10 +1951,10 @@ def ankle_keys(t0, side):
     return lift + [K(t0 + 1.0, ankle_pose(side, 1, 0.0))] + [dict(k, t=round(k["t"] + 0.2, 3)) for k in turn] \
         + planted(t0 + 4.8, t0 + 5.6, lambda s: ankle_pose(side, 1 - s), n=3)
 _a0 = ankle_pose("R", 0)
-_wall = float(posed_skin(_a0)[0][HAND_VERTS["L"], 0].max() - joints(_a0)["wrist.L"][0])         # mur au ras de la paume
+_wall = float(posed_skin(_a0)[0][HAND_VERTS["L"], 0].max() - joints(_a0)["wrist.L"][0]) - 0.0035         # mur au ras de la paume
 # Corps entier, de trois quarts du côté du mur (35°) : la main posée à plat sur le mur se voit devant lui, et la jambe
 # levée devant le corps. Cadrée des genoux au sol, l'image ne montrait ni la main ni le mur, qui semblait loin.
-motion("ankle-circles", [K(0, _a0)] + ankle_keys(0, "R") + ankle_keys(5.6, "L"), muscles=("calves", "shins"), yaw=35, pitch=8,
+motion("ankle-circles", [K(0, _a0)] + ankle_keys(0, "R") + ankle_keys(5.6, "L"), muscles=("calves", "shins"), yaw=8, pitch=14,
        props=(prop("wall", "wrist.L", 0, (_wall, 0, -0.02), floor=True),))
 close_up("ankle-circles", ("head", "wrist", "toes", "foot"), 0.12)          # de la tête aux orteils, main sur le mur comprise
 
