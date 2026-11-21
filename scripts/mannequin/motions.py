@@ -1112,7 +1112,7 @@ walking("walk-fast", 0.92, 36, ("quads", "calves", "glutes", "hamstrings"), stri
 # Boxe dans le vide : garde (pied gauche devant, genoux souples, poings au menton), direct du gauche, retour en garde,
 # direct du droit avec rotation du buste, retour. Les pieds restent posés.
 BOX_FEET = {"L": ankle("L", dx=0.03 * S_HIP, dz=0.17 * S_LEG), "R": ankle("R", dx=-0.06 * S_HIP, dz=-0.15 * S_LEG)}
-BOX_GUARD = {"L": (0.06, -0.12, 0.2), "R": (-0.11, -0.12, 0.17)}       # poignets en garde, depuis la tête (repère du regard)
+BOX_GUARD = {"L": (0.06, -0.14, 0.17), "R": (-0.11, -0.14, 0.145)}       # poignets en garde, depuis la tête (repère du regard)
 BOX_FLARE = {"L": 0.15, "R": 0.2}                        # écart des coudes en garde (pôle du coude, repère du buste)
 BOX_TURN_FLARE = 0.3                                     # … et quand l'autre bras frappe
 BOX_ELBOW_FWD = 0.35                                     # coudes en garde : un peu devant les côtes (pôle vers l'avant)

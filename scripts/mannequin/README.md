@@ -185,7 +185,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      sous le milieu du corps, pied arrière en retrait et sur le côté : les brins montent de part et d'autre du genou
      avant, la cuisse arrière reste derrière eux (8 mm au moins de la peau à chaque image). Bande de 10 cm × 5 mm
      (une serviette pliée en long) ; chaque brin mesure 0,80 m (femme) ou 0,91 m (homme), constant à 2 mm près ;
-   - boxe dans le vide : garde, poings devant le menton, chacun de son côté (6 à 9 cm du visage au plus près), placée
+   - boxe dans le vide : garde, poings devant le menton, chacun de son côté (7 à 10 cm du menton, 5 à 7 cm du visage au plus près), placée
      dans le repère du regard (dans celui du buste tourné, les deux poings partaient vers la joue droite) ; coudes bas,
      devant les côtes (`BOX_FLARE`, `BOX_ELBOW_FWD`), avant-bras presque verticaux ; bassin tourné de 14° seulement en
      garde (à 26°, le poing arrière ne rejoignait le menton qu'avec l'avant-bras en travers de la poitrine, coude haut).
