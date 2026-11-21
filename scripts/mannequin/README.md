@@ -65,7 +65,12 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      passent à 6 mm au moins de la peau sur toute la course (`towel_clearance`, 11 positions : pied avant, tibias,
      genoux, cuisses, bras ; le script s'arrête en erreur s'il n'y parvient pas) ;
    - scan corporel au lit (`bed-scan-*`) : le corps repose vraiment sur le matelas. La hanche s'étend jusqu'à ce que
-     mollets et talons touchent, le dos des mains est posé (hauteur du poignet réglée à chaque clé). L'oreiller
+     mollets et talons touchent. Mains posées paume vers le matelas (`scan_hands`) : doigts à demi dépliés et un peu
+     relevés, pouce le long de l'index ; paume, bout des doigts et avant-bras touchent ensemble (hauteur du poignet
+     réglée à chaque clé ; poing fermé : le poignet se relève juste assez pour que l'avant-bras reste posé, clés
+     rapprochées). Posées sur le dos, paumes au plafond, la torsion de l'avant-bras plafonnait à 100° : la main restait
+     sur la tranche, pouce et doigts dressés jusqu'à 11 cm au-dessus du matelas, à côté de la hanche (4 à 5,5 cm
+     aujourd'hui, dos de la main compris). L'oreiller
      (`pillow_under`) est réglé sur la peau de chaque corps : son dessus au point le plus bas du crâne (la tête s'y
      enfonce de 1 mm), son bord côté pieds juste avant la nuque (plus loin, le cou et les épaules y entreraient), sa
      taille à la mesure d'une tête (`depth` 26 cm le long du lit, `width` 48 cm en travers ; 34 × 56 cm par défaut),
@@ -136,13 +141,15 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      l'avant-bras est 1,5 cm à l'intérieur du bord (`DOOR_EDGE`), sa moitié côté passage dépasse ; la partie posée
      touche la face (réglée sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des montants, à la
      mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc depuis les chevilles
-     (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de face, d'en haut (pitch 24°) : poitrine
-     ouverte face à la caméra, les deux avant-bras visibles, le buste qui avance se lit par la tête qui descend dans
-     l'image (à 12°, elle ne bougeait que de 4 cm). Vus de trois quarts avant, le montant proche
-     (12 cm de profondeur) cache tout son avant-bras, quelle que soit la largeur de la porte ; de profil ou de trois
-     quarts arrière (110°), les bras à l'horizontale, dirigés vers la caméra, se lisaient comme des bras levés à la
-     verticale. Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus petite
-     marge (calcul de CameraFraming) qui montre le linteau (2,12 m) ;
+     (penché de 12 à 13° en fin de course, épaules 12 cm devant les coudes, regard horizontal ; profondeur des avant-bras
+     réglée sur toute la course, pas seulement à mi-chemin : le coude se plie un peu plus en passant, 79–89°, et
+     l'avant-bras reste à 2 mm au plus de la face, à 13° de la verticale au plus). Vue de trois quarts arrière,
+     plongeante (yaw 145°, pitch 38°) : les deux avant-bras sont entre la caméra et les montants, posés sur leur face, et
+     le buste qui passe dans l'encadrement se lit (de face, la caméra regardait le buste avancer droit vers elle : les
+     images se ressemblaient toutes ; de trois quarts avant, le montant proche, 12 cm de profondeur, cache tout son
+     avant-bras ; à 110°, peu plongeante, les bras à l'horizontale se lisaient comme des bras levés). Même cadrage pour
+     les deux corps : de la tête et du bout des doigts aux orteils, avec la plus petite marge (calcul de CameraFraming)
+     qui fait entrer les coins du linteau (2,12 m), projetés dans l'image, à 6 cm du bord ;
    - marches sur place (`march_foot`) : le pied se déroule (talon levé, pointe posée), monte à la verticale de son
      appui, n'avance qu'une fois en l'air, redescend de même ; les deux pieds sont résolus à chaque clé (32 clés par
      cycle), ils ne glissent pas au sol ;
@@ -172,7 +179,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      et la fermeture de chaque doigt et du pouce sont réglées sur la peau ; pendant les pas, le bras droit garde le
      verre devant le ventre (`glass_steps`) ;
    - cercles dans les deux sens (`both_ways` : épaules de la mobilité du matin, hanches) : deux tours dans un sens,
-     arrêt progressif, deux tours dans l'autre. Cercles de hanches : le bassin tourne au-dessus des pieds posés et la
+     arrêt progressif, deux tours dans l'autre. Cercles de hanches : le bassin (± 10 cm pour la femme, ± 11 cm pour
+     l'homme, genoux un peu fléchis) tourne au-dessus des pieds posés et la
      colonne se courbe à l'opposé, résolue pour que la tête ne bouge pas ; flexion avant : le dos s'enroule étage par
      étage (tête, haut du dos, bas du dos, bassin) et se déroule dans l'ordre inverse (`fold`) ; mollets : les talons
      tournent autour d'un point pris 4 à 6 mm sous l'articulation des orteils (`CALF_PIVOT`, vers la peau de l'avant-pied) :
@@ -196,7 +204,10 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      garde (à 26°, le poing arrière ne rejoignait le menton qu'avec l'avant-bras en travers de la poitrine, coude haut).
      Quand un bras frappe, le coude de l'autre s'écarte un peu (`BOX_TURN_FLARE`) : le buste tourne vers lui, et
      l'avant-bras resté serré entrait dans la poitrine. Coups droits vers l'avant, coude à peine plié au bout du coup
-     (allonge 0,94) ; vue de trois quarts (35°) ;
+     (allonge 1,0, coude à 164–166° : à 0,94 il restait à 138°), dans l'axe de l'épaule (cible à 55 % de l'écart de
+     l'épaule au milieu du corps, 6 à 7° vers l'intérieur : visée au milieu, le bras partait de 11 à 16° en travers),
+     épaules tournées de 33° (direct du gauche) et 36° (direct du droit) ; vue de trois quarts à 60°, un peu d'en haut
+     (10°) : le bras tendu se lit devant le corps (à 35°, raccourci, il semblait frapper sur le côté) ;
    - squats partiels : bras placés par leur direction, en miroir, à chaque clé (`hs_dir`) : tendus en V au-dessus de
      la tête le long des oreilles, en bas à l'horizontale devant soi, en passant un peu en diagonale ;
    - grand étirement : inclinaison sur le côté répartie sur toute la colonne (`SIDE_SPLIT`), bassin et pieds
@@ -229,6 +240,13 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      à 2° (femme) et 10° (homme) de l'horizontale, genou à 92–100°. Bras à l'horizontale, tête tournée de 87° vers la
      main avant. Le pied tournait auparavant sur le sol (12 à 34 mm de glissement) et le second côté finissait pied
      droit tourné (boucle ouverte de 11 cm) ;
+   - étirement « 4 » au bord du lit : le second côté est la pose du premier en miroir (`mirror_pose`, articulations
+     symétriques au millimètre) ; vu de trois quarts (22°), le second côté semblait différent (genou haut, tibia
+     raide, pied devant l'autre cuisse) : la caméra est donc de face (pitch 16°). Buste penché de 14° (femme) et 18°
+     (homme) depuis les hanches jusqu'au cou (9 et 13° avant), la tête avance de 5,5 cm de plus ;
+   - haussements d'épaules : élévation des clavicules de 24° pour l'homme, 38° pour la femme (`SHRUG`) : sa clavicule
+     est plus courte et, à 24°, le sommet de ses épaules ne montait que de 29 mm (52 mm pour l'homme ; 56 mm
+     aujourd'hui debout, 44 mm assise contre 49) ;
    - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement
      encadré pour tout mouvement dont la peau entre de plus de 5 mm dans un accessoire.
 3. `prop_scan.py` : peau dans les accessoires. Chaque mouvement à accessoires est rejoué pour les deux corps comme
@@ -260,7 +278,11 @@ défaut), et s'en approche sans descendre sous 1 m ; elle garde la même éléva
 (et du matelas). Menton rentré (tête, cou et
 épaules de profil), cercles d'épaules (tête, épaules, coudes), mollets (des poignets au sol : les mains entières,
 pas des morceaux de doigts en haut de l'image) et ouverture de poitrine dans la porte (des orteils au bout des
-doigts, linteau compris, de face) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, de trois quarts du côté du mur (35°), la main posée à plat sur le mur dans l'image. Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
+doigts, linteau compris, de face) sont cadrés ainsi (`close_up`), comme la posture de l'enfant et les genoux vers la poitrine (corps entier, sans le lit). Cercles de chevilles : corps entier, presque de face (8°, du côté du corps : de plus loin du côté du mur, la
+caméra serait derrière lui), un peu d'en haut (14°) ; le mur se voit presque par la tranche, la main posée à plat contre
+lui (paume parallèle au mur, 3,5 mm d'appui des coussinets ; de trois quarts, on voyait le dos de la main dressée
+devant le mur, lue comme une paume tournée vers la caméra). La pointe du pied décrit un cercle d'une dizaine de
+centimètres (10 × 9 cm pour la femme, 12,5 × 11 cm pour l'homme ; 8 × 7,5 et 10 × 9 cm avant). Le passage d'un cadrage à l'autre dure 1,2 s (0,6 s entre deux vues d'ensemble). Calcul dans
 `CameraFraming` (GrowtinCore), refait à l'identique par `camera_shot` (`motion_eval.py`) pour les planches de
 `review.py` : même point visé, même champ à la distance de la caméra (aperçu sans perspective, carte supposée de
 proportions 1,03). Quand deux mouvements successifs ont le même décor au même endroit (étapes du scan corporel),
