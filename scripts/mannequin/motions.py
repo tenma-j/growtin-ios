@@ -1778,6 +1778,14 @@ shrug_up = dict(clavicle=[0, 0, SHRUG], upperarm01=[0, 0, -22 * SHRUG / 24], low
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(4.2, P("stand", **shrug_up)),
                   K(4.6, "stand", "out"), K(7.5, "stand")], muscles=("upperBack", "neck"), yaw=25)
 _chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22 * SHRUG / 24]), "chairSit")
+if SHRUG > 24:
+    # Épaules plus hautes (femme) : mains au même endroit sur les cuisses, mais coudes rouverts vers l'extérieur et
+    # l'arrière ; avec la seule mise en contact, l'avant-bras tiré vers le haut entrait de 8 mm dans la cuisse.
+    _J = joints(_chair_shrug); _kw = {}
+    for _s, _sg in (("L", 1), ("R", -1)):
+        _f, _, _n = hand_axes(_chair_shrug, _s)
+        _kw.update({_s: _J[f"wrist.{_s}"], f"fingers_{_s}": _f, f"palm_{_s}": _n, f"pole_{_s}": (_sg, -0.3, -0.6)})
+    _chair_shrug = hands(_chair_shrug, **_kw)
 # Tempo de la consigne : épaules tenues 5 secondes vers les oreilles, puis elles tombent.
 motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(6.2, _chair_shrug),
                         K(6.6, "chairSit", "out"), K(9.5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
