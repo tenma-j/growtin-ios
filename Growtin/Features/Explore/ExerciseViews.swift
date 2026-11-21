@@ -202,7 +202,10 @@ struct ExerciseSessionView: View {
     init(exercise: Exercise, onComplete: @escaping () -> Void) {
         self.exercise = exercise
         self.onComplete = onComplete
-        _clock = State(initialValue: SessionClock(totalSeconds: exercise.totalSeconds))
+        _clock = State(initialValue: SessionClock(
+            totalSeconds: exercise.totalSeconds,
+            alerts: StepAlert.forSteps(exercise.steps.map { ($0.title, $0.seconds) })
+        ))
     }
 
     /// Étape en cours et secondes restantes dans cette étape.
@@ -253,7 +256,7 @@ struct ExerciseSessionView: View {
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            .sensoryFeedback(.impact(weight: .medium), trigger: state.index)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.5), trigger: state.index)
             .accessibilityElement(children: .combine)
         }
         .onAppear { clock.onFinish = onComplete }

@@ -104,8 +104,16 @@ struct MannequinCard: View {
     }
 
     var body: some View {
+        if let kind = FacePictogram.Kind(motion: motion) {
+            FacePictogram(kind: kind, caption: caption, height: height)
+        } else {
+            scene
+        }
+    }
+
+    private var scene: some View {
         let dark = colorScheme == .dark
-        ZStack(alignment: .topTrailing) {
+        return ZStack(alignment: .topTrailing) {
             Color(uiColor: MannequinStage.backdrop(dark: dark))
             MannequinSceneView(motion: motion, figure: figure, dark: dark)
             Menu {
@@ -151,6 +159,121 @@ struct MannequinCard: View {
         .clipShape(.rect(cornerRadius: GT.Radius.card))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Animation 3D du mouvement. Fais glisser horizontalement pour tourner le personnage.")
+    }
+}
+
+/// Pictogramme des étapes « Visage » : le personnage 3D n'a pas de traits, on montre donc un visage stylisé
+/// qui se contracte puis se relâche (relaxation progressive) ou qui respire doucement (scan corporel), au rythme
+/// du mouvement correspondant.
+struct FacePictogram: View {
+    enum Kind {
+        /// Contraction de 1 à 5 s, puis détente jusqu'à 15 s (mouvement « chair-face »).
+        case tenseRelease
+        /// Détente sur la respiration : inspire 4 s, expire 6 s (mouvement « bed-scan-face »).
+        case relax
+
+        init?(motion: String) {
+            switch motion {
+            case "chair-face": self = .tenseRelease
+            case "bed-scan-face": self = .relax
+            default: return nil
+            }
+        }
+    }
+
+    private enum Phase: Equatable {
+        case ready, tense, release, inhale, exhale
+
+        var label: String {
+            switch self {
+            case .ready: "Prépare-toi"
+            case .tense: "Contracte"
+            case .release: "Relâche"
+            case .inhale: "Inspire, relâche la mâchoire"
+            case .exhale: "Expire, détends le front"
+            }
+        }
+    }
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let kind: Kind
+    var caption: String?
+    var height: CGFloat
+    @State private var start = Date()
+
+    private func phase(at date: Date) -> Phase {
+        let t = date.timeIntervalSince(start)
+        switch kind {
+        case .tenseRelease:
+            let local = t.truncatingRemainder(dividingBy: 15)
+            return local < 1 ? .ready : local < 5 ? .tense : .release
+        case .relax:
+            return t.truncatingRemainder(dividingBy: 10) < 4 ? .inhale : .exhale
+        }
+    }
+
+    var body: some View {
+        let dark = colorScheme == .dark
+        TimelineView(.periodic(from: start, by: 0.25)) { context in
+            let phase = phase(at: context.date)
+            ZStack {
+                Color(uiColor: MannequinStage.backdrop(dark: dark))
+                VStack(spacing: GT.Spacing.m) {
+                    Image(systemName: "face.smiling")
+                        .font(.system(size: min(120, height * 0.42), weight: .light))
+                        .foregroundStyle(phase == .tense ? Color.gtInk : Color.gtGrowth)
+                        .scaleEffect(x: scale(phase).x, y: scale(phase).y)
+                        .animation(reduceMotion ? nil : animation(phase), value: phase)
+                    Text(phase.label)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary.opacity(0.85))
+                        .contentTransition(.opacity)
+                        .animation(.easeInOut(duration: 0.4), value: phase)
+                }
+                .environment(\.colorScheme, .light)
+                if let caption {
+                    VStack {
+                        Spacer()
+                        HStack(spacing: GT.Spacing.xs) {
+                            Circle().fill(Color.gtGrowth).frame(width: 7, height: 7)
+                            Text(caption).font(.caption.weight(.medium)).foregroundStyle(.primary.opacity(0.85))
+                        }
+                        .padding(.horizontal, GT.Spacing.s)
+                        .padding(.vertical, 6)
+                        .glassEffect(.regular, in: .capsule)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(GT.Spacing.s)
+                    }
+                    .environment(\.colorScheme, .light)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Visage : \(phase.label)")
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .clipShape(.rect(cornerRadius: GT.Radius.card))
+    }
+
+    private func scale(_ phase: Phase) -> (x: CGFloat, y: CGFloat) {
+        guard !reduceMotion else { return (1, 1) }
+        switch phase {
+        case .tense: return (0.9, 0.8)        // visage plissé
+        case .inhale: return (1.06, 1.06)
+        case .exhale: return (0.96, 0.96)
+        case .ready, .release: return (1, 1)
+        }
+    }
+
+    private func animation(_ phase: Phase) -> Animation {
+        switch phase {
+        case .tense: .easeIn(duration: 0.8)
+        case .release: .easeOut(duration: 2.5)
+        case .inhale: .easeInOut(duration: 4)
+        case .exhale: .easeInOut(duration: 6)
+        case .ready: .easeInOut(duration: 0.5)
+        }
     }
 }
 

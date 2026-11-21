@@ -22,7 +22,10 @@ struct ScalpMassageSessionView: View {
     ]
 
     init(onComplete: @escaping () -> Void) {
-        _clock = State(initialValue: SessionClock(totalSeconds: Self.zones.count * Self.secondsPerZone))
+        _clock = State(initialValue: SessionClock(
+            totalSeconds: Self.zones.count * Self.secondsPerZone,
+            alerts: StepAlert.forSteps(Self.zones.map { ($0.name, Self.secondsPerZone) })
+        ))
         self.onComplete = onComplete
     }
 
@@ -68,7 +71,7 @@ struct ScalpMassageSessionView: View {
                 }
                 .accessibilityHidden(true)
             }
-            .sensoryFeedback(.impact(weight: .medium), trigger: zoneIndex)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.5), trigger: zoneIndex)
         }
         .onAppear { clock.onFinish = onComplete }
         .onDisappear { clock.stop() }
