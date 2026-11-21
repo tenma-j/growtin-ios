@@ -1822,7 +1822,7 @@ motion("trap-stretch", [K(0, "stand")] + trap_keys(0, False) + trap_keys(8, True
 # de profil les bras à l'horizontale, dirigés vers la caméra, se lisaient comme des bras levés à la verticale. Même
 # cadrage pour les deux corps : de la tête et du bout des doigts jusqu'aux orteils.
 UPPER_ARM = UPPER_ARM_LEN
-DOOR_IN = 0.20 * S_LEG                                       # avancée du bassin
+DOOR_IN = 0.24 * S_LEG                                       # avancée du bassin
 DOOR_RHYTHM = rhythm_amount(90.0)                            # bras à l'horizontale : la ceinture scapulaire suit un peu
 _DOOR_ARM, _DOOR_HAND = region(("lowerarm",), "L"), region(("wrist", "finger"), "L")
 def door_body(s):
@@ -1858,16 +1858,21 @@ DOOR_WIDTH = 2 * (float(DOOR_ELBOW[0]) + 0.035 + DOOR_EDGE)
 # face (1 mm de jeu), sans la traverser.
 _DOOR_IN = DOOR_WIDTH / 2 - 0.035
 DOOR_Z = float(DOOR_ELBOW[2]) + DOOR_DEPTH[0]
+# Réglé sur toute la course (le coude se plie un peu plus à mi-chemin et l'avant-bras s'approche de la face).
 for _ in range(5):
-    _v = posed_skin(doorway(0.5))[0]
-    _on = _v[:, 0] > _DOOR_IN
-    DOOR_DEPTH[0] += float(_v[_DOOR_ARM[_on[_DOOR_ARM]], 2].max()) - DOOR_Z + 0.001
-    DOOR_DEPTH[1] += float(_v[_DOOR_HAND[_on[_DOOR_HAND]], 2].max()) - DOOR_Z + 0.001
+    _arm = _hand = -1.0
+    for _s in (0.0, 0.15, 0.3, 0.5, 0.7, 0.85, 1.0):
+        _v = posed_skin(doorway(_s))[0]
+        _on = _v[:, 0] > _DOOR_IN
+        _arm = max(_arm, float(_v[_DOOR_ARM[_on[_DOOR_ARM]], 2].max()))
+        _hand = max(_hand, float(_v[_DOOR_HAND[_on[_DOOR_HAND]], 2].max()))
+    DOOR_DEPTH[0] += _arm - DOOR_Z + 0.001
+    DOOR_DEPTH[1] += _hand - DOOR_Z + 0.001
     DOOR_Z = float(DOOR_ELBOW[2]) + DOOR_DEPTH[0]
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
-motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
-       + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=0, pitch=24,
+motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=12) + [K(5, doorway(1.0))]
+       + planted(5, 7, lambda s: doorway(1 - s), n=12) + [K(7.6, doorway(0.0))],
+       muscles=("chest", "shoulders"), yaw=145, pitch=38,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
 # Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des orteils au bout des doigts, pour les deux corps. Vu de
@@ -1880,9 +1885,17 @@ _door_keys = [[joints(k["pose"])[n] for n in ik.names] for k in MOTIONS["doorway
 _door_ids = [ik.names.index(n) for j in DOOR_FRAME for n in (f"{j}.L", f"{j}.R") if n in ik.names] + \
             [ik.names.index(j) for j in DOOR_FRAME if j in ik.names]
 _cam = MOTIONS["doorway-stretch"]["camera"]
+# Vue plongeante : on projette les coins du linteau dans le plan de l'image (repère de la caméra tourné de yaw,
+# incliné de pitch) ; il doit y entrer avec 6 cm de marge.
+from motion_eval import VIEW_ASPECT  # noqa: E402
+_ya, _pa = np.radians(_cam["yaw"]), np.radians(_cam["pitch"])
+_Ry = np.array([[np.cos(_ya), 0, np.sin(_ya)], [0, 1, 0], [-np.sin(_ya), 0, np.cos(_ya)]])
+_up = np.array([0.0, np.cos(_pa), -np.sin(_pa)])
+_lintel = [np.array([x * (DOOR_WIDTH / 2 + 0.035), DOOR_TOP, DOOR_Z + 0.06 + z * 0.06]) for x in (-1, 1) for z in (-1, 1)]
 for _m in np.arange(0.05, 0.6, 0.005):
     _c, _, _ext = camera_shot(_door_keys, _door_ids, _cam["yaw"], _cam["pitch"], _m)
-    if _c[1] + _ext / 2 >= DOOR_TOP + 0.03: break
+    _d = [_Ry @ (q - _c) for q in _lintel]
+    if all(abs(d @ _up) <= _ext / 2 - 0.06 and abs(d[0]) <= _ext * VIEW_ASPECT / 2 - 0.06 for d in _d): break
 close_up("doorway-stretch", DOOR_FRAME, round(float(_m), 3))
 print("porte : marge du cadrage", round(float(_m), 3))
 
