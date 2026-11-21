@@ -131,8 +131,9 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      l'avant-bras est 1,5 cm à l'intérieur du bord (`DOOR_EDGE`), sa moitié côté passage dépasse ; la partie posée
      touche la face (réglée sur la peau, 1 mm de jeu). `width` donne la distance entre les axes des montants, à la
      mesure de chaque corps ; les avant-bras ne bougent plus pendant que le corps avance d'un bloc depuis les chevilles
-     (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de face, un peu d'en haut (pitch 12°) :
-     poitrine ouverte face à la caméra, les deux avant-bras visibles. Vus de trois quarts avant, le montant proche
+     (penché d'une dizaine de degrés en fin de course, regard horizontal). Vue de face, d'en haut (pitch 24°) : poitrine
+     ouverte face à la caméra, les deux avant-bras visibles, le buste qui avance se lit par la tête qui descend dans
+     l'image (à 12°, elle ne bougeait que de 4 cm). Vus de trois quarts avant, le montant proche
      (12 cm de profondeur) cache tout son avant-bras, quelle que soit la largeur de la porte ; de profil ou de trois
      quarts arrière (110°), les bras à l'horizontale, dirigés vers la caméra, se lisaient comme des bras levés à la
      verticale. Même cadrage pour les deux corps : de la tête et du bout des doigts aux orteils, avec la plus petite
@@ -172,7 +173,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      tournent autour d'un point pris 4 à 6 mm sous l'articulation des orteils (`CALF_PIVOT`, vers la peau de l'avant-pied) :
      orteils et avant-pied posés glissent de 3 à 4 mm au plus (6,9 mm autour de l'articulation elle-même) (`calf_raise`) ;
    - salutation des bras : montée et descente bras tendus, parallèles, placés par leur direction à chaque clé
-     (`raise_arms`, 8 clés de chaque côté, jusqu'à 135° devant soi : interpolés en angles, les bras s'ouvraient en V et,
+     (`raise_arms`, allonge 0,995, coudes à 166°, 8 clés de chaque côté, jusqu'à 135° devant soi : interpolés en angles, les bras s'ouvraient en V et,
      vus de trois quarts, le bras proche semblait plié, main devant la poitrine) ; vue presque de profil (60°) ; coudes à 165–169° mains jointes au-dessus de la tête (`overhead_y`,
      allonge 0,997). Posture de l'arbre : le poids passe sur la jambe d'appui pieds posés, puis le pied se soulève à
      la verticale de son appui avant de partir vers le mollet (`tree_shift`) ; il glissait de 15 cm au sol ;
@@ -205,7 +206,7 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
      décollé et le talon contre la fesse, neuf clés (`quad_path`) : hanche, genou et pied passent d'une pose à l'autre,
      la cuisse avance un peu à mi-chemin (genou devant, pied moins tendu), le genou plie surtout en fin de montée, la
      main s'approche du cou-de-pied et le saisit. Au retour, le pied redescend par le même chemin, en 2,6 s, jusqu'à
-     côté de l'autre (0,7 m/s au plus) : lâché du talon haut, il décrivait un arc derrière le corps à 1,4 m/s, comme
+     côté de l'autre (0,8 m/s au plus) : lâché du talon haut, il décrivait un arc derrière le corps à 1,4 m/s, comme
      un coup de pied. Les jambes restent écartées de 17 cm au moins (chevilles). Ouverture
      de la poitrine : mains jointes paume contre paume derrière le dos, bras tendus 25° derrière la verticale,
      omoplates serrées, haut du dos en extension et tête droite (`chest_clasp` ; écart des poignets réglé pour que les
@@ -214,8 +215,8 @@ Le personnage animé de l'onglet Explorer (femme ou homme selon le profil) est p
    - guerrier II (`warrior`, `warrior_keys`) : le pied avant se soulève de 2,5 cm, tourne en l'air de la pointe en
      dedans (12°, comme l'autre pied) à 90° et se repose ; le genou plie ensuite, pieds posés (clés rapprochées) :
      bassin aussi bas que le permet la jambe arrière tendue (genou à 171–172°, comme debout), décalé jusqu'à ce que
-     le genou avant soit au-dessus de la cheville ; avec des chevilles écartées de 2 × 0,66 jambe, la cuisse avant est
-     à 1° (femme) et 9° (homme) de l'horizontale, genou à 88–97°. Bras à l'horizontale, tête tournée de 87° vers la
+     le genou avant soit au-dessus de la cheville (genou dans l'axe du pied tourné) ; avec des chevilles écartées de 2 × 0,66 jambe, la cuisse avant est
+     à 2° (femme) et 10° (homme) de l'horizontale, genou à 92–100°. Bras à l'horizontale, tête tournée de 87° vers la
      main avant. Le pied tournait auparavant sur le sol (12 à 34 mm de glissement) et le second côté finissait pied
      droit tourné (boucle ouverte de 11 cm) ;
    - contrôle final : après l'écriture du fichier, `motions.py` lance `prop_scan.py` et affiche un avertissement

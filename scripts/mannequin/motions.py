@@ -1582,7 +1582,8 @@ def calf_raise(u):
     p = P("stand", root={"offset": [0.0, float(move[1]), float(move[2])]}, upperarm01=[-4 * u, 0, 4 * u], lowerarm01=[-8 * u, 0, 0])
     return legs(p, **kw)
 _calf = calf_raise(1.0)
-motion("calf-raises", [K(0, "stand")] + planted(0, 1.0, calf_raise, n=6) + [K(1.4, _calf)] + planted(1.4, 4.0, lambda s: calf_raise(1 - s), n=8),
+motion("calf-raises", [K(0, "stand")] + planted(0, 1.0, calf_raise, n=6) + [K(1.4, _calf)] + planted(1.4, 4.0, lambda s: calf_raise(1 - s), n=8)[:-1]
+       + [K(4.0, "stand", "linear")],                         # dernière clé : la pose de départ (boucle fermée)
        muscles=("calves",), yaw=68, pitch=6)
 close_up("calf-raises", ("wrist", "foot", "toes"), 0.05)
 
@@ -1667,7 +1668,7 @@ def quad_keys(t0, flip):
     ws = [0.5 * u + 0.5 * u * u * (3 - 2 * u) for u in (i / QUAD_PATH_N for i in range(1, QUAD_PATH_N))]
     path = [f(quad_path(w)) for w in ws]
     hold = f(_quad)
-    # Montée en 2,6 s, descente en 2,6 s : le pied ne dépasse pas 0,6 m/s.
+    # Montée en 2,6 s, descente en 2,6 s : le pied ne dépasse pas 0,8 m/s.
     return ([K(t0 + 0.2, half, "in"), K(t0 + 0.35, heel, "linear"), K(t0 + 0.5, peel, "linear")]
             + [K(t0 + 0.5 + 2.6 * (i + 1) / QUAD_PATH_N, q, "linear") for i, q in enumerate(path)]
             + [K(t0 + 3.1, hold, "out"), K(t0 + 5.3, hold)]
@@ -1844,7 +1845,7 @@ for _ in range(5):
 print("porte : entre les axes des montants", round(DOOR_WIDTH, 3), "coude", np.round(DOOR_ELBOW, 3), "profondeurs", np.round(DOOR_DEPTH, 3))
 motion("doorway-stretch", [K(0, doorway(0.0))] + planted(0, 2, doorway, n=6) + [K(5, doorway(1.0))]
        + planted(5, 7, lambda s: doorway(1 - s), n=6) + [K(7.6, doorway(0.0))],
-       muscles=("chest", "shoulders"), yaw=0, pitch=12,
+       muscles=("chest", "shoulders"), yaw=0, pitch=24,
        props=(dict(prop("door", "root", 0, (0, 0, DOOR_Z + 0.06 - float(STAND["root"][2])), floor=True), width=round(DOOR_WIDTH, 4)),))
 
 # Cadrage : tout l'encadrement (linteau à 2,12 m) et le corps des orteils au bout des doigts, pour les deux corps. Vu de
@@ -1981,7 +1982,7 @@ def raise_arms(theta):
     p = P(mountain, upperarm01=[-theta, 0, 5], lowerarm01=[-4, 0, 0], **open_hand(min(1.0, 0.7 + theta / 300)))
     t = np.radians(theta)
     for s, sg in (("L", 1), ("R", -1)):
-        p = reach_arm(p, s, [0.03 * sg, -np.cos(t), np.sin(t)], 0.985, (0.3 * sg, -1, -0.4))
+        p = reach_arm(p, s, [0.03 * sg, -np.cos(t), np.sin(t)], 0.995, (0.3 * sg, -1, -0.4))
     return p
 _RAISE_N = 8
 _rise = [K(3.4 * i / _RAISE_N, raise_arms(RAISE_TOP * (1 - np.cos(np.pi / 2 * i / _RAISE_N))), "linear") for i in range(1, _RAISE_N + 1)]
@@ -2032,8 +2033,8 @@ def war_legs(root_dx, root_dy, bend, turn=None, lift=0.0):
           neck01=[0, 0.35 * WAR_LOOK * bend, 0], neck02=[0, 0.25 * WAR_LOOK * bend, 0], head=[0, 0.4 * WAR_LOOK * bend, 0])
     # écart symétrique : les pieds restent aux mêmes endroits quand on change de côté
     front = np.array([WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["L"][2]]); back = np.array([-WAR_STANCE * S_LEG, FLOOR_ANKLE, ANK["R"][2]])
-    # genou avant tourné avec le pied (vers l'extérieur une fois le pied tourné, droit devant au départ)
-    return legs(p, L=front + [0, lift, 0], R=back, pole_L=(turn, 0, 1 - 0.75 * turn), pole_R=(0, 0, 1),
+    # genou avant tourné avec le pied (dans l'axe du pied tourné, au-dessus des orteils ; droit devant au départ)
+    return legs(p, L=front + [0, lift, 0], R=back, pole_L=(turn, 0, 1 - turn), pole_R=(0, 0, 1),
                 foot_yaw_L=-WAR_TOE_IN + (90 + WAR_TOE_IN) * turn, foot_yaw_R=WAR_TOE_IN)
 def war_root_dy(dx):
     """Descente du bassin pour que la jambe arrière soit tendue à WAR_BACK de sa longueur."""
