@@ -1769,12 +1769,15 @@ motion("shoulder-rolls-both", both_ways(4.2, 2, 12, roll), muscles=("shoulders",
 for _mid in ("shoulder-rolls", "shoulder-rolls-both"):
     close_up(_mid, ("head", "upperarm01", "lowerarm01"), 0.12)
 
-shrug_up = dict(clavicle=[0, 0, 24], upperarm01=[0, 0, -22], lowerarm01=[-6, 0, 0])
+# Élévation des clavicules : la clavicule de la femme est plus courte et sa peau suit moins l'articulation ; à 24°, comme
+# l'homme, le sommet de ses épaules ne montait que de 29 mm (52 mm pour l'homme) ; à 38° : 56 mm (assise : 44 contre 49).
+SHRUG = 24.0 if BODY == "male" else 38.0
+shrug_up = dict(clavicle=[0, 0, SHRUG], upperarm01=[0, 0, -22 * SHRUG / 24], lowerarm01=[-6, 0, 0])
 # Haussements : les épaules montent en inspirant, tenues 3 secondes, puis tombent en expirant ; 8 fois dans l'étape
 # de 60 secondes (boucle de 7,5 s).
 motion("shrugs", [K(0, "stand"), K(1.2, P("stand", **shrug_up, neck01=[-2, 0, 0])), K(4.2, P("stand", **shrug_up)),
                   K(4.6, "stand", "out"), K(7.5, "stand")], muscles=("upperBack", "neck"), yaw=25)
-_chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22]), "chairSit")
+_chair_shrug = keep_hands(P("chairSit", clavicle=[0, 0, 22 * SHRUG / 24]), "chairSit")
 # Tempo de la consigne : épaules tenues 5 secondes vers les oreilles, puis elles tombent.
 motion("chair-shrugs", [K(0, "chairSit"), K(1.2, _chair_shrug), K(6.2, _chair_shrug),
                         K(6.6, "chairSit", "out"), K(9.5, "chairSit")], muscles=("upperBack", "neck"), yaw=30, props=(CHAIR,))
@@ -1906,7 +1909,7 @@ motion("scapular-squeeze", [K(0, "stand"), K(1, squeeze), K(5, squeeze), K(6, "s
 # Cercles de hanches : le bassin dessine un cercle au-dessus des pieds, qui restent posés ; le haut du corps ne suit
 # pas : la colonne se courbe à l'opposé (sur le côté, vers l'avant, vers l'arrière) juste assez pour que la tête reste
 # à sa place, au-dessus des pieds, et le cou la garde droite. Deux tours dans un sens, deux dans l'autre.
-HIP_R = 0.075 * S_LEG
+HIP_R = 0.11 * S_LEG
 HIP_SPINE = (("spine05", 0.3), ("spine04", 0.3), ("spine03", 0.25), ("spine02", 0.15))
 _hip_head = STAND["head"]
 def hip_circle(theta):
@@ -1914,7 +1917,7 @@ def hip_circle(theta):
     def body(b):
         """b : courbure de la colonne (degrés) sur le côté et d'avant en arrière ; le bassin en prend le quart."""
         bones = {n: [b[1] * w, 0, b[0] * w] for n, w in HIP_SPINE}
-        return P("handsHips", root={"rot": [["z", -0.25 * b[0]], ["x", 0.25 * b[1]]], "offset": [ox, -0.02 * S_LEG, oz]},
+        return P("handsHips", root={"rot": [["z", -0.25 * b[0]], ["x", 0.25 * b[1]]], "offset": [ox, -0.035 * S_LEG, oz]},
                  neck01=[-0.6 * b[1], 0, -0.6 * b[0]], head=[-0.65 * b[1], 0, -0.65 * b[0]], **bones)
     def miss(b):
         h = joints(body(b))["head"]
