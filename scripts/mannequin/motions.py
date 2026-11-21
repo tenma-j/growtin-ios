@@ -1138,10 +1138,11 @@ BOX_GUARD = {"L": (0.06, -0.14, 0.17), "R": (-0.11, -0.14, 0.145)}       # poign
 BOX_FLARE = {"L": 0.15, "R": 0.2}                        # écart des coudes en garde (pôle du coude, repère du buste)
 BOX_TURN_FLARE = 0.3                                     # … et quand l'autre bras frappe
 BOX_ELBOW_FWD = 0.35                                     # coudes en garde : un peu devant les côtes (pôle vers l'avant)
-BOX_REACH = 0.94                                         # coude pas complètement tendu au bout du coup
+BOX_HIT_X = 0.55
+BOX_REACH = 1.0                                         # coude pas complètement tendu au bout du coup
 def boxing(jab=0.0, cross=0.0):
     yaw = -14 - 5 * jab + 18 * cross                 # bassin tourné vers la droite en garde
-    twist = -8 * jab + 26 * cross                    # rotation des épaules en plus de celle du bassin
+    twist = -14 * jab + 32 * cross                    # rotation des épaules en plus de celle du bassin
     look = -(yaw + twist)
     p = P("stand", root={"rot": [["y", yaw]], "offset": [0, -0.06 * S_LEG, 0.02 * S_LEG * (jab + cross)]},
           spine04=[3, twist * 0.2, 0], spine03=[3, twist * 0.3, 0], spine02=[0, twist * 0.3, 0], spine01=[0, twist * 0.2, 0],
@@ -1154,7 +1155,7 @@ def boxing(jab=0.0, cross=0.0):
         # regarde droit devant, +Z) : pris dans celui du buste tourné, ils partaient tous deux vers la joue droite.
         guard = J["head"] + BOX_GUARD[s]
         reach = BOX_REACH * ARM
-        hit = np.array([0.02 * sg, sh[1] + 0.01, sh[2] + np.sqrt(reach ** 2 - (sh[0] - 0.02 * sg) ** 2)])
+        hit = np.array([BOX_HIT_X * sh[0], sh[1] + 0.01, sh[2] + np.sqrt(reach ** 2 - ((1 - BOX_HIT_X) * sh[0]) ** 2)])
         w = guard + (hit - guard) * u
         f = np.array([-0.15 * sg, 1, 0.25]); f = f / np.linalg.norm(f) * (1 - u) + (hit - sh) / reach * u
         n = np.array([-sg, 0, 0.2]); n = n / np.linalg.norm(n) * (1 - u) + np.array([-0.25 * sg, -1, 0]) * u
@@ -1167,7 +1168,7 @@ _jab, _cross = boxing(jab=1), boxing(cross=1)
 motion("shadow-boxing", [K(0, _guard), K(0.04, _guard)] + planted(0.04, 0.27, lambda s: boxing(jab=s), n=4) + [K(0.37, _jab)]
        + planted(0.37, 0.7, lambda s: boxing(jab=1 - s), n=4) + [K(1.1, _guard)] + planted(1.1, 1.36, lambda s: boxing(cross=s), n=4)
        + [K(1.46, _cross)] + planted(1.46, 1.84, lambda s: boxing(cross=1 - s), n=4) + [K(2.2, _guard)],
-       muscles=("shoulders", "triceps", "abs"), yaw=35)
+       muscles=("shoulders", "triceps", "abs"), yaw=60, pitch=10)
 
 # Échauffement : marche sur place et grands cercles de bras vers l'arrière. Le bras monte par l'avant jusqu'à la
 # verticale, puis redescend par le côté, un peu en arrière du plan des épaules (là où l'épaule le permet : il ne passe
